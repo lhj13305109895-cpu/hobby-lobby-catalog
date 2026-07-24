@@ -155,7 +155,7 @@ async function dataUriToImageData(dataUri) {
   return { ...imageBytes, ...dimensions };
 }
 
-async function cropImageForExcel(dataUri, targetAspect = 1.33) {
+async function cropImageForExcel(dataUri, targetAspect = 1.33, isMixedSet = false) {
   const image = await new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
@@ -169,21 +169,61 @@ async function cropImageForExcel(dataUri, targetAspect = 1.33) {
   outputContext.fillStyle = "#ffffff";
   outputContext.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
 
-  const sourceAspect = image.naturalWidth / image.naturalHeight;
-  if (sourceAspect > 1.18) {
-    outputContext.drawImage(image, 0, 0, outputCanvas.width, outputCanvas.height);
-  } else {
-    const sourceCanvas = document.createElement("canvas");
-    sourceCanvas.width = image.naturalWidth;
-    sourceCanvas.height = image.naturalHeight;
-    const sourceContext = sourceCanvas.getContext("2d", { willReadFrequently: true });
-    sourceContext.drawImage(image, 0, 0);
-    const pixels = sourceContext.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
-    let minX = pixels.width;
-    let minY = pixels.height;
-    let maxX = 0;
-    let maxY = 0;
+  const sourceCanvas = document.createElement("canvas");
+  sourceCanvas.width = image.naturalWidth;
+  sourceCanvas.height = image.naturalHeight;
+  const sourceContext = sourceCanvas.getContext("2d", { willReadFrequently: true });
+  sourceContext.drawImage(image, 0, 0);
+  const pixels = sourceContext.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
 
+  if (isMixedSet) {
+    // Scene/set images often contain a flat beige presentation band above and
+    // below the actual photograph. Find the first and last rows with real
+    // visual detail, then stretch that complete-width scene into the cell.
+    // Keeping the full width preserves the top-left logo.
+    const detailedRows = [];
+    for (let y = 0; y < pixels.height; y += 2) {
+      let minRed = 255;
+      let minGreen = 255;
+      let minBlue = 255;
+      let maxRed = 0;
+      let maxGreen = 0;
+      let maxBlue = 0;
+      for (let x = 0; x < pixels.width; x += 3) {
+        const offset = (y * pixels.width + x) * 4;
+        const alpha = pixels.data[offset + 3];
+        if (alpha < 20) continue;
+        const red = pixels.data[offset];
+        const green = pixels.data[offset + 1];
+        const blue = pixels.data[offset + 2];
+        minRed = Math.min(minRed, red);
+        minGreen = Math.min(minGreen, green);
+        minBlue = Math.min(minBlue, blue);
+        maxRed = Math.max(maxRed, red);
+        maxGreen = Math.max(maxGreen, green);
+        maxBlue = Math.max(maxBlue, blue);
+      }
+      if (maxRed - minRed > 34 || maxGreen - minGreen > 34 || maxBlue - minBlue > 34) detailedRows.push(y);
+    }
+    const sourceTop = detailedRows.length ? Math.max(0, detailedRows[0] - 2) : 0;
+    const sourceBottom = detailedRows.length ? Math.min(image.naturalHeight, detailedRows[detailedRows.length - 1] + 4) : image.naturalHeight;
+    outputContext.drawImage(
+      image,
+      0,
+      sourceTop,
+      image.naturalWidth,
+      Math.max(1, sourceBottom - sourceTop),
+      0,
+      0,
+      outputCanvas.width,
+      outputCanvas.height,
+    );
+  } else {
+    // Count foreground pixels per row/column instead of trusting the first
+    // non-white pixel. This ignores isolated JPEG noise around the white
+    // background and centers the visible product body itself.
+    const columnCounts = new Uint32Array(pixels.width);
+    const rowCounts = new Uint32Array(pixels.height);
     for (let y = 0; y < pixels.height; y += 2) {
       for (let x = 0; x < pixels.width; x += 2) {
         const offset = (y * pixels.width + x) * 4;
@@ -191,23 +231,39 @@ async function cropImageForExcel(dataUri, targetAspect = 1.33) {
         const green = pixels.data[offset + 1];
         const blue = pixels.data[offset + 2];
         const alpha = pixels.data[offset + 3];
-        if (alpha > 20 && (red < 247 || green < 247 || blue < 247)) {
-          minX = Math.min(minX, x);
-          minY = Math.min(minY, y);
-          maxX = Math.max(maxX, x);
-          maxY = Math.max(maxY, y);
+        if (alpha > 20 && (red < 245 || green < 245 || blue < 245 || Math.max(red, green, blue) - Math.min(red, green, blue) > 10)) {
+          columnCounts[x] += 1;
+          rowCounts[y] += 1;
         }
       }
     }
 
+    const minColumnCount = Math.max(2, Math.round(pixels.height * 0.006));
+    const minRowCount = Math.max(2, Math.round(pixels.width * 0.006));
+    let minX = columnCounts.findIndex((count) => count >= minColumnCount);
+    let minY = rowCounts.findIndex((count) => count >= minRowCount);
+    let maxX = -1;
+    let maxY = -1;
+    for (let x = columnCounts.length - 1; x >= 0; x -= 1) {
+      if (columnCounts[x] >= minColumnCount) {
+        maxX = x;
+        break;
+      }
+    }
+    for (let y = rowCounts.length - 1; y >= 0; y -= 1) {
+      if (rowCounts[y] >= minRowCount) {
+        maxY = y;
+        break;
+      }
+    }
     if (minX >= maxX || minY >= maxY) {
       minX = 0;
       minY = 0;
       maxX = image.naturalWidth;
       maxY = image.naturalHeight;
     }
-    const paddingX = (maxX - minX) * 0.08;
-    const paddingY = (maxY - minY) * 0.08;
+    const paddingX = (maxX - minX) * 0.06;
+    const paddingY = (maxY - minY) * 0.06;
     minX = Math.max(0, minX - paddingX);
     minY = Math.max(0, minY - paddingY);
     maxX = Math.min(image.naturalWidth, maxX + paddingX);
@@ -682,7 +738,11 @@ export function App() {
     const now = new Date();
     const today = now.toISOString().slice(0, 10);
     const dateDisplay = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`;
-    const imageData = await Promise.all(selectedEntries.map(async ({ pattern }) => dataUriToImageData(await cropImageForExcel(await imageToDataUri(pattern.thumb)))));
+    const imageData = await Promise.all(selectedEntries.map(async ({ pattern }) => dataUriToImageData(await cropImageForExcel(
+      await imageToDataUri(pattern.thumb),
+      1.33,
+      pattern.family === "混色套装系列",
+    ))));
     const blob = makeQuoteXlsx({ entries: selectedEntries, quoteNo, dateDisplay, imageData });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
