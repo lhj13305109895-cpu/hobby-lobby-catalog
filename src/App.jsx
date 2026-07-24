@@ -75,11 +75,26 @@ const catalogue = [
   { no: 69, name: "混色套装 11", family: "混色套装系列", body: "混色可选" },
   { no: 70, name: "混色套装 12", family: "混色套装系列", body: "混色可选" },
   { no: 71, name: "混色套装 13", family: "混色套装系列", body: "混色可选" },
+  { no: 72, name: "蓝叶咖啡花", nameEn: "Blue Leaf Coffee Floral", family: "阿拉伯茶饮系列", body: "白色壶身", image: "/assets/new-pattern-72.jpg" },
+  { no: 73, name: "黑叶奶茶花", nameEn: "Black Leaf Milk Tea Floral", family: "阿拉伯茶饮系列", body: "白色壶身", image: "/assets/new-pattern-73.jpg" },
+  { no: 74, name: "红叶茶花", nameEn: "Red Leaf Tea Floral", family: "阿拉伯茶饮系列", body: "白色壶身", image: "/assets/new-pattern-74.jpg" },
+  { no: 75, name: "阿拉伯茶饮混色套装", nameEn: "Arabic Beverage Mixed Set", family: "混色套装系列", body: "混色可选", image: "/assets/new-pattern-75.jpg" },
+  { no: 76, name: "金月华灯", nameEn: "Golden Crescent Lanterns", family: "斋月祝福系列", body: "白色壶身", image: "/assets/new-pattern-76.png" },
+  { no: 77, name: "花月清真寺", nameEn: "Floral Moon Mosque", family: "斋月祝福系列", body: "白色壶身", image: "/assets/new-pattern-77.png" },
+  { no: 78, name: "蜂鸟花野", nameEn: "Hummingbird Meadow", family: "花鸟雅集系列", body: "白色壶身", image: "/assets/new-pattern-78.png" },
+  { no: 79, name: "星月彩灯", nameEn: "Starlit Ramadan Lantern", family: "斋月祝福系列", body: "白色壶身", image: "/assets/new-pattern-79.png" },
+  { no: 80, name: "秋果栖鸟", nameEn: "Autumn Fruit Songbird", family: "花鸟雅集系列", body: "白色壶身", image: "/assets/new-pattern-80.png" },
+  { no: 81, name: "花鸟雅集混色套装", nameEn: "Bird & Bloom Mixed Set", family: "混色套装系列", body: "混色可选", image: "/assets/new-pattern-81.png" },
+  { no: 82, name: "斋月祝福混色套装", nameEn: "Ramadan Blessings Mixed Set", family: "混色套装系列", body: "混色可选", image: "/assets/new-pattern-82.png" },
+  { no: 83, name: "玫瑰蜂鸟", nameEn: "Rose Garden Hummingbirds", family: "花鸟雅集系列", body: "白色壶身", image: "/assets/new-pattern-83.png" },
+  { no: 84, name: "复古蔷薇双鸟", nameEn: "Vintage Rose Aviary", family: "花鸟雅集系列", body: "白色壶身", image: "/assets/new-pattern-84.png" },
 ].map((item) => ({
   ...item,
   id: `pattern-${String(item.no).padStart(2, "0")}`,
-  image: `/assets/today-pattern-${String(item.no).padStart(2, "0")}.jpg`,
-  thumb: `/assets/today-thumb-${String(item.no).padStart(2, "0")}.jpg`,
+  image: item.image || `/assets/today-pattern-${String(item.no).padStart(2, "0")}.jpg`,
+  thumb: item.thumb || (item.image
+    ? item.image.replace("new-pattern-", "new-thumb-").replace(/\.(png|jpg)$/i, ".jpg")
+    : `/assets/today-thumb-${String(item.no).padStart(2, "0")}.jpg`),
 }));
 
 const filters = ["全部花色", "白色壶身", "316不锈钢", "混色套装"];
@@ -147,67 +162,65 @@ async function cropImageForExcel(dataUri, targetAspect = 1.33) {
     img.onerror = reject;
     img.src = dataUri;
   });
-  const sourceCanvas = document.createElement("canvas");
-  sourceCanvas.width = image.naturalWidth;
-  sourceCanvas.height = image.naturalHeight;
-  const sourceContext = sourceCanvas.getContext("2d", { willReadFrequently: true });
-  sourceContext.drawImage(image, 0, 0);
-  const { data, width, height } = sourceContext.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
-  let minX = width;
-  let minY = height;
-  let maxX = 0;
-  let maxY = 0;
-
-  for (let y = 0; y < height; y += 2) {
-    for (let x = 0; x < width; x += 2) {
-      const offset = (y * width + x) * 4;
-      const red = data[offset];
-      const green = data[offset + 1];
-      const blue = data[offset + 2];
-      const alpha = data[offset + 3];
-      const isBackground = alpha < 18 || (red > 242 && green > 242 && blue > 242);
-      if (!isBackground) {
-        minX = Math.min(minX, x);
-        minY = Math.min(minY, y);
-        maxX = Math.max(maxX, x);
-        maxY = Math.max(maxY, y);
-      }
-    }
-  }
-
-  if (minX >= maxX || minY >= maxY) return dataUri;
-
-  const paddingX = Math.round((maxX - minX) * 0.05);
-  const paddingY = Math.round((maxY - minY) * 0.08);
-  minX = Math.max(0, minX - paddingX);
-  minY = Math.max(0, minY - paddingY);
-  maxX = Math.min(width, maxX + paddingX);
-  maxY = Math.min(height, maxY + paddingY);
-
-  let cropWidth = maxX - minX;
-  let cropHeight = maxY - minY;
-  const currentAspect = cropWidth / cropHeight;
-  if (currentAspect < targetAspect) {
-    const newWidth = cropHeight * targetAspect;
-    const grow = (newWidth - cropWidth) / 2;
-    minX = Math.max(0, Math.round(minX - grow));
-    maxX = Math.min(width, Math.round(maxX + grow));
-  } else if (currentAspect > targetAspect) {
-    const newHeight = cropWidth / targetAspect;
-    const grow = (newHeight - cropHeight) / 2;
-    minY = Math.max(0, Math.round(minY - grow));
-    maxY = Math.min(height, Math.round(maxY + grow));
-  }
-
-  cropWidth = maxX - minX;
-  cropHeight = maxY - minY;
   const outputCanvas = document.createElement("canvas");
   outputCanvas.width = 720;
   outputCanvas.height = Math.round(outputCanvas.width / targetAspect);
   const outputContext = outputCanvas.getContext("2d");
   outputContext.fillStyle = "#ffffff";
   outputContext.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
-  outputContext.drawImage(image, minX, minY, cropWidth, cropHeight, 0, 0, outputCanvas.width, outputCanvas.height);
+
+  const sourceAspect = image.naturalWidth / image.naturalHeight;
+  if (sourceAspect > 1.18) {
+    outputContext.drawImage(image, 0, 0, outputCanvas.width, outputCanvas.height);
+  } else {
+    const sourceCanvas = document.createElement("canvas");
+    sourceCanvas.width = image.naturalWidth;
+    sourceCanvas.height = image.naturalHeight;
+    const sourceContext = sourceCanvas.getContext("2d", { willReadFrequently: true });
+    sourceContext.drawImage(image, 0, 0);
+    const pixels = sourceContext.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
+    let minX = pixels.width;
+    let minY = pixels.height;
+    let maxX = 0;
+    let maxY = 0;
+
+    for (let y = 0; y < pixels.height; y += 2) {
+      for (let x = 0; x < pixels.width; x += 2) {
+        const offset = (y * pixels.width + x) * 4;
+        const red = pixels.data[offset];
+        const green = pixels.data[offset + 1];
+        const blue = pixels.data[offset + 2];
+        const alpha = pixels.data[offset + 3];
+        if (alpha > 20 && (red < 247 || green < 247 || blue < 247)) {
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x);
+          maxY = Math.max(maxY, y);
+        }
+      }
+    }
+
+    if (minX >= maxX || minY >= maxY) {
+      minX = 0;
+      minY = 0;
+      maxX = image.naturalWidth;
+      maxY = image.naturalHeight;
+    }
+    const paddingX = (maxX - minX) * 0.08;
+    const paddingY = (maxY - minY) * 0.08;
+    minX = Math.max(0, minX - paddingX);
+    minY = Math.max(0, minY - paddingY);
+    maxX = Math.min(image.naturalWidth, maxX + paddingX);
+    maxY = Math.min(image.naturalHeight, maxY + paddingY);
+    const cropWidth = maxX - minX;
+    const cropHeight = maxY - minY;
+    const scale = Math.min(outputCanvas.width / cropWidth, outputCanvas.height / cropHeight);
+    const drawWidth = cropWidth * scale;
+    const drawHeight = cropHeight * scale;
+    const drawX = (outputCanvas.width - drawWidth) / 2;
+    const drawY = (outputCanvas.height - drawHeight) / 2;
+    outputContext.drawImage(image, minX, minY, cropWidth, cropHeight, drawX, drawY, drawWidth, drawHeight);
+  }
   return outputCanvas.toDataURL("image/jpeg", 0.9);
 }
 
@@ -307,9 +320,9 @@ function makeQuoteXlsx({ entries, quoteNo, dateDisplay, imageData }) {
   const totalRow = dataStartRow + entries.length;
   const tailRow = totalRow + 1;
   const bankRow = totalRow + 2;
-  const imageInset = 47625;
-  const imageCellWidth = 1619250;
-  const imageCellHeight = 1238250;
+  const imageInset = 19050;
+  const imageCellWidth = 1676400;
+  const imageCellHeight = 1295400;
   const rowXml = [];
   const merges = ["A1:K1", "A2:K2", "B3:D3", "F3:H3", "J3:K3", "B4:D4", "F4:H4", "J4:K4", "B5:K5", "B6:K6", "B7:F7", "H7:K7"];
 
@@ -348,7 +361,7 @@ function makeQuoteXlsx({ entries, quoteNo, dateDisplay, imageData }) {
   const drawingAnchors = imageData.map((image, index) => {
     const rowZero = dataStartRow + index - 1;
     const cropAttributes = imageCropAttributes(image);
-    return `<xdr:oneCellAnchor><xdr:from><xdr:col>1</xdr:col><xdr:colOff>${imageInset}</xdr:colOff><xdr:row>${rowZero}</xdr:row><xdr:rowOff>${imageInset}</xdr:rowOff></xdr:from><xdr:ext cx="${imageCellWidth}" cy="${imageCellHeight}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${index + 2}" name="Product ${index + 1}"/><xdr:cNvPicPr preferRelativeResize="0"/></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId${index + 1}"/><a:srcRect${cropAttributes}/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`;
+    return `<xdr:oneCellAnchor><xdr:from><xdr:col>1</xdr:col><xdr:colOff>${imageInset}</xdr:colOff><xdr:row>${rowZero}</xdr:row><xdr:rowOff>${imageInset}</xdr:rowOff></xdr:from><xdr:ext cx="${imageCellWidth}" cy="${imageCellHeight}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${index + 2}" name="Product ${index + 1}" descr="Model 319 product image"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1" noChangeArrowheads="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId${index + 1}" cstate="print"/><a:srcRect${cropAttributes}/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr bwMode="auto"><a:xfrm><a:off x="0" y="0"/><a:ext cx="${imageCellWidth}" cy="${imageCellHeight}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:ln><a:noFill/></a:ln></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`;
   }).join("");
 
   const worksheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetViews><sheetView workbookViewId="0" showGridLines="1"/></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols><col min="1" max="1" width="23.64" customWidth="1"/><col min="2" max="2" width="25.88" customWidth="1"/><col min="3" max="3" width="12.54" customWidth="1"/><col min="4" max="4" width="11.2" customWidth="1"/><col min="5" max="5" width="11.1" customWidth="1"/><col min="6" max="6" width="11.1" customWidth="1"/><col min="7" max="7" width="15.75" customWidth="1"/><col min="8" max="8" width="11.1" customWidth="1"/><col min="9" max="9" width="10.8" customWidth="1"/><col min="10" max="10" width="9" customWidth="1"/><col min="11" max="11" width="7.86" customWidth="1"/></cols><sheetData>${rowXml.join("")}</sheetData><mergeCells count="${merges.length}">${merges.map((ref) => `<mergeCell ref="${ref}"/>`).join("")}</mergeCells><drawing r:id="rId1"/><pageMargins left="0.25" right="0.25" top="0.4" bottom="0.4" header="0.3" footer="0.3"/></worksheet>`;
@@ -386,11 +399,11 @@ const copy = {
     heroLead: "用于给客人快速查看全部花色：按系列分类，单击图片可放大查看，1.6L / 2.0L 价格直接标清。",
     browseAll: "浏览全部花色",
     viewSpecs: "查看型号价格",
-    heroNotePatterns: "70 个今日花色，已按系列分类",
+    heroNotePatterns: "83 个当前花色，已按系列分类",
     heroNoteModel: "型号319 · 1.6L ¥29 RMB / 2.0L ¥31 RMB",
     stripModel: "型号",
     stripPatterns: "花色",
-    stripPatternCount: "70款",
+    stripPatternCount: "83款",
     galleryEyebrow: "完整花色库",
     galleryTitle: "按系列查看花色",
     galleryText: "每张卡片都是今天提供的新图。单击图片直接放大查看，下面可选择容量和箱数。",
@@ -430,6 +443,9 @@ const copy = {
       "中东文字系列": "中东文字系列",
       "素色光板系列": "素色光板系列",
       "混色套装系列": "混色套装系列",
+      "阿拉伯茶饮系列": "阿拉伯茶饮系列",
+      "斋月祝福系列": "斋月祝福系列",
+      "花鸟雅集系列": "花鸟雅集系列",
     },
     bodyLabels: {
       "白色壶身": "白色壶身",
@@ -438,7 +454,7 @@ const copy = {
     },
     benefits: [
       { icon: ShieldCheck, title: "316内胆", text: "型号319，316不锈钢内胆，适合日常保温使用。" },
-      { icon: PaintBrush, title: "全花色目录", text: "按系列查看 70 个今日花色，方便给客人快速选款。" },
+      { icon: PaintBrush, title: "全花色目录", text: "按系列查看 83 个当前花色，方便给客人快速选款。" },
       { icon: MagnifyingGlassPlus, title: "单击放大", text: "单击任意图片即可看大图，滚轮可继续放大查看细节。" },
       { icon: Heart, title: "两种容量", text: "1.6L ¥29 RMB，2.0L ¥31 RMB，价格清楚直接。" },
     ],
@@ -454,11 +470,11 @@ const copy = {
     heroLead: "A premium catalogue for buyers to browse every available pattern by series. Click any image to enlarge, then select 1.6L or 2.0L directly.",
     browseAll: "Browse Patterns",
     viewSpecs: "View Prices",
-    heroNotePatterns: "70 current patterns grouped by series",
+    heroNotePatterns: "83 current patterns grouped by series",
     heroNoteModel: "Model 319 · 1.6L ¥29 RMB / 2.0L ¥31 RMB",
     stripModel: "Model",
     stripPatterns: "Patterns",
-    stripPatternCount: "70 styles",
+    stripPatternCount: "83 styles",
     galleryEyebrow: "Complete Pattern Library",
     galleryTitle: "Browse by series",
     galleryText: "All cards use the latest product images. Click an image to enlarge it, then select capacity and carton quantity below.",
@@ -498,6 +514,9 @@ const copy = {
       "中东文字系列": "Middle Eastern Lettering Series",
       "素色光板系列": "Plain Body Series",
       "混色套装系列": "Mixed Set Series",
+      "阿拉伯茶饮系列": "Arabic Tea & Coffee Series",
+      "斋月祝福系列": "Ramadan Blessings Series",
+      "花鸟雅集系列": "Bird & Bloom Series",
     },
     bodyLabels: {
       "白色壶身": "White body",
@@ -506,7 +525,7 @@ const copy = {
     },
     benefits: [
       { icon: ShieldCheck, title: "316 inner liner", text: "Model 319 uses a 316 stainless-steel inner liner for everyday thermal use." },
-      { icon: PaintBrush, title: "Full pattern catalogue", text: "70 current patterns are grouped by series for faster buyer selection." },
+      { icon: PaintBrush, title: "Full pattern catalogue", text: "83 current patterns are grouped by series for faster buyer selection." },
       { icon: MagnifyingGlassPlus, title: "Click to enlarge", text: "Click any image for a larger preview, then use the mouse wheel to zoom in." },
       { icon: Heart, title: "Two capacities", text: "1.6L ¥29 RMB and 2.0L ¥31 RMB, with clear catalogue pricing." },
     ],
@@ -555,6 +574,7 @@ export function App() {
   const displayBody = (value) => t.bodyLabels[value] || value;
   const displayPatternName = (pattern) => {
     if (language === "zh") return pattern.name;
+    if (pattern.nameEn) return pattern.nameEn;
     if (pattern.family === "混色套装系列") return `Mixed Set ${String(pattern.no - 58).padStart(2, "0")}`;
     if (pattern.no === 43) return "Black Lid Stainless Plain Body";
     if (pattern.no === 58) return "White Plain Body";
@@ -749,7 +769,7 @@ export function App() {
                   const catalogueCode = `319-${String(pattern.no).padStart(2, "0")}`;
                   return (
                     <article className={`pattern-card ${active ? "selected" : ""}`} key={pattern.id}>
-                      <button className="pattern-image-wrap" type="button" onClick={() => openExpanded(pattern)} aria-label={`${displayPatternName(pattern)}，${displayFamily(pattern.family)}，${t.zoomHint}。`}><img src={pattern.thumb} alt="" />{active && <span className="check-mark"><Check weight="bold" /></span>}<span className="zoom-hint"><MagnifyingGlassPlus weight="bold" /> {t.zoomHint}</span></button>
+                      <button className="pattern-image-wrap" type="button" onClick={() => openExpanded(pattern)} aria-label={`${displayPatternName(pattern)}，${displayFamily(pattern.family)}，${t.zoomHint}。`}><img src={pattern.thumb} alt="" loading="lazy" decoding="async" />{active && <span className="check-mark"><Check weight="bold" /></span>}<span className="zoom-hint"><MagnifyingGlassPlus weight="bold" /> {t.zoomHint}</span></button>
                       <span className="pattern-code">MODEL 319 · {catalogueCode}</span><span className="pattern-name">{displayPatternName(pattern)}</span><span className="pattern-family">{displayBody(pattern.body)} · 1.6L ¥29 · 2.0L ¥31</span>
                       <div className="capacity-picker" aria-label={`${pattern.name} 容量选择`}>
                         {capacities.map((capacity) => (
