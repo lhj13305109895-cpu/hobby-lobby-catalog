@@ -9,8 +9,11 @@ const index = path.join(dist, "client", "index.html");
 const worker = path.join(root, "worker", "index.js");
 const hosting = path.join(root, ".openai", "hosting.json");
 
-for (const file of [index, worker, hosting]) {
-  if (!existsSync(file)) throw new Error("Missing Sites build input: " + file);
+if (!existsSync(index)) throw new Error("Missing client build output: " + index);
+
+if (!existsSync(worker) || !existsSync(hosting)) {
+  console.log("Skipped Sites packaging because worker/index.js or .openai/hosting.json is not configured.");
+  process.exit(0);
 }
 
 mkdirSync(path.join(dist, "server"), { recursive: true });

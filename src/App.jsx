@@ -88,14 +88,18 @@ const catalogue = [
   { no: 82, name: "斋月祝福混色套装", nameEn: "Ramadan Blessings Mixed Set", family: "混色套装系列", body: "混色可选", image: "/assets/new-pattern-82.png" },
   { no: 83, name: "玫瑰蜂鸟", nameEn: "Rose Garden Hummingbirds", family: "花鸟雅集系列", body: "白色壶身", image: "/assets/new-pattern-83.png" },
   { no: 84, name: "复古蔷薇双鸟", nameEn: "Vintage Rose Aviary", family: "花鸟雅集系列", body: "白色壶身", image: "/assets/new-pattern-84.png" },
-].map((item) => ({
-  ...item,
-  id: `pattern-${String(item.no).padStart(2, "0")}`,
-  image: item.image || `/assets/today-pattern-${String(item.no).padStart(2, "0")}.jpg`,
-  thumb: item.thumb || (item.image
-    ? item.image.replace("new-pattern-", "new-thumb-").replace(/\.(png|jpg)$/i, ".jpg")
-    : `/assets/today-thumb-${String(item.no).padStart(2, "0")}.jpg`),
-}));
+].map((item) => {
+  const image = item.image || `/assets/today-pattern-${String(item.no).padStart(2, "0")}.jpg`;
+  return {
+    ...item,
+    id: `pattern-${String(item.no).padStart(2, "0")}`,
+    image,
+    displayImage: item.displayImage || image.replace(/\.png$/i, "-display.jpg"),
+    thumb: item.thumb || (item.image
+      ? item.image.replace("new-pattern-", "new-thumb-").replace(/\.(png|jpg)$/i, ".jpg")
+      : `/assets/today-thumb-${String(item.no).padStart(2, "0")}.jpg`),
+  };
+});
 
 const filters = ["全部花色", "白色壶身", "316不锈钢", "混色套装"];
 
@@ -280,18 +284,6 @@ async function cropImageForExcel(dataUri, targetAspect = 1.33, isMixedSet = fals
   return outputCanvas.toDataURL("image/jpeg", 0.9);
 }
 
-function imageCropAttributes(image, targetAspect = 1.33) {
-  if (!image?.width || !image?.height) return "";
-  const imageAspect = image.width / image.height;
-  if (Math.abs(imageAspect - targetAspect) < 0.02) return "";
-  if (imageAspect > targetAspect) {
-    const crop = Math.round(((1 - targetAspect / imageAspect) / 2) * 100000);
-    return ` l="${crop}" r="${crop}"`;
-  }
-  const crop = Math.round(((1 - imageAspect / targetAspect) / 2) * 100000);
-  return ` t="${crop}" b="${crop}"`;
-}
-
 function writeUint16(target, offset, value) {
   target[offset] = value & 0xff;
   target[offset + 1] = (value >>> 8) & 0xff;
@@ -413,11 +405,13 @@ function makeQuoteXlsx({ entries, quoteNo, dateDisplay, imageData }) {
 
   const drawingAnchors = imageData.map((image, index) => {
     const rowZero = dataStartRow + index - 1;
-    const cropAttributes = imageCropAttributes(image);
-    return `<xdr:twoCellAnchor editAs="twoCell"><xdr:from><xdr:col>1</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${rowZero}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:to><xdr:col>2</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${rowZero + 1}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${index + 2}" name="Product ${index + 1}" descr="Model 319 product image"/><xdr:cNvPicPr><a:picLocks noChangeAspect="0" noChangeArrowheads="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId${index + 1}" cstate="print"/><a:srcRect${cropAttributes}/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr bwMode="auto"><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:ln w="12700"><a:solidFill><a:srgbClr val="000000"/></a:solidFill><a:prstDash val="solid"/></a:ln></xdr:spPr></xdr:pic><xdr:clientData/></xdr:twoCellAnchor>`;
+    const insetEmu = 4 * 9525;
+    const widthEmu = 174 * 9525;
+    const heightEmu = 131 * 9525;
+    return `<xdr:oneCellAnchor><xdr:from><xdr:col>1</xdr:col><xdr:colOff>${insetEmu}</xdr:colOff><xdr:row>${rowZero}</xdr:row><xdr:rowOff>${insetEmu}</xdr:rowOff></xdr:from><xdr:ext cx="${widthEmu}" cy="${heightEmu}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${index + 1}" name="Product ${index + 1}" descr="Model 319 product image"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId${index + 1}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`;
   }).join("");
 
-  const worksheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetViews><sheetView workbookViewId="0" showGridLines="1"/></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols><col min="1" max="1" width="23.64" customWidth="1"/><col min="2" max="2" width="25.88" customWidth="1"/><col min="3" max="3" width="12.54" customWidth="1"/><col min="4" max="4" width="11.2" customWidth="1"/><col min="5" max="5" width="11.1" customWidth="1"/><col min="6" max="6" width="11.1" customWidth="1"/><col min="7" max="7" width="15.75" customWidth="1"/><col min="8" max="8" width="11.1" customWidth="1"/><col min="9" max="9" width="10.8" customWidth="1"/><col min="10" max="10" width="9" customWidth="1"/><col min="11" max="11" width="7.86" customWidth="1"/></cols><sheetData>${rowXml.join("")}</sheetData><mergeCells count="${merges.length}">${merges.map((ref) => `<mergeCell ref="${ref}"/>`).join("")}</mergeCells><drawing r:id="rId1"/><pageMargins left="0.25" right="0.25" top="0.4" bottom="0.4" header="0.3" footer="0.3"/></worksheet>`;
+  const worksheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetViews><sheetView workbookViewId="0" showGridLines="1"/></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols><col min="1" max="1" width="23.64" customWidth="1"/><col min="2" max="2" width="25.88" customWidth="1"/><col min="3" max="3" width="12.54" customWidth="1"/><col min="4" max="4" width="11.2" customWidth="1"/><col min="5" max="5" width="11.1" customWidth="1"/><col min="6" max="6" width="11.1" customWidth="1"/><col min="7" max="7" width="15.75" customWidth="1"/><col min="8" max="8" width="11.1" customWidth="1"/><col min="9" max="9" width="10.8" customWidth="1"/><col min="10" max="10" width="9" customWidth="1"/><col min="11" max="11" width="7.86" customWidth="1"/></cols><sheetData>${rowXml.join("")}</sheetData><mergeCells count="${merges.length}">${merges.map((ref) => `<mergeCell ref="${ref}"/>`).join("")}</mergeCells><pageMargins left="0.25" right="0.25" top="0.4" bottom="0.4" header="0.3" footer="0.3"/><drawing r:id="rId1"/></worksheet>`;
   const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="¥ #,##0.00"/></numFmts><fonts count="3"><font><sz val="11"/><name val="Arial"/></font><font><b/><sz val="11"/><name val="Arial"/></font><font><b/><u/><sz val="16"/><name val="Arial"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9EEF2"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="3"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FF000000"/></left><right style="thin"><color rgb="FF000000"/></right><top style="thin"><color rgb="FF000000"/></top><bottom style="thin"><color rgb="FF000000"/></bottom><diagonal/></border><border><left style="thin"><color rgb="FFE6E6E6"/></left><right style="thin"><color rgb="FFE6E6E6"/></right><top style="thin"><color rgb="FFE6E6E6"/></top><bottom style="thin"><color rgb="FFE6E6E6"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="9"><xf numFmtId="0" fontId="1" fillId="0" borderId="2" xfId="0" applyFont="1" applyBorder="1"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyFill="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="164" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1"><alignment vertical="center" wrapText="1"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
 
   const drawing = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">${drawingAnchors}</xdr:wsDr>`;
@@ -592,6 +586,7 @@ export function App() {
   const [selectedCapacities, setSelectedCapacities] = useState({});
   const [selectedQuantities, setSelectedQuantities] = useState({});
   const [exportStatus, setExportStatus] = useState("");
+  const [cartOpen, setCartOpen] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [zoom, setZoom] = useState(1);
   const t = copy[language];
@@ -636,7 +631,10 @@ export function App() {
 
   useEffect(() => {
     function closeWithEscape(event) {
-      if (event.key === "Escape") closeExpanded();
+      if (event.key === "Escape") {
+        closeExpanded();
+        setCartOpen(false);
+      }
     }
     window.addEventListener("keydown", closeWithEscape);
     return () => window.removeEventListener("keydown", closeWithEscape);
@@ -768,7 +766,7 @@ export function App() {
   return (
     <div className="site-shell" lang={language}>
       <header className="topbar">
-        <a className="brand-link" href="#top" aria-label="Hobby Lobby home"><img src="/assets/brand-logo.png" alt="Hobby Lobby Ask for More" /></a>
+        <a className="brand-link" href="#top" aria-label="Hobby Lobby home"><img src="/assets/brand-logo.png" alt="Hobby Lobby Ask for More" width="256" height="256" decoding="async" /></a>
         <nav aria-label={language === "zh" ? "主导航" : "Main navigation"}>
           <a href="#gallery">{t.navGallery}</a><a href="#details">{t.navSteel}</a><a href="#specifications">{t.navSpecs}</a>
         </nav>
@@ -795,7 +793,7 @@ export function App() {
               <span><ShieldCheck weight="regular" /> {t.heroNoteModel}</span>
             </div>
           </div>
-          <div className="hero-media"><img src="/assets/today-pattern-02.jpg" alt={language === "zh" ? "316不锈钢保温壶花色展示" : "316 stainless steel thermal pot pattern display"} /></div>
+          <div className="hero-media"><img src="/assets/today-pattern-02.jpg" alt={language === "zh" ? "316不锈钢保温壶花色展示" : "316 stainless steel thermal pot pattern display"} width="1200" height="1200" loading="eager" decoding="async" fetchPriority="high" /></div>
         </section>
 
         <div className="catalog-strip" aria-label={language === "zh" ? "目录摘要" : "Catalogue summary"}><span><small>{t.stripModel}</small><strong>319</strong></span><span><small>1.6L</small><strong>¥29 RMB</strong></span><span><small>2.0L</small><strong>¥31 RMB</strong></span><span><small>{t.stripPatterns}</small><strong>{t.stripPatternCount}</strong></span></div>
@@ -826,7 +824,7 @@ export function App() {
                   const catalogueCode = `319-${String(pattern.no).padStart(2, "0")}`;
                   return (
                     <article className={`pattern-card ${active ? "selected" : ""}`} key={pattern.id}>
-                      <button className="pattern-image-wrap" type="button" onClick={() => openExpanded(pattern)} aria-label={`${displayPatternName(pattern)}，${displayFamily(pattern.family)}，${t.zoomHint}。`}><img src={pattern.thumb} alt="" loading="lazy" decoding="async" />{active && <span className="check-mark"><Check weight="bold" /></span>}<span className="zoom-hint"><MagnifyingGlassPlus weight="bold" /> {t.zoomHint}</span></button>
+                      <button className="pattern-image-wrap" type="button" onClick={() => openExpanded(pattern)} aria-label={`${displayPatternName(pattern)}，${displayFamily(pattern.family)}，${t.zoomHint}。`}><img src={pattern.thumb} alt="" width="640" height="640" loading="lazy" decoding="async" fetchPriority="low" />{active && <span className="check-mark"><Check weight="bold" /></span>}<span className="zoom-hint"><MagnifyingGlassPlus weight="bold" /> {t.zoomHint}</span></button>
                       <span className="pattern-code">MODEL 319 · {catalogueCode}</span><span className="pattern-name">{displayPatternName(pattern)}</span><span className="pattern-family">{displayBody(pattern.body)} · 1.6L ¥29 · 2.0L ¥31</span>
                       <div className="capacity-picker" aria-label={`${pattern.name} 容量选择`}>
                         {capacities.map((capacity) => (
@@ -851,56 +849,67 @@ export function App() {
         </section>
 
         <section className="steel-band" id="details">
-          <img src="/assets/today-pattern-09.jpg" alt={language === "zh" ? "316不锈钢黑盖粉牡丹花色保温壶" : "316 stainless steel black-lid floral thermal pot"} />
+          <img src="/assets/today-pattern-09.jpg" alt={language === "zh" ? "316不锈钢黑盖粉牡丹花色保温壶" : "316 stainless steel black-lid floral thermal pot"} width="1200" height="1200" loading="lazy" decoding="async" />
           <div><p className="eyebrow">{t.steelEyebrow}</p><h2>{t.steelTitle}</h2><p>{t.steelText}</p><a href="#gallery" onClick={() => chooseFilter("316不锈钢")}>{t.steelLink} <ArrowRight weight="bold" /></a></div>
         </section>
 
         <section className="benefit-row section" aria-label={language === "zh" ? "产品卖点" : "Product benefits"}>{t.benefits.map(({ icon: Icon, title, text }) => <article key={title}><Icon weight="regular" /><h3>{title}</h3><p>{text}</p></article>)}</section>
       </main>
 
-      <aside className="selection-cart" aria-label="已选花色">
-        <div className="selection-cart-head">
-          <span><ShoppingCart weight="bold" /> 已选花色</span>
-          <strong>{totalCartons}</strong>
-        </div>
-        {selectedEntries.length === 0 ? (
-          <p className="cart-empty">点击花色卡片里的容量按钮，这里会自动汇总客户选择的花色和容量。</p>
-        ) : (
-          <>
-            <div className="cart-list">
-              {selectedEntries.map(({ pattern, capacity, quantity }) => (
-                <div className="cart-item" key={`${pattern.id}-${capacity.id}`}>
-                  <img src={pattern.thumb} alt="" />
-                  <div>
-                    <strong>{pattern.name}</strong>
-                    <small>319-{String(pattern.no).padStart(2, "0")} · {capacity.id} · {capacity.price} · {capacity.packing}</small>
-                    <div className="qty-control">
-                      <span>箱数</span>
-                      <button type="button" onClick={(event) => { event.stopPropagation(); updateQuantity(pattern.id, capacity.id, quantity - 1); }} aria-label={`${pattern.name} ${capacity.id} 减少一箱`}>−</button>
-                      <input value={quantity} inputMode="numeric" min="1" max="999" onChange={(event) => updateQuantity(pattern.id, capacity.id, event.target.value)} aria-label={`${pattern.name} ${capacity.id} 箱数`} />
-                      <button type="button" onClick={(event) => { event.stopPropagation(); updateQuantity(pattern.id, capacity.id, quantity + 1); }} aria-label={`${pattern.name} ${capacity.id} 增加一箱`}>+</button>
+      <aside className={`selection-cart ${cartOpen ? "is-open" : "is-collapsed"}`} aria-label="已选花色">
+        {!cartOpen ? (
+          <button className="cart-fab" type="button" onClick={() => setCartOpen(true)} aria-expanded="false" aria-label={`展开购物车，当前共 ${totalCartons} 箱`}>
+            <ShoppingCart weight="bold" />
+            <span>购物车</span>
+            <strong aria-live="polite">{totalCartons}</strong>
+          </button>
+        ) : <>
+          <div className="selection-cart-head">
+            <span><ShoppingCart weight="bold" /> 已选花色</span>
+            <div className="cart-head-actions">
+              <strong aria-live="polite">{totalCartons}</strong>
+              <button className="cart-collapse" type="button" onClick={() => setCartOpen(false)} aria-expanded="true" aria-label="收起购物车"><X weight="bold" /></button>
+            </div>
+          </div>
+          {selectedEntries.length === 0 ? (
+            <p className="cart-empty">点击花色卡片里的容量按钮，这里会自动汇总客户选择的花色和容量。</p>
+          ) : (
+            <>
+              <div className="cart-list">
+                {selectedEntries.map(({ pattern, capacity, quantity }) => (
+                  <div className="cart-item" key={`${pattern.id}-${capacity.id}`}>
+                    <img src={pattern.thumb} alt="" width="640" height="640" loading="lazy" decoding="async" />
+                    <div>
+                      <strong>{pattern.name}</strong>
+                      <small>319-{String(pattern.no).padStart(2, "0")} · {capacity.id} · {capacity.price} · {capacity.packing}</small>
+                      <div className="qty-control">
+                        <span>箱数</span>
+                        <button type="button" onClick={(event) => { event.stopPropagation(); updateQuantity(pattern.id, capacity.id, quantity - 1); }} aria-label={`${pattern.name} ${capacity.id} 减少一箱`}>−</button>
+                        <input value={quantity} inputMode="numeric" min="1" max="999" onChange={(event) => updateQuantity(pattern.id, capacity.id, event.target.value)} aria-label={`${pattern.name} ${capacity.id} 箱数`} />
+                        <button type="button" onClick={(event) => { event.stopPropagation(); updateQuantity(pattern.id, capacity.id, quantity + 1); }} aria-label={`${pattern.name} ${capacity.id} 增加一箱`}>+</button>
+                      </div>
                     </div>
+                    <button className="cart-remove" type="button" onClick={() => removeSelectedCapacity(pattern.id, capacity.id)} aria-label={`移出 ${pattern.name} ${capacity.id}`}><Trash weight="bold" /></button>
                   </div>
-                  <button className="cart-remove" type="button" onClick={() => removeSelectedCapacity(pattern.id, capacity.id)} aria-label={`移出 ${pattern.name} ${capacity.id}`}><Trash weight="bold" /></button>
-                </div>
-              ))}
-            </div>
-            <div className="cart-actions">
-              <button className="cart-export" type="button" onClick={exportSelectedDocument}><DownloadSimple weight="bold" /> 导出报价表</button>
-              <button className="cart-clear" type="button" onClick={() => { setSelectedCapacities({}); setSelectedQuantities({}); setExportStatus(""); }}>清空选款</button>
-            </div>
-            {exportStatus && <p className="export-status">{exportStatus}</p>}
-          </>
-        )}
+                ))}
+              </div>
+              <div className="cart-actions">
+                <button className="cart-export" type="button" onClick={exportSelectedDocument}><DownloadSimple weight="bold" /> 导出报价表</button>
+                <button className="cart-clear" type="button" onClick={() => { setSelectedCapacities({}); setSelectedQuantities({}); setExportStatus(""); }}>清空选款</button>
+              </div>
+              {exportStatus && <p className="export-status">{exportStatus}</p>}
+            </>
+          )}
+        </>}
       </aside>
 
-      <footer><img src="/assets/brand-logo.png" alt="" /><p>{t.footerText}</p><a href="#top">{language === "zh" ? "回到顶部" : "Back to top"} <ArrowRight weight="bold" /></a></footer>
+      <footer><img src="/assets/brand-logo.png" alt="" width="256" height="256" loading="lazy" decoding="async" /><p>{t.footerText}</p><a href="#top">{language === "zh" ? "回到顶部" : "Back to top"} <ArrowRight weight="bold" /></a></footer>
 
       {expanded && <div className="lightbox-backdrop" role="presentation" onClick={closeExpanded}>
         <div className="lightbox-panel" role="dialog" aria-modal="true" aria-label={`${displayPatternName(expanded)} 大图`} onClick={(event) => event.stopPropagation()} onWheel={zoomLightbox}>
           <button className="lightbox-close" type="button" onClick={closeExpanded} aria-label="关闭大图"><X weight="bold" /></button>
           <span className="zoom-meter">{Math.round(zoom * 100)}% · {language === "zh" ? "滚轮缩放" : "Wheel to zoom"}</span>
-          <div className="lightbox-image"><img src={expanded.image} alt={`${displayPatternName(expanded)} 大图`} style={{ transform: `scale(${zoom})` }} /></div>
+          <div className="lightbox-image"><img src={expanded.displayImage} alt={`${displayPatternName(expanded)} 大图`} decoding="async" fetchPriority="high" style={{ transform: `scale(${zoom})` }} /></div>
           <div className="lightbox-info">
             <div className="lightbox-pack">
               <span>PRICE / PACKING</span>
