@@ -159,13 +159,26 @@ async function dataUriToImageData(dataUri) {
   return { ...imageBytes, ...dimensions };
 }
 
-async function cropImageForExcel(dataUri, targetAspect = 1.33, isMixedSet = false) {
-  const image = await new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = dataUri;
+function loadCanvasImage(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = src;
   });
+}
+
+function drawContainedImage(context, image, x, y, width, height, padding = 0) {
+  const availableWidth = Math.max(1, width - padding * 2);
+  const availableHeight = Math.max(1, height - padding * 2);
+  const scale = Math.min(availableWidth / image.naturalWidth, availableHeight / image.naturalHeight);
+  const drawWidth = image.naturalWidth * scale;
+  const drawHeight = image.naturalHeight * scale;
+  context.drawImage(image, x + (width - drawWidth) / 2, y + (height - drawHeight) / 2, drawWidth, drawHeight);
+}
+
+async function prepareQuoteImage(dataUri, targetAspect = 1.33) {
+  const image = await loadCanvasImage(dataUri);
   const outputCanvas = document.createElement("canvas");
   outputCanvas.width = 720;
   outputCanvas.height = Math.round(outputCanvas.width / targetAspect);
@@ -173,115 +186,163 @@ async function cropImageForExcel(dataUri, targetAspect = 1.33, isMixedSet = fals
   outputContext.fillStyle = "#ffffff";
   outputContext.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
 
-  const sourceCanvas = document.createElement("canvas");
-  sourceCanvas.width = image.naturalWidth;
-  sourceCanvas.height = image.naturalHeight;
-  const sourceContext = sourceCanvas.getContext("2d", { willReadFrequently: true });
-  sourceContext.drawImage(image, 0, 0);
-  const pixels = sourceContext.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
+  drawContainedImage(outputContext, image, 0, 0, outputCanvas.width, outputCanvas.height, 8);
+  return outputCanvas.toDataURL("image/jpeg", 0.86);
+}
 
-  if (isMixedSet) {
-    // Scene/set images often contain a flat beige presentation band above and
-    // below the actual photograph. Find the first and last rows with real
-    // visual detail, then stretch that complete-width scene into the cell.
-    // Keeping the full width preserves the top-left logo.
-    const detailedRows = [];
-    for (let y = 0; y < pixels.height; y += 2) {
-      let minRed = 255;
-      let minGreen = 255;
-      let minBlue = 255;
-      let maxRed = 0;
-      let maxGreen = 0;
-      let maxBlue = 0;
-      for (let x = 0; x < pixels.width; x += 3) {
-        const offset = (y * pixels.width + x) * 4;
-        const alpha = pixels.data[offset + 3];
-        if (alpha < 20) continue;
-        const red = pixels.data[offset];
-        const green = pixels.data[offset + 1];
-        const blue = pixels.data[offset + 2];
-        minRed = Math.min(minRed, red);
-        minGreen = Math.min(minGreen, green);
-        minBlue = Math.min(minBlue, blue);
-        maxRed = Math.max(maxRed, red);
-        maxGreen = Math.max(maxGreen, green);
-        maxBlue = Math.max(maxBlue, blue);
-      }
-      if (maxRed - minRed > 34 || maxGreen - minGreen > 34 || maxBlue - minBlue > 34) detailedRows.push(y);
-    }
-    const sourceTop = detailedRows.length ? Math.max(0, detailedRows[0] - 2) : 0;
-    const sourceBottom = detailedRows.length ? Math.min(image.naturalHeight, detailedRows[detailedRows.length - 1] + 4) : image.naturalHeight;
-    outputContext.drawImage(
-      image,
-      0,
-      sourceTop,
-      image.naturalWidth,
-      Math.max(1, sourceBottom - sourceTop),
-      0,
-      0,
-      outputCanvas.width,
-      outputCanvas.height,
-    );
-  } else {
-    // Count foreground pixels per row/column instead of trusting the first
-    // non-white pixel. This ignores isolated JPEG noise around the white
-    // background and centers the visible product body itself.
-    const columnCounts = new Uint32Array(pixels.width);
-    const rowCounts = new Uint32Array(pixels.height);
-    for (let y = 0; y < pixels.height; y += 2) {
-      for (let x = 0; x < pixels.width; x += 2) {
-        const offset = (y * pixels.width + x) * 4;
-        const red = pixels.data[offset];
-        const green = pixels.data[offset + 1];
-        const blue = pixels.data[offset + 2];
-        const alpha = pixels.data[offset + 3];
-        if (alpha > 20 && (red < 245 || green < 245 || blue < 245 || Math.max(red, green, blue) - Math.min(red, green, blue) > 10)) {
-          columnCounts[x] += 1;
-          rowCounts[y] += 1;
-        }
-      }
-    }
+const quoteImageCache = new Map();
 
-    const minColumnCount = Math.max(2, Math.round(pixels.height * 0.006));
-    const minRowCount = Math.max(2, Math.round(pixels.width * 0.006));
-    let minX = columnCounts.findIndex((count) => count >= minColumnCount);
-    let minY = rowCounts.findIndex((count) => count >= minRowCount);
-    let maxX = -1;
-    let maxY = -1;
-    for (let x = columnCounts.length - 1; x >= 0; x -= 1) {
-      if (columnCounts[x] >= minColumnCount) {
-        maxX = x;
-        break;
-      }
-    }
-    for (let y = rowCounts.length - 1; y >= 0; y -= 1) {
-      if (rowCounts[y] >= minRowCount) {
-        maxY = y;
-        break;
-      }
-    }
-    if (minX >= maxX || minY >= maxY) {
-      minX = 0;
-      minY = 0;
-      maxX = image.naturalWidth;
-      maxY = image.naturalHeight;
-    }
-    const paddingX = (maxX - minX) * 0.06;
-    const paddingY = (maxY - minY) * 0.06;
-    minX = Math.max(0, minX - paddingX);
-    minY = Math.max(0, minY - paddingY);
-    maxX = Math.min(image.naturalWidth, maxX + paddingX);
-    maxY = Math.min(image.naturalHeight, maxY + paddingY);
-    const cropWidth = maxX - minX;
-    const cropHeight = maxY - minY;
-    const scale = Math.min(outputCanvas.width / cropWidth, outputCanvas.height / cropHeight);
-    const drawWidth = cropWidth * scale;
-    const drawHeight = cropHeight * scale;
-    const drawX = (outputCanvas.width - drawWidth) / 2;
-    const drawY = (outputCanvas.height - drawHeight) / 2;
-    outputContext.drawImage(image, minX, minY, cropWidth, cropHeight, drawX, drawY, drawWidth, drawHeight);
+function concatByteArrays(parts) {
+  const totalLength = parts.reduce((sum, part) => sum + part.length, 0);
+  const output = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const part of parts) {
+    output.set(part, offset);
+    offset += part.length;
   }
-  return outputCanvas.toDataURL("image/jpeg", 0.9);
+  return output;
+}
+
+function makeImagePdf(pages) {
+  const encoder = new TextEncoder();
+  const objects = new Map();
+  const pageReferences = pages.map((_, index) => `${3 + index * 3} 0 R`).join(" ");
+  objects.set(1, encoder.encode("<< /Type /Catalog /Pages 2 0 R >>"));
+  objects.set(2, encoder.encode(`<< /Type /Pages /Kids [${pageReferences}] /Count ${pages.length} >>`));
+
+  pages.forEach((page, index) => {
+    const pageObject = 3 + index * 3;
+    const imageObject = pageObject + 1;
+    const contentObject = pageObject + 2;
+    const jpeg = dataUriToBytes(page.dataUri).bytes;
+    const content = encoder.encode("q\n595 0 0 842 0 0 cm\n/Im0 Do\nQ\n");
+    objects.set(pageObject, encoder.encode(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /XObject << /Im0 ${imageObject} 0 R >> >> /Contents ${contentObject} 0 R >>`));
+    objects.set(imageObject, concatByteArrays([
+      encoder.encode(`<< /Type /XObject /Subtype /Image /Width ${page.width} /Height ${page.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>\nstream\n`),
+      jpeg,
+      encoder.encode("\nendstream"),
+    ]));
+    objects.set(contentObject, concatByteArrays([
+      encoder.encode(`<< /Length ${content.length} >>\nstream\n`),
+      content,
+      encoder.encode("endstream"),
+    ]));
+  });
+
+  const parts = [encoder.encode("%PDF-1.4\n%1234\n")];
+  const offsets = [0];
+  let byteOffset = parts[0].length;
+  const objectCount = 2 + pages.length * 3;
+  for (let objectNumber = 1; objectNumber <= objectCount; objectNumber += 1) {
+    const objectBytes = concatByteArrays([
+      encoder.encode(`${objectNumber} 0 obj\n`),
+      objects.get(objectNumber),
+      encoder.encode("\nendobj\n"),
+    ]);
+    offsets[objectNumber] = byteOffset;
+    parts.push(objectBytes);
+    byteOffset += objectBytes.length;
+  }
+  const xrefOffset = byteOffset;
+  const xref = ["xref", `0 ${objectCount + 1}`, "0000000000 65535 f "];
+  for (let objectNumber = 1; objectNumber <= objectCount; objectNumber += 1) {
+    xref.push(`${String(offsets[objectNumber]).padStart(10, "0")} 00000 n `);
+  }
+  xref.push("trailer", `<< /Size ${objectCount + 1} /Root 1 0 R >>`, "startxref", String(xrefOffset), "%%EOF");
+  parts.push(encoder.encode(`${xref.join("\n")}\n`));
+  return new Blob([concatByteArrays(parts)], { type: "application/pdf" });
+}
+
+async function buildQuotePageImages(entries, quoteNo, dateDisplay) {
+  const rowsPerPage = 7;
+  const pageCount = Math.ceil(entries.length / rowsPerPage);
+  const uniquePatterns = [...new Map(entries.map(({ pattern }) => [pattern.id, pattern])).values()];
+  const loadedImages = new Map(await Promise.all(uniquePatterns.map(async (pattern) => [
+    pattern.id,
+    await loadCanvasImage(pattern.thumb),
+  ])));
+  const totals = entries.reduce((summary, { capacity, quantity }) => ({
+    cartons: summary.cartons + quantity,
+    pieces: summary.pieces + capacity.pcsPerCarton * quantity,
+    amount: summary.amount + capacity.pcsPerCarton * quantity * capacity.priceNumber,
+    cbm: summary.cbm + capacity.cbm * quantity,
+  }), { cartons: 0, pieces: 0, amount: 0, cbm: 0 });
+  const pages = [];
+
+  for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1240;
+    canvas.height = 1754;
+    const context = canvas.getContext("2d");
+    context.fillStyle = "#fffdfa";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = "#c90816";
+    context.fillRect(0, 0, canvas.width, 18);
+    context.fillStyle = "#211d1a";
+    context.font = '700 50px "Microsoft YaHei", "PingFang SC", sans-serif';
+    context.fillText("型号 319 花色报价单", 58, 88);
+    context.fillStyle = "#6e655f";
+    context.font = '26px "Microsoft YaHei", "PingFang SC", sans-serif';
+    context.fillText(`报价单号：${quoteNo}    日期：${dateDisplay}`, 60, 137);
+    context.textAlign = "right";
+    context.fillText(`第 ${pageIndex + 1} / ${pageCount} 页`, 1180, 137);
+    context.textAlign = "left";
+
+    const headerY = 176;
+    context.fillStyle = "#211d1a";
+    context.fillRect(42, headerY, 1156, 62);
+    context.fillStyle = "#ffffff";
+    context.font = '700 23px "Microsoft YaHei", "PingFang SC", sans-serif';
+    const headings = [[60, "产品图片"], [260, "型号 / 花色"], [650, "容量 / 装箱"], [820, "箱数"], [925, "数量"], [1040, "金额"]];
+    headings.forEach(([x, label]) => context.fillText(label, x, headerY + 40));
+
+    const pageEntries = entries.slice(pageIndex * rowsPerPage, (pageIndex + 1) * rowsPerPage);
+    pageEntries.forEach(({ pattern, capacity, quantity }, rowIndex) => {
+      const y = 238 + rowIndex * 190;
+      context.fillStyle = rowIndex % 2 ? "#faf5ee" : "#ffffff";
+      context.fillRect(42, y, 1156, 190);
+      context.strokeStyle = "#e0d7cf";
+      context.lineWidth = 2;
+      context.beginPath();
+      context.moveTo(42, y + 190);
+      context.lineTo(1198, y + 190);
+      context.stroke();
+      drawContainedImage(context, loadedImages.get(pattern.id), 54, y + 9, 174, 172, 5);
+      context.fillStyle = "#c90816";
+      context.font = '700 24px "Microsoft YaHei", "PingFang SC", sans-serif';
+      context.fillText(`319-${String(pattern.no).padStart(2, "0")}`, 260, y + 52);
+      context.fillStyle = "#211d1a";
+      context.font = '700 30px "Microsoft YaHei", "PingFang SC", sans-serif';
+      context.fillText(pattern.name, 260, y + 96);
+      context.fillStyle = "#6e655f";
+      context.font = '22px "Microsoft YaHei", "PingFang SC", sans-serif';
+      context.fillText(pattern.family, 260, y + 138);
+      context.fillStyle = "#211d1a";
+      context.font = '700 28px "Microsoft YaHei", "PingFang SC", sans-serif';
+      context.fillText(capacity.id, 650, y + 76);
+      context.fillStyle = "#6e655f";
+      context.font = '22px "Microsoft YaHei", "PingFang SC", sans-serif';
+      context.fillText(`${capacity.pcsPerCarton}只/箱 · ¥${capacity.priceNumber}/只`, 650, y + 117);
+      context.fillStyle = "#211d1a";
+      context.font = '700 30px "Microsoft YaHei", "PingFang SC", sans-serif';
+      context.fillText(String(quantity), 830, y + 98);
+      context.fillText(String(quantity * capacity.pcsPerCarton), 935, y + 98);
+      context.fillStyle = "#c90816";
+      context.fillText(`¥${quantity * capacity.pcsPerCarton * capacity.priceNumber}`, 1040, y + 98);
+    });
+
+    context.fillStyle = "#c90816";
+    context.fillRect(42, 1590, 1156, 112);
+    context.fillStyle = "#ffffff";
+    context.font = '700 25px "Microsoft YaHei", "PingFang SC", sans-serif';
+    context.fillText(`合计  ${totals.cartons} 箱  |  ${totals.pieces} 只  |  ${totals.cbm.toFixed(2)} CBM`, 70, 1658);
+    context.textAlign = "right";
+    context.font = '700 36px "Microsoft YaHei", "PingFang SC", sans-serif';
+    context.fillText(`总金额 ¥${totals.amount}`, 1168, 1664);
+    context.textAlign = "left";
+    pages.push({ dataUri: canvas.toDataURL("image/jpeg", 0.88), width: canvas.width, height: canvas.height });
+  }
+  return pages;
 }
 
 function writeUint16(target, offset, value) {
@@ -586,9 +647,11 @@ export function App() {
   const [selectedCapacities, setSelectedCapacities] = useState({});
   const [selectedQuantities, setSelectedQuantities] = useState({});
   const [exportStatus, setExportStatus] = useState("");
+  const [quotePreview, setQuotePreview] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [zoom, setZoom] = useState(1);
+  const [catalogueReady, setCatalogueReady] = useState(false);
   const t = copy[language];
   const filteredPatterns = useMemo(() => (
     filter === "全部花色"
@@ -634,6 +697,10 @@ export function App() {
       if (event.key === "Escape") {
         closeExpanded();
         setCartOpen(false);
+        setQuotePreview((current) => {
+          if (current?.pdfUrl) URL.revokeObjectURL(current.pdfUrl);
+          return null;
+        });
       }
     }
     window.addEventListener("keydown", closeWithEscape);
@@ -643,6 +710,20 @@ export function App() {
   useEffect(() => {
     setZoom(1);
   }, [expandedId]);
+
+  useEffect(() => {
+    let idleId;
+    let timeoutId;
+    if ("requestIdleCallback" in window) {
+      idleId = window.requestIdleCallback(() => setCatalogueReady(true), { timeout: 400 });
+    } else {
+      timeoutId = window.setTimeout(() => setCatalogueReady(true), 80);
+    }
+    return () => {
+      if (idleId !== undefined) window.cancelIdleCallback(idleId);
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+    };
+  }, []);
 
   function chooseFilter(nextFilter) {
     setFilter(nextFilter);
@@ -727,30 +808,86 @@ export function App() {
   async function exportSelectedDocument() {
     if (!selectedEntries.length) return;
     setExportStatus("正在生成报价表...");
-    const lastQuoteNumber = Number.parseInt(window.localStorage.getItem(quoteNumberKey), 10);
-    const nextQuoteNumber = Number.isFinite(lastQuoteNumber) && lastQuoteNumber >= quoteNumberStart ? lastQuoteNumber + 1 : quoteNumberStart;
-    const quoteNo = `${quoteNumberPrefix}${String(nextQuoteNumber).padStart(5, "0")}`;
-    const now = new Date();
-    const today = now.toISOString().slice(0, 10);
-    const dateDisplay = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`;
-    const imageData = await Promise.all(selectedEntries.map(async ({ pattern }) => dataUriToImageData(await cropImageForExcel(
-      await imageToDataUri(pattern.thumb),
-      1.33,
-      pattern.family === "混色套装系列",
-    ))));
-    const blob = makeQuoteXlsx({ entries: selectedEntries, quoteNo, dateDisplay, imageData });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `Hobby-Lobby-319-报价表-${today}.xlsx`;
-    link.rel = "noopener";
-    document.body.appendChild(link);
-    window.localStorage.setItem(quoteNumberKey, String(nextQuoteNumber));
-    window.__lastHobbyLobbyExport = { fileName: link.download, itemCount: selectedEntries.length, quoteNo };
-    link.click();
-    link.remove();
-    setExportStatus(`已生成：${link.download}`);
-    window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+    try {
+      const lastQuoteNumber = Number.parseInt(window.localStorage.getItem(quoteNumberKey), 10);
+      const nextQuoteNumber = Number.isFinite(lastQuoteNumber) && lastQuoteNumber >= quoteNumberStart ? lastQuoteNumber + 1 : quoteNumberStart;
+      const quoteNo = `${quoteNumberPrefix}${String(nextQuoteNumber).padStart(5, "0")}`;
+      const now = new Date();
+      const today = now.toISOString().slice(0, 10);
+      const dateDisplay = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`;
+      const uniquePatterns = [...new Map(selectedEntries.map(({ pattern }) => [pattern.id, pattern])).values()];
+      const imageByPattern = new Map(await Promise.all(uniquePatterns.map(async (pattern) => {
+        const source = pattern.thumb;
+        if (!quoteImageCache.has(source)) {
+          quoteImageCache.set(source, imageToDataUri(source)
+            .then((dataUri) => prepareQuoteImage(dataUri))
+            .then((dataUri) => dataUriToImageData(dataUri))
+            .catch((error) => {
+              quoteImageCache.delete(source);
+              throw error;
+            }));
+        }
+        return [pattern.id, await quoteImageCache.get(source)];
+      })));
+      const imageData = selectedEntries.map(({ pattern }) => imageByPattern.get(pattern.id));
+      const blob = makeQuoteXlsx({ entries: selectedEntries, quoteNo, dateDisplay, imageData });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Hobby-Lobby-319-报价表-${today}.xlsx`;
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      window.localStorage.setItem(quoteNumberKey, String(nextQuoteNumber));
+      window.__lastHobbyLobbyExport = { fileName: link.download, itemCount: selectedEntries.length, quoteNo };
+      link.click();
+      link.remove();
+      setExportStatus(`Excel 已生成：${link.download}`);
+      window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+    } catch (error) {
+      console.error(error);
+      setExportStatus("生成失败，请刷新后重试");
+    }
+  }
+
+  async function exportWechatPdf() {
+    if (!selectedEntries.length) return;
+    setExportStatus("正在生成微信 PDF...");
+    try {
+      const lastQuoteNumber = Number.parseInt(window.localStorage.getItem(quoteNumberKey), 10);
+      const nextQuoteNumber = Number.isFinite(lastQuoteNumber) && lastQuoteNumber >= quoteNumberStart ? lastQuoteNumber + 1 : quoteNumberStart;
+      const quoteNo = `${quoteNumberPrefix}${String(nextQuoteNumber).padStart(5, "0")}`;
+      const now = new Date();
+      const today = now.toISOString().slice(0, 10);
+      const dateDisplay = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`;
+      const pages = await buildQuotePageImages(selectedEntries, quoteNo, dateDisplay);
+      const pdfBlob = makeImagePdf(pages);
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      const fileName = `Hobby-Lobby-319-报价单-${today}.pdf`;
+      setQuotePreview((current) => {
+        if (current?.pdfUrl) URL.revokeObjectURL(current.pdfUrl);
+        return { pages, pdfUrl, fileName };
+      });
+      const link = document.createElement("a");
+      link.href = pdfUrl;
+      link.download = fileName;
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.localStorage.setItem(quoteNumberKey, String(nextQuoteNumber));
+      window.__lastHobbyLobbyPdfExport = { pageCount: pages.length, itemCount: selectedEntries.length, quoteNo, size: pdfBlob.size };
+      setExportStatus("PDF 已生成；苹果 Safari 和微信均可打开");
+    } catch (error) {
+      console.error(error);
+      setExportStatus("PDF 生成失败，请刷新后重试");
+    }
+  }
+
+  function closeQuotePreview() {
+    setQuotePreview((current) => {
+      if (current?.pdfUrl) URL.revokeObjectURL(current.pdfUrl);
+      return null;
+    });
   }
 
   function closeExpanded() {
@@ -766,7 +903,7 @@ export function App() {
   return (
     <div className="site-shell" lang={language}>
       <header className="topbar">
-        <a className="brand-link" href="#top" aria-label="Hobby Lobby home"><img src="/assets/brand-logo.png" alt="Hobby Lobby Ask for More" width="256" height="256" decoding="async" /></a>
+        <a className="brand-link" href="#top" aria-label="Hobby Lobby home"><img src="/assets/brand-logo.webp" alt="Hobby Lobby Ask for More" width="256" height="256" decoding="async" /></a>
         <nav aria-label={language === "zh" ? "主导航" : "Main navigation"}>
           <a href="#gallery">{t.navGallery}</a><a href="#details">{t.navSteel}</a><a href="#specifications">{t.navSpecs}</a>
         </nav>
@@ -793,7 +930,7 @@ export function App() {
               <span><ShieldCheck weight="regular" /> {t.heroNoteModel}</span>
             </div>
           </div>
-          <div className="hero-media"><img src="/assets/today-pattern-02.jpg" alt={language === "zh" ? "316不锈钢保温壶花色展示" : "316 stainless steel thermal pot pattern display"} width="1200" height="1200" loading="eager" decoding="async" fetchPriority="high" /></div>
+          <div className="hero-media"><img src="/assets/hero-pattern-02.webp" alt={language === "zh" ? "316不锈钢保温壶花色展示" : "316 stainless steel thermal pot pattern display"} width="1000" height="1000" loading="eager" decoding="async" fetchPriority="high" /></div>
         </section>
 
         <div className="catalog-strip" aria-label={language === "zh" ? "目录摘要" : "Catalogue summary"}><span><small>{t.stripModel}</small><strong>319</strong></span><span><small>1.6L</small><strong>¥29 RMB</strong></span><span><small>2.0L</small><strong>¥31 RMB</strong></span><span><small>{t.stripPatterns}</small><strong>{t.stripPatternCount}</strong></span></div>
@@ -805,7 +942,7 @@ export function App() {
               {filters.map((item) => <button key={item} className={filter === item ? "active" : ""} onClick={() => chooseFilter(item)} aria-pressed={filter === item}>{displayFilter(item)}</button>)}
             </div>
           </div>
-          <div className="catalogue-layout">
+          {catalogueReady ? <div className="catalogue-layout">
             <aside className="series-directory" aria-label={language === "zh" ? "花色系列目录" : "Pattern series directory"}>
               <span>{t.directory}</span>
               {groupedPatterns.map(([series, seriesPatterns], seriesIndex) => (
@@ -824,7 +961,7 @@ export function App() {
                   const catalogueCode = `319-${String(pattern.no).padStart(2, "0")}`;
                   return (
                     <article className={`pattern-card ${active ? "selected" : ""}`} key={pattern.id}>
-                      <button className="pattern-image-wrap" type="button" onClick={() => openExpanded(pattern)} aria-label={`${displayPatternName(pattern)}，${displayFamily(pattern.family)}，${t.zoomHint}。`}><img src={pattern.thumb} alt="" width="640" height="640" loading="lazy" decoding="async" fetchPriority="low" />{active && <span className="check-mark"><Check weight="bold" /></span>}<span className="zoom-hint"><MagnifyingGlassPlus weight="bold" /> {t.zoomHint}</span></button>
+                      <button className="pattern-image-wrap" type="button" onClick={() => openExpanded(pattern)} aria-label={`${displayPatternName(pattern)}，${displayFamily(pattern.family)}，${t.zoomHint}。`}><img src={pattern.thumb} alt="" width="640" height="640" loading={seriesIndex === 0 ? "eager" : "lazy"} decoding="async" fetchPriority={seriesIndex === 0 ? "high" : undefined} />{active && <span className="check-mark"><Check weight="bold" /></span>}<span className="zoom-hint"><MagnifyingGlassPlus weight="bold" /> {t.zoomHint}</span></button>
                       <span className="pattern-code">MODEL 319 · {catalogueCode}</span><span className="pattern-name">{displayPatternName(pattern)}</span><span className="pattern-family">{displayBody(pattern.body)} · 1.6L ¥29 · 2.0L ¥31</span>
                       <div className="capacity-picker" aria-label={`${pattern.name} 容量选择`}>
                         {capacities.map((capacity) => (
@@ -839,7 +976,7 @@ export function App() {
               </div>
             </section>)}
             </div>
-          </div>
+          </div> : <div className="gallery-loading" role="status">{language === "zh" ? "正在准备花色目录…" : "Preparing pattern catalogue…"}</div>}
           <p className="gallery-note">{t.currentShowing} {filteredPatterns.length} {t.currentSuffix}</p>
         </section>
 
@@ -849,7 +986,7 @@ export function App() {
         </section>
 
         <section className="steel-band" id="details">
-          <img src="/assets/today-pattern-09.jpg" alt={language === "zh" ? "316不锈钢黑盖粉牡丹花色保温壶" : "316 stainless steel black-lid floral thermal pot"} width="1200" height="1200" loading="lazy" decoding="async" />
+          <img src="/assets/steel-pattern-09.webp" alt={language === "zh" ? "316不锈钢黑盖粉牡丹花色保温壶" : "316 stainless steel black-lid floral thermal pot"} width="1000" height="1000" loading="lazy" decoding="async" />
           <div><p className="eyebrow">{t.steelEyebrow}</p><h2>{t.steelTitle}</h2><p>{t.steelText}</p><a href="#gallery" onClick={() => chooseFilter("316不锈钢")}>{t.steelLink} <ArrowRight weight="bold" /></a></div>
         </section>
 
@@ -894,7 +1031,8 @@ export function App() {
                 ))}
               </div>
               <div className="cart-actions">
-                <button className="cart-export" type="button" onClick={exportSelectedDocument}><DownloadSimple weight="bold" /> 导出报价表</button>
+                <button className="cart-export" type="button" onClick={exportWechatPdf}><DownloadSimple weight="bold" /> PDF 报价表</button>
+                <button className="cart-export cart-export-secondary" type="button" onClick={exportSelectedDocument}><DownloadSimple weight="bold" /> Excel 报价表</button>
                 <button className="cart-clear" type="button" onClick={() => { setSelectedCapacities({}); setSelectedQuantities({}); setExportStatus(""); }}>清空选款</button>
               </div>
               {exportStatus && <p className="export-status">{exportStatus}</p>}
@@ -903,7 +1041,7 @@ export function App() {
         </>}
       </aside>
 
-      <footer><img src="/assets/brand-logo.png" alt="" width="256" height="256" loading="lazy" decoding="async" /><p>{t.footerText}</p><a href="#top">{language === "zh" ? "回到顶部" : "Back to top"} <ArrowRight weight="bold" /></a></footer>
+      <footer><img src="/assets/brand-logo.webp" alt="" width="256" height="256" loading="lazy" decoding="async" /><p>{t.footerText}</p><a href="#top">{language === "zh" ? "回到顶部" : "Back to top"} <ArrowRight weight="bold" /></a></footer>
 
       {expanded && <div className="lightbox-backdrop" role="presentation" onClick={closeExpanded}>
         <div className="lightbox-panel" role="dialog" aria-modal="true" aria-label={`${displayPatternName(expanded)} 大图`} onClick={(event) => event.stopPropagation()} onWheel={zoomLightbox}>
@@ -924,6 +1062,19 @@ export function App() {
               <strong>{displayPatternName(expanded)}</strong>
               <small>{displayFamily(expanded.family)} · {displayBody(expanded.body)} · 1.6L ¥29 RMB · 2.0L ¥31 RMB</small>
             </div>
+          </div>
+        </div>
+      </div>}
+
+      {quotePreview && <div className="quote-preview-backdrop" role="presentation" onClick={closeQuotePreview}>
+        <div className="quote-preview-panel" role="dialog" aria-modal="true" aria-label="PDF 报价单预览" onClick={(event) => event.stopPropagation()}>
+          <div className="quote-preview-head">
+            <div><strong>PDF 报价单</strong><small>适用于苹果 Safari、微信和电脑，照片已嵌入文件</small></div>
+            <button className="quote-preview-close" type="button" onClick={closeQuotePreview} aria-label="关闭 PDF 预览"><X weight="bold" /></button>
+          </div>
+          <a className="quote-preview-tip" href={quotePreview.pdfUrl} download={quotePreview.fileName} target="_blank" rel="noopener">没有自动下载？点这里再次打开 / 下载 PDF</a>
+          <div className="quote-preview-pages">
+            {quotePreview.pages.map((page, index) => <img key={index} src={page.dataUri} alt={`报价单第 ${index + 1} 页`} width={page.width} height={page.height} />)}
           </div>
         </div>
       </div>}

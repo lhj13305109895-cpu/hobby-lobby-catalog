@@ -1,9 +1,8 @@
 /assets/*
-  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+  Cache-Control: public, max-age=2592000, stale-while-revalidate=604800
   X-Content-Type-Options: nosniff
 
 /*
-  Cache-Control: public, max-age=0, must-revalidate
   Referrer-Policy: strict-origin-when-cross-origin
   X-Content-Type-Options: nosniff
   Permissions-Policy: camera=(), microphone=(), geolocation=()
