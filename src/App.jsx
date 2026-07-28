@@ -97,16 +97,129 @@ function loadCanvasImage(src) {
   });
 }
 
-function drawContainedImage(context, image, x, y, width, height, padding = 0) {
-  const availableWidth = Math.max(1, width - padding * 2);
-  const availableHeight = Math.max(1, height - padding * 2);
-  const scale = Math.min(availableWidth / image.naturalWidth, availableHeight / image.naturalHeight);
-  const drawWidth = image.naturalWidth * scale;
-  const drawHeight = image.naturalHeight * scale;
-  context.drawImage(image, x + (width - drawWidth) / 2, y + (height - drawHeight) / 2, drawWidth, drawHeight);
+const imageContentBoundsCache = new WeakMap();
+
+function getImageContentBounds(image) {
+  if (imageContentBoundsCache.has(image)) return imageContentBoundsCache.get(image);
+
+  const fullBounds = { sx: 0, sy: 0, sw: image.naturalWidth, sh: image.naturalHeight };
+  const analysisScale = Math.min(1, 480 / Math.max(image.naturalWidth, image.naturalHeight));
+  const width = Math.max(1, Math.round(image.naturalWidth * analysisScale));
+  const height = Math.max(1, Math.round(image.naturalHeight * analysisScale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  context.drawImage(image, 0, 0, width, height);
+
+  try {
+    const pixels = context.getImageData(0, 0, width, height).data;
+    const cornerSize = Math.max(2, Math.round(Math.min(width, height) * 0.035));
+    const corners = [
+      [0, 0],
+      [width - cornerSize, 0],
+      [0, height - cornerSize],
+      [width - cornerSize, height - cornerSize],
+    ].map(([startX, startY]) => {
+      const total = [0, 0, 0];
+      let count = 0;
+      for (let y = startY; y < startY + cornerSize; y += 1) {
+        for (let x = startX; x < startX + cornerSize; x += 1) {
+          const offset = (y * width + x) * 4;
+          total[0] += pixels[offset];
+          total[1] += pixels[offset + 1];
+          total[2] += pixels[offset + 2];
+          count += 1;
+        }
+      }
+      return total.map((value) => value / count);
+    });
+    const background = [0, 1, 2].map((channel) => corners.reduce((sum, color) => sum + color[channel], 0) / corners.length);
+    const cornerSpread = Math.max(...corners.map((color) => Math.max(...color.map((value, channel) => Math.abs(value - background[channel])))));
+
+    // Full-bleed photos have different corner colours and must not be cropped.
+    // Uniform white or beige borders have matching corners and can be removed safely.
+    if (cornerSpread <= 32) {
+      const rowHits = new Uint16Array(height);
+      const columnHits = new Uint16Array(width);
+      for (let y = 0; y < height; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+          const offset = (y * width + x) * 4;
+          const difference = Math.max(
+            Math.abs(pixels[offset] - background[0]),
+            Math.abs(pixels[offset + 1] - background[1]),
+            Math.abs(pixels[offset + 2] - background[2]),
+          );
+          if (pixels[offset + 3] > 16 && difference > 14) {
+            rowHits[y] += 1;
+            columnHits[x] += 1;
+          }
+        }
+      }
+
+      const rowThreshold = Math.max(2, Math.floor(width * 0.008));
+      const columnThreshold = Math.max(2, Math.floor(height * 0.008));
+      const top = rowHits.findIndex((hits) => hits >= rowThreshold);
+      let bottom = -1;
+      for (let y = height - 1; y >= 0; y -= 1) {
+        if (rowHits[y] >= rowThreshold) { bottom = y; break; }
+      }
+      const left = columnHits.findIndex((hits) => hits >= columnThreshold);
+      let right = -1;
+      for (let x = width - 1; x >= 0; x -= 1) {
+        if (columnHits[x] >= columnThreshold) { right = x; break; }
+      }
+
+      if (top >= 0 && left >= 0 && bottom > top && right > left) {
+        const contentWidth = right - left + 1;
+        const contentHeight = bottom - top + 1;
+        if (contentWidth >= width * 0.18 && contentHeight >= height * 0.18) {
+          const paddingX = Math.max(2, Math.round(contentWidth * 0.025));
+          const paddingY = Math.max(2, Math.round(contentHeight * 0.025));
+          const cropLeft = Math.max(0, left - paddingX);
+          const cropTop = Math.max(0, top - paddingY);
+          const cropRight = Math.min(width - 1, right + paddingX);
+          const cropBottom = Math.min(height - 1, bottom + paddingY);
+          const bounds = {
+            sx: cropLeft / analysisScale,
+            sy: cropTop / analysisScale,
+            sw: (cropRight - cropLeft + 1) / analysisScale,
+            sh: (cropBottom - cropTop + 1) / analysisScale,
+          };
+          imageContentBoundsCache.set(image, bounds);
+          return bounds;
+        }
+      }
+    }
+  } catch {
+    // If canvas pixel inspection is unavailable, keep the complete source image.
+  }
+
+  imageContentBoundsCache.set(image, fullBounds);
+  return fullBounds;
 }
 
-async function prepareQuoteImage(dataUri, targetAspect = 1.33) {
+function drawContainedImage(context, image, x, y, width, height, padding = 0) {
+  const { sx, sy, sw, sh } = getImageContentBounds(image);
+  const availableWidth = Math.max(1, width - padding * 2);
+  const availableHeight = Math.max(1, height - padding * 2);
+  const scale = Math.min(availableWidth / sw, availableHeight / sh);
+  const drawWidth = sw * scale;
+  const drawHeight = sh * scale;
+  context.drawImage(image, sx, sy, sw, sh, x + (width - drawWidth) / 2, y + (height - drawHeight) / 2, drawWidth, drawHeight);
+}
+
+function drawCoveredImage(context, image, x, y, width, height) {
+  const { sx, sy, sw, sh } = getImageContentBounds(image);
+  const scale = Math.max(width / sw, height / sh);
+  const sourceWidth = width / scale;
+  const sourceHeight = height / scale;
+  const sourceX = sx + (sw - sourceWidth) / 2;
+  const sourceY = sy + (sh - sourceHeight) / 2;
+  context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, x, y, width, height);
+}
+
+async function prepareQuoteImage(dataUri, targetAspect = 209 / 136, fillFrame = false) {
   const image = await loadCanvasImage(dataUri);
   const outputCanvas = document.createElement("canvas");
   outputCanvas.width = 720;
@@ -115,7 +228,8 @@ async function prepareQuoteImage(dataUri, targetAspect = 1.33) {
   outputContext.fillStyle = "#ffffff";
   outputContext.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
 
-  drawContainedImage(outputContext, image, 0, 0, outputCanvas.width, outputCanvas.height, 8);
+  if (fillFrame) drawCoveredImage(outputContext, image, 0, 0, outputCanvas.width, outputCanvas.height);
+  else drawContainedImage(outputContext, image, 0, 0, outputCanvas.width, outputCanvas.height);
   return outputCanvas.toDataURL("image/jpeg", 0.86);
 }
 
@@ -236,7 +350,7 @@ async function buildQuotePageImages(entries, quoteNo, dateDisplay) {
       context.moveTo(42, y + 190);
       context.lineTo(1198, y + 190);
       context.stroke();
-      drawContainedImage(context, loadedImages.get(pattern.id), 54, y + 9, 174, 172, 5);
+      drawContainedImage(context, loadedImages.get(pattern.id), 48, y + 4, 190, 182, 2);
       context.fillStyle = "#c90816";
       context.font = '700 24px "Microsoft YaHei", "PingFang SC", sans-serif';
       context.fillText(`319-${String(pattern.no).padStart(2, "0")}`, 260, y + 52);
@@ -395,9 +509,9 @@ function makeQuoteXlsx({ entries, quoteNo, dateDisplay, imageData }) {
 
   const drawingAnchors = imageData.map((image, index) => {
     const rowZero = dataStartRow + index - 1;
-    const insetEmu = 4 * 9525;
-    const widthEmu = 174 * 9525;
-    const heightEmu = 131 * 9525;
+    const insetEmu = 2 * 9525;
+    const widthEmu = 209 * 9525;
+    const heightEmu = 136 * 9525;
     return `<xdr:oneCellAnchor><xdr:from><xdr:col>1</xdr:col><xdr:colOff>${insetEmu}</xdr:colOff><xdr:row>${rowZero}</xdr:row><xdr:rowOff>${insetEmu}</xdr:rowOff></xdr:from><xdr:ext cx="${widthEmu}" cy="${heightEmu}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${index + 1}" name="Product ${index + 1}" descr="Model 319 product image"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId${index + 1}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`;
   }).join("");
 
@@ -749,7 +863,7 @@ function Storefront() {
         const source = pattern.thumb;
         if (!quoteImageCache.has(source)) {
           quoteImageCache.set(source, imageToDataUri(source)
-            .then((dataUri) => prepareQuoteImage(dataUri))
+            .then((dataUri) => prepareQuoteImage(dataUri, 209 / 136, pattern.family === "混色套装系列"))
             .then((dataUri) => dataUriToImageData(dataUri))
             .catch((error) => {
               quoteImageCache.delete(source);
