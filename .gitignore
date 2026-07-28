@@ -3,3 +3,6 @@ dist/
 .vite/
 *.log
 pnpm-workspace.yaml
+.env
+.env.*
+!.env.example
