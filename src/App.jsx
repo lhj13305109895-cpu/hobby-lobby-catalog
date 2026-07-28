@@ -8,6 +8,12 @@ import {
 
 const AdminApp = lazy(() => import("./admin/AdminApp.jsx").then((module) => ({ default: module.AdminApp })));
 
+const versionUploadedAsset = (source, updatedAt) => {
+  if (!source?.startsWith("/assets/uploads/")) return source;
+  const version = Date.parse(updatedAt) || updatedAt || "1";
+  return `${source}${source.includes("?") ? "&" : "?"}v=${encodeURIComponent(version)}`;
+};
+
 const categories = [...categoriesData]
   .filter((category) => category.enabled && category.visible)
   .sort((a, b) => a.sortOrder - b.sortOrder);
@@ -25,9 +31,9 @@ const catalogue = [...productsData]
     nameEn: product.nameEn,
     family: categoryById.get(product.categoryId)?.nameZh || "待分类",
     body: product.bodyType,
-    image: product.originalImage,
-    displayImage: product.mainImage,
-    thumb: product.thumbnailImage,
+    image: versionUploadedAsset(product.originalImage, product.updatedAt),
+    displayImage: versionUploadedAsset(product.mainImage, product.updatedAt),
+    thumb: versionUploadedAsset(product.thumbnailImage, product.updatedAt),
   }));
 
 const filters = ["全部花色", "白色壶身", "316不锈钢", "混色套装"];
