@@ -27,7 +27,8 @@
 2. The featured product source had a white square background. Created a background-extracted product asset, removed the chroma key to alpha, and preserved the complete lid, spout, handle, body, pattern, and base.
 3. The original carousel filter could include promotional set images. Limited the hero runway to the botanical-floral category so the cover consistently shows individual real products.
 4. Replaced the old hero preload with the new featured product asset and updated the page description from 58 to 83 patterns plus customization.
-5. Reworked the desktop hero from a hard two-column split into one continuous ivory canvas so the curved runway passes behind the headline area and the foreground product, matching the selected reference composition.
+5. Reworked the desktop hero from a hard two-column split into one continuous ivory canvas. The enlarged curved runway now passes behind the headline and foreground product, while a separate curved floor layer creates the same gallery-stage depth as the selected reference.
+6. Capped the foreground product by hero height and a 720 px maximum width so wide desktop screens cannot enlarge it beyond the frame or crop the lid and base.
 
 ## Known non-blocking repository issue
 
