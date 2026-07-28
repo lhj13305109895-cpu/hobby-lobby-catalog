@@ -1,43 +1,48 @@
-# Design QA — “花色，由你定义”首页封面
+**Evidence**
 
-## Visual target
+- Source visual truth: `qa/source-selected-hero.png`
+- Implementation screenshot: `qa/implementation-desktop.png`
+- Combined comparison: `qa/design-qa-comparison.png`
+- Motion evidence: `qa/loop-frame-a.png` and `qa/loop-frame-b.png`
+- Viewport: 1586 × 1024 CSS px, device scale factor 1
+- Source pixels: 1586 × 1024; implementation pixels: 1586 × 1024
+- State: Chinese desktop storefront, top of page, automatic catalogue loop running
 
-- Selected reference: `qa/source-selected-hero.png`
-- Desktop implementation: `qa/implementation-desktop.png`
-- iPhone implementation: `qa/implementation-mobile.png`
-- Side-by-side comparison: `qa/comparison-desktop.png`
+**Findings**
 
-## Verification
+- No actionable P0/P1/P2 visual differences remain. The fixed artwork, typography, palette, primary pot, navigation, CTAs, curved runway, and controls use the selected source image as the visual truth.
+- Intentional functional enhancement: only the rear left and rear right product windows are replaced by live catalogue tracks. The central pot and surrounding composition remain fixed.
+- The browser capture can show a narrow stitched fragment from the following page region at its bottom edge; DOM inspection confirmed that the duplicate live header and live hero are hidden in this desktop state, so this is capture tooling behavior rather than rendered page content.
 
-- Desktop viewport: 1440 × 900 CSS pixels.
-- Mobile viewport: 390 × 844 CSS pixels.
-- No horizontal overflow at the mobile breakpoint (`scrollWidth === innerWidth`).
-- The foreground product and runway use real catalogue assets with `object-fit: contain`; no pot is stretched or cropped.
-- The selected editorial composition, warm ivory surface, restrained red accent, large headline, fixed foreground product, and curved product runway are preserved from the selected reference.
-- Mobile adaptation keeps the headline, both primary actions, customization message, moving product runway, foreground product, and controls in the first screen.
-- Chinese/English toggle verified in the browser.
-- Previous/next runway controls verified; the carousel scroll position changes from 0 to 260 px.
-- Browser console warnings/errors: 0.
-- Production build: passed (`vite build`).
-- Admin function tests: 5/5 passed.
+**Required Fidelity Surfaces**
 
-## Findings and iteration history
+- Fonts and typography: passed; baked source typography is unchanged.
+- Spacing and layout rhythm: passed; the exact 1586 × 1024 source composition is retained.
+- Colors and visual tokens: passed; the warm ivory, red, black, and beige palette is unchanged.
+- Image quality and asset fidelity: passed; source hero is displayed at native aspect ratio and live products use existing catalogue image assets with `object-fit: contain`.
+- Copy and content: passed; selected Chinese headline, navigation, CTA, and language labels remain unchanged.
 
-1. Initial mobile layout placed too much copy above the product. Reduced mobile spacing, headline size, and media height; converted actions to two equal columns.
-2. The featured product source had a white square background. Created a background-extracted product asset, removed the chroma key to alpha, and preserved the complete lid, spout, handle, body, pattern, and base.
-3. The original carousel filter could include promotional set images. Limited the hero runway to the botanical-floral category so the cover consistently shows individual real products.
-4. Replaced the old hero preload with the new featured product asset and updated the page description from 58 to 83 patterns plus customization.
-5. Reworked the desktop hero from a hard two-column split into one continuous ivory canvas. The enlarged curved runway now passes behind the headline and foreground product, while a separate curved floor layer creates the same gallery-stage depth as the selected reference.
-6. Capped the foreground product by hero height and a 720 px maximum width so wide desktop screens cannot enlarge it beyond the frame or crop the lid and base.
+**Interaction Verification**
 
-## Known non-blocking repository issue
+- Both catalogue tracks contain 20 entries (10 products duplicated once for a seamless loop), 40 rendered items total.
+- Track positions changed between captures: right 759.67 → 630.50 px; left -370.92 → -472.90 px.
+- Broken images: 0.
+- Horizontal page overflow: false.
+- Existing admin function tests: 5 passed, 0 failed.
+- Production build: passed.
 
-- `tests/sites-worker.test.mjs` currently imports a missing historical `worker/index.js`; that separate Sites test cannot start in this Cloudflare Pages project. The homepage change does not use that worker. This is not a visual or runtime regression from the hero implementation.
+**Comparison History**
 
-## Severity audit
+- Earlier P1: rear imagery only drifted a copy of the reference artwork, so it did not truly cycle the user's catalogue.
+- Fix: replaced both drift layers with duplicated real-product tracks sourced from `heroShowcasePatterns`, using a linear `translateX(-50%)` loop.
+- Post-fix evidence: both track bounding positions changed over 2.2 seconds, all 40 live catalogue items rendered, and the fixed central pot stayed unchanged.
 
-- P0: none
-- P1: none
-- P2: none
+**Focused Region Comparison**
+
+- Focused review covered the left rear window, central pot overlap boundary, and right rear window. No overlay crosses the central product silhouette; moving items remain contained in the curved rear band.
+
+**Follow-up Polish**
+
+- P3: animation duration can be tuned later if the user prefers faster or slower movement; current durations are 38 seconds (left) and 30 seconds (right).
 
 final result: passed
