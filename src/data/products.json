@@ -2322,5 +2322,33 @@
     "visible": true,
     "createdAt": "2026-07-28T00:00:00.000Z",
     "updatedAt": "2026-07-28T00:00:00.000Z"
+  },
+  {
+    "productId": "product-645ea1a5-8e8",
+    "slug": "319-1785209982579",
+    "nameZh": "蓝大花",
+    "nameEn": "blue flower",
+    "model": "319",
+    "capacities": [
+      "1.6L",
+      "2.0L"
+    ],
+    "descriptionZh": "",
+    "descriptionEn": "",
+    "categoryId": "botanical-floral",
+    "bodyType": "白色壶身",
+    "mainImage": "/assets/uploads/319-product-645ea1a5-8e8-1785210006594-8dfa26-main-1.webp",
+    "thumbnailImage": "/assets/uploads/319-product-645ea1a5-8e8-1785210006594-8dfa26-main-1-thumb.webp",
+    "originalImage": "/assets/uploads/319-product-645ea1a5-8e8-1785210006594-8dfa26-main-1.webp",
+    "detailImages": [],
+    "imageAltZh": "",
+    "imageAltEn": "",
+    "sortOrder": 9990,
+    "isNew": false,
+    "featured": false,
+    "pinned": false,
+    "visible": true,
+    "createdAt": "2026-07-28T03:39:42.580Z",
+    "updatedAt": "2026-07-28T03:41:10.520Z"
   }
 ]
