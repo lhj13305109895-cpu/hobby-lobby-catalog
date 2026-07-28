@@ -2322,5 +2322,33 @@
     "visible": true,
     "createdAt": "2026-07-28T00:00:00.000Z",
     "updatedAt": "2026-07-28T00:00:00.000Z"
+  },
+  {
+    "productId": "product-c56769ba-aa7",
+    "slug": "319-01-copy-1785209421693",
+    "nameZh": "彩色字母 副本",
+    "nameEn": "",
+    "model": "319",
+    "capacities": [
+      "1.6L",
+      "2.0L"
+    ],
+    "descriptionZh": "",
+    "descriptionEn": "",
+    "categoryId": "trend-letters",
+    "bodyType": "白色壶身",
+    "mainImage": "/assets/today-pattern-01.jpg",
+    "thumbnailImage": "/assets/today-thumb-01.jpg",
+    "originalImage": "/assets/today-pattern-01.jpg",
+    "detailImages": [],
+    "imageAltZh": "彩色字母保温壶",
+    "imageAltEn": "",
+    "sortOrder": 10,
+    "isNew": false,
+    "featured": false,
+    "pinned": false,
+    "visible": false,
+    "createdAt": "2026-07-28T03:30:21.693Z",
+    "updatedAt": "2026-07-28T03:31:20.472Z"
   }
 ]
