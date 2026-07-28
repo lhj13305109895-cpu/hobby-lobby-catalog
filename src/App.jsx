@@ -1,105 +1,34 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import productsData from "./data/products.json";
+import categoriesData from "./data/categories.json";
 import {
   ArrowDown, ArrowRight, Check, Heart,
   DownloadSimple, MagnifyingGlassPlus, PaintBrush, ShieldCheck, ShoppingCart, Trash, X,
 } from "@phosphor-icons/react";
 
-const catalogue = [
-  { no: 1, name: "彩色字母", family: "潮流字母系列", body: "白色壶身" },
-  { no: 2, name: "蓝花不锈钢", family: "316不锈钢花卉系列", body: "316不锈钢" },
-  { no: 3, name: "蓝棕几何", family: "民族几何系列", body: "白色壶身" },
-  { no: 4, name: "秋叶果实", family: "花卉植物系列", body: "白色壶身" },
-  { no: 5, name: "黄柠檬", family: "水果清新系列", body: "白色壶身" },
-  { no: 6, name: "蓝花钢壶款", family: "316不锈钢花卉系列", body: "316不锈钢" },
-  { no: 7, name: "墨枝淡花", family: "花卉植物系列", body: "白色壶身" },
-  { no: 8, name: "黑白圆花", family: "316不锈钢花卉系列", body: "316不锈钢" },
-  { no: 9, name: "粉牡丹钢壶", family: "316不锈钢花卉系列", body: "316不锈钢" },
-  { no: 10, name: "沙漠椰影", family: "中东文字系列", body: "白色壶身" },
-  { no: 11, name: "红玫瑰", family: "花卉植物系列", body: "白色壶身" },
-  { no: 13, name: "棕叶白花钢壶", family: "316不锈钢花卉系列", body: "316不锈钢" },
-  { no: 14, name: "几何文字", family: "中东文字系列", body: "白色壶身" },
-  { no: 15, name: "小黄花", family: "花卉植物系列", body: "白色壶身" },
-  { no: 16, name: "挂饰茶壶", family: "中东文字系列", body: "白色壶身" },
-  { no: 17, name: "樱桃字母", family: "潮流字母系列", body: "白色壶身" },
-  { no: 18, name: "粉色竖花", family: "花卉植物系列", body: "白色壶身" },
-  { no: 19, name: "复古地毯纹", family: "民族几何系列", body: "316不锈钢" },
-  { no: 20, name: "米色挂饰", family: "中东文字系列", body: "白色壶身" },
-  { no: 21, name: "红色地毯纹", family: "民族几何系列", body: "316不锈钢" },
-  { no: 22, name: "白牡丹钢壶", family: "316不锈钢花卉系列", body: "316不锈钢" },
-  { no: 23, name: "满版小花", family: "花卉植物系列", body: "白色壶身" },
-  { no: 24, name: "黑枝淡花", family: "花卉植物系列", body: "白色壶身" },
-  { no: 25, name: "蓝粉竖花", family: "花卉植物系列", body: "白色壶身" },
-  { no: 26, name: "山线茶壶", family: "中东文字系列", body: "白色壶身" },
-  { no: 27, name: "粉玫花束", family: "花卉植物系列", body: "白色壶身" },
-  { no: 28, name: "棕叶花钢壶", family: "316不锈钢花卉系列", body: "316不锈钢" },
-  { no: 29, name: "柠檬满版", family: "水果清新系列", body: "白色壶身" },
-  { no: 30, name: "橘圆钢壶", family: "316不锈钢花卉系列", body: "316不锈钢" },
-  { no: 31, name: "粉蓝竖花", family: "花卉植物系列", body: "白色壶身" },
-  { no: 32, name: "棕色几何", family: "民族几何系列", body: "白色壶身" },
-  { no: 33, name: "柠檬蓝条", family: "水果清新系列", body: "白色壶身" },
-  { no: 34, name: "骆驼咖啡", family: "中东文字系列", body: "白色壶身" },
-  { no: 35, name: "彩穗文字", family: "中东文字系列", body: "316不锈钢" },
-  { no: 36, name: "粉碎花", family: "花卉植物系列", body: "白色壶身" },
-  { no: 37, name: "蓝条柠檬", family: "水果清新系列", body: "白色壶身" },
-  { no: 38, name: "深蓝几何", family: "民族几何系列", body: "316不锈钢" },
-  { no: 39, name: "复古棕植", family: "花卉植物系列", body: "白色壶身" },
-  { no: 40, name: "欧式圆章", family: "民族几何系列", body: "316不锈钢" },
-  { no: 41, name: "夕阳咖啡", family: "中东文字系列", body: "白色壶身" },
-  { no: 42, name: "迷你小花", family: "花卉植物系列", body: "白色壶身" },
-  { no: 43, name: "黑盖钢色光板", family: "素色光板系列", body: "316不锈钢" },
-  { no: 44, name: "蓝色花枝", family: "花卉植物系列", body: "白色壶身" },
-  { no: 45, name: "茶壶挂饰", family: "中东文字系列", body: "316不锈钢" },
-  { no: 46, name: "紫色字母", family: "潮流字母系列", body: "白色壶身" },
-  { no: 47, name: "红蓝字母", family: "潮流字母系列", body: "白色壶身" },
-  { no: 48, name: "淡粉竖花", family: "花卉植物系列", body: "白色壶身" },
-  { no: 49, name: "蓝色碎花", family: "花卉植物系列", body: "白色壶身" },
-  { no: 50, name: "金棕棕榈", family: "316不锈钢花卉系列", body: "316不锈钢" },
-  { no: 51, name: "浅粉小花", family: "花卉植物系列", body: "白色壶身" },
-  { no: 52, name: "咖啡圆日", family: "中东文字系列", body: "白色壶身" },
-  { no: 53, name: "红花满版", family: "花卉植物系列", body: "白色壶身" },
-  { no: 54, name: "彩色小花", family: "花卉植物系列", body: "白色壶身" },
-  { no: 55, name: "缤纷花束", family: "花卉植物系列", body: "白色壶身" },
-  { no: 56, name: "蓝白瓷砖", family: "民族几何系列", body: "白色壶身" },
-  { no: 57, name: "蓝绿花束", family: "花卉植物系列", body: "白色壶身" },
-  { no: 58, name: "白色光板", family: "素色光板系列", body: "白色壶身" },
-  { no: 59, name: "混色套装 01", family: "混色套装系列", body: "混色可选" },
-  { no: 60, name: "混色套装 02", family: "混色套装系列", body: "混色可选" },
-  { no: 61, name: "混色套装 03", family: "混色套装系列", body: "混色可选" },
-  { no: 62, name: "混色套装 04", family: "混色套装系列", body: "混色可选" },
-  { no: 63, name: "混色套装 05", family: "混色套装系列", body: "混色可选" },
-  { no: 64, name: "混色套装 06", family: "混色套装系列", body: "混色可选" },
-  { no: 65, name: "混色套装 07", family: "混色套装系列", body: "混色可选" },
-  { no: 66, name: "混色套装 08", family: "混色套装系列", body: "混色可选" },
-  { no: 67, name: "混色套装 09", family: "混色套装系列", body: "混色可选" },
-  { no: 68, name: "混色套装 10", family: "混色套装系列", body: "混色可选" },
-  { no: 69, name: "混色套装 11", family: "混色套装系列", body: "混色可选" },
-  { no: 70, name: "混色套装 12", family: "混色套装系列", body: "混色可选" },
-  { no: 71, name: "混色套装 13", family: "混色套装系列", body: "混色可选" },
-  { no: 72, name: "蓝叶咖啡花", nameEn: "Blue Leaf Coffee Floral", family: "阿拉伯茶饮系列", body: "白色壶身", image: "/assets/new-pattern-72.jpg" },
-  { no: 73, name: "黑叶奶茶花", nameEn: "Black Leaf Milk Tea Floral", family: "阿拉伯茶饮系列", body: "白色壶身", image: "/assets/new-pattern-73.jpg" },
-  { no: 74, name: "红叶茶花", nameEn: "Red Leaf Tea Floral", family: "阿拉伯茶饮系列", body: "白色壶身", image: "/assets/new-pattern-74.jpg" },
-  { no: 75, name: "阿拉伯茶饮混色套装", nameEn: "Arabic Beverage Mixed Set", family: "混色套装系列", body: "混色可选", image: "/assets/new-pattern-75.jpg" },
-  { no: 76, name: "金月华灯", nameEn: "Golden Crescent Lanterns", family: "斋月祝福系列", body: "白色壶身", image: "/assets/new-pattern-76.png" },
-  { no: 77, name: "花月清真寺", nameEn: "Floral Moon Mosque", family: "斋月祝福系列", body: "白色壶身", image: "/assets/new-pattern-77.png" },
-  { no: 78, name: "蜂鸟花野", nameEn: "Hummingbird Meadow", family: "花鸟雅集系列", body: "白色壶身", image: "/assets/new-pattern-78.png" },
-  { no: 79, name: "星月彩灯", nameEn: "Starlit Ramadan Lantern", family: "斋月祝福系列", body: "白色壶身", image: "/assets/new-pattern-79.png" },
-  { no: 80, name: "秋果栖鸟", nameEn: "Autumn Fruit Songbird", family: "花鸟雅集系列", body: "白色壶身", image: "/assets/new-pattern-80.png" },
-  { no: 81, name: "花鸟雅集混色套装", nameEn: "Bird & Bloom Mixed Set", family: "混色套装系列", body: "混色可选", image: "/assets/new-pattern-81.png" },
-  { no: 82, name: "斋月祝福混色套装", nameEn: "Ramadan Blessings Mixed Set", family: "混色套装系列", body: "混色可选", image: "/assets/new-pattern-82.png" },
-  { no: 83, name: "玫瑰蜂鸟", nameEn: "Rose Garden Hummingbirds", family: "花鸟雅集系列", body: "白色壶身", image: "/assets/new-pattern-83.png" },
-  { no: 84, name: "复古蔷薇双鸟", nameEn: "Vintage Rose Aviary", family: "花鸟雅集系列", body: "白色壶身", image: "/assets/new-pattern-84.png" },
-].map((item) => {
-  const image = item.image || `/assets/today-pattern-${String(item.no).padStart(2, "0")}.jpg`;
-  return {
-    ...item,
-    id: `pattern-${String(item.no).padStart(2, "0")}`,
-    image,
-    displayImage: item.displayImage || image.replace(/\.png$/i, "-display.jpg"),
-    thumb: item.thumb || (item.image
-      ? item.image.replace("new-pattern-", "new-thumb-").replace(/\.(png|jpg)$/i, ".jpg")
-      : `/assets/today-thumb-${String(item.no).padStart(2, "0")}.jpg`),
-  };
-});
+const AdminApp = lazy(() => import("./admin/AdminApp.jsx").then((module) => ({ default: module.AdminApp })));
+
+const categories = [...categoriesData]
+  .filter((category) => category.enabled && category.visible)
+  .sort((a, b) => a.sortOrder - b.sortOrder);
+const categoryById = new Map(categoriesData.map((category) => [category.categoryId, category]));
+const categoryByNameZh = new Map(categoriesData.map((category) => [category.nameZh, category]));
+const catalogue = [...productsData]
+  .filter((product) => product.visible && categoryById.get(product.categoryId)?.enabled && categoryById.get(product.categoryId)?.visible)
+  .sort((a, b) => (categoryById.get(a.categoryId)?.sortOrder || 9999) - (categoryById.get(b.categoryId)?.sortOrder || 9999)
+    || Number(b.pinned) - Number(a.pinned) || a.sortOrder - b.sortOrder)
+  .map((product) => ({
+    ...product,
+    id: product.productId,
+    no: Number(product.slug.split("-").at(-1)),
+    name: product.nameZh,
+    nameEn: product.nameEn,
+    family: categoryById.get(product.categoryId)?.nameZh || "待分类",
+    body: product.bodyType,
+    image: product.originalImage,
+    displayImage: product.mainImage,
+    thumb: product.thumbnailImage,
+  }));
 
 const filters = ["全部花色", "白色壶身", "316不锈钢", "混色套装"];
 
@@ -640,7 +569,7 @@ const copy = {
   },
 };
 
-export function App() {
+function Storefront() {
   const [language, setLanguage] = useState("zh");
   const [filter, setFilter] = useState("全部花色");
   const [selectedId, setSelectedId] = useState("pattern-01");
@@ -681,7 +610,7 @@ export function App() {
   ), [selectedCapacities, selectedQuantities]);
   const totalCartons = selectedEntries.reduce((sum, item) => sum + item.quantity, 0);
   const displayFilter = (value) => t.filterLabels[value] || value;
-  const displayFamily = (value) => t.familyLabels[value] || value;
+  const displayFamily = (value) => language === "zh" ? value : (categoryByNameZh.get(value)?.nameEn || t.familyLabels[value] || value);
   const displayBody = (value) => t.bodyLabels[value] || value;
   const displayPatternName = (pattern) => {
     if (language === "zh") return pattern.name;
@@ -960,8 +889,8 @@ export function App() {
                   const active = Boolean(selectedCapacities[pattern.id]?.length);
                   const catalogueCode = `319-${String(pattern.no).padStart(2, "0")}`;
                   return (
-                    <article className={`pattern-card ${active ? "selected" : ""}`} key={pattern.id}>
-                      <button className="pattern-image-wrap" type="button" onClick={() => openExpanded(pattern)} aria-label={`${displayPatternName(pattern)}，${displayFamily(pattern.family)}，${t.zoomHint}。`}><img src={pattern.thumb} alt="" width="640" height="640" loading={seriesIndex === 0 ? "eager" : "lazy"} decoding="async" fetchPriority={seriesIndex === 0 ? "high" : undefined} />{active && <span className="check-mark"><Check weight="bold" /></span>}<span className="zoom-hint"><MagnifyingGlassPlus weight="bold" /> {t.zoomHint}</span></button>
+                    <article className={`pattern-card ${active ? "selected" : ""}`} id={pattern.id} key={pattern.id}>
+                      <button className="pattern-image-wrap" type="button" onClick={() => openExpanded(pattern)} aria-label={`${displayPatternName(pattern)}，${displayFamily(pattern.family)}，${t.zoomHint}。`}><img src={pattern.thumb} srcSet={`${pattern.thumb} 720w, ${pattern.displayImage} 1600w`} sizes="(max-width: 700px) 46vw, (max-width: 1100px) 30vw, 240px" alt={language === "zh" ? pattern.imageAltZh : (pattern.imageAltEn || displayPatternName(pattern))} width="640" height="640" loading={seriesIndex === 0 ? "eager" : "lazy"} decoding="async" fetchPriority={seriesIndex === 0 ? "high" : undefined} />{active && <span className="check-mark"><Check weight="bold" /></span>}<span className="zoom-hint"><MagnifyingGlassPlus weight="bold" /> {t.zoomHint}</span></button>
                       <span className="pattern-code">MODEL 319 · {catalogueCode}</span><span className="pattern-name">{displayPatternName(pattern)}</span><span className="pattern-family">{displayBody(pattern.body)} · 1.6L ¥29 · 2.0L ¥31</span>
                       <div className="capacity-picker" aria-label={`${pattern.name} 容量选择`}>
                         {capacities.map((capacity) => (
@@ -1047,7 +976,7 @@ export function App() {
         <div className="lightbox-panel" role="dialog" aria-modal="true" aria-label={`${displayPatternName(expanded)} 大图`} onClick={(event) => event.stopPropagation()} onWheel={zoomLightbox}>
           <button className="lightbox-close" type="button" onClick={closeExpanded} aria-label="关闭大图"><X weight="bold" /></button>
           <span className="zoom-meter">{Math.round(zoom * 100)}% · {language === "zh" ? "滚轮缩放" : "Wheel to zoom"}</span>
-          <div className="lightbox-image"><img src={expanded.displayImage} alt={`${displayPatternName(expanded)} 大图`} decoding="async" fetchPriority="high" style={{ transform: `scale(${zoom})` }} /></div>
+          <div className="lightbox-image"><img src={expanded.displayImage} srcSet={`${expanded.thumb} 720w, ${expanded.displayImage} 1600w`} sizes="(max-width: 700px) 96vw, 80vw" alt={`${displayPatternName(expanded)} 大图`} decoding="async" fetchPriority="high" style={{ transform: `scale(${zoom})` }} /></div>
           <div className="lightbox-info">
             <div className="lightbox-pack">
               <span>PRICE / PACKING</span>
@@ -1080,4 +1009,11 @@ export function App() {
       </div>}
     </div>
   );
+}
+
+
+export function App() {
+  return window.location.pathname.startsWith("/admin")
+    ? <Suspense fallback={<main style={{ padding: 24 }}>正在加载管理后台…</main>}><AdminApp /></Suspense>
+    : <Storefront />;
 }
