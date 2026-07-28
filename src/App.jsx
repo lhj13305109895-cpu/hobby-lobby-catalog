@@ -1000,7 +1000,7 @@ function Storefront() {
               </div>
             </div>
             <div className="hero-featured-product">
-              <img src={heroFeaturedPattern.displayImage} alt={language === "zh" ? `${displayPatternName(heroFeaturedPattern)}真实产品` : `${displayPatternName(heroFeaturedPattern)} real product`} width="1000" height="1000" loading="eager" decoding="async" fetchPriority="high" />
+              <img src="/assets/hero-featured-product.png" alt={language === "zh" ? `${displayPatternName(heroFeaturedPattern)}真实产品` : `${displayPatternName(heroFeaturedPattern)} real product`} width="1254" height="1254" loading="eager" decoding="async" fetchPriority="high" />
             </div>
             <div className="hero-runway-controls">
               <button type="button" aria-label={t.previousPatterns} onClick={() => heroCarouselRef.current?.scrollBy({ left: -260, behavior: "smooth" })}><ArrowLeft weight="bold" /></button>

@@ -24,9 +24,10 @@
 ## Findings and iteration history
 
 1. Initial mobile layout placed too much copy above the product. Reduced mobile spacing, headline size, and media height; converted actions to two equal columns.
-2. The featured product source had a white square background. Applied a soft elliptical crop while preserving the complete product silhouette.
+2. The featured product source had a white square background. Created a background-extracted product asset, removed the chroma key to alpha, and preserved the complete lid, spout, handle, body, pattern, and base.
 3. The original carousel filter could include promotional set images. Limited the hero runway to the botanical-floral category so the cover consistently shows individual real products.
 4. Replaced the old hero preload with the new featured product asset and updated the page description from 58 to 83 patterns plus customization.
+5. Reworked the desktop hero from a hard two-column split into one continuous ivory canvas so the curved runway passes behind the headline area and the foreground product, matching the selected reference composition.
 
 ## Known non-blocking repository issue
 
