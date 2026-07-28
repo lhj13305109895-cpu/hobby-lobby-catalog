@@ -4,7 +4,7 @@
 
 ## 登录
 
-用 Safari 打开后台，输入 Cloudflare Access 允许的管理员邮箱并完成验证。登录过期时页面会显示中文提示，重新登录后刷新即可。
+用 Safari 打开后台，点击“使用 GitHub 登录”并授权配置好的 GitHub OAuth App。只有 `ADMIN_GITHUB_LOGINS` 中的账号可以进入。会话使用 HttpOnly、Secure、SameSite Cookie，12 小时后过期；过期后重新点击 GitHub 登录即可。
 
 ## 新增产品
 

@@ -1,7 +1,7 @@
 import { errorResponse, json, requireAdmin } from "../_shared.js";
 
 export async function onRequestGet(context) {
-  const auth = requireAdmin(context);
+  const auth = await requireAdmin(context);
   if (auth.response) return auth.response;
   try {
     const { CF_ACCOUNT_ID, CF_API_TOKEN, CF_PAGES_PROJECT } = context.env;

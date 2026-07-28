@@ -55,7 +55,7 @@ function validate(products, categories, files) {
 }
 
 export async function onRequestPost(context) {
-  const auth = requireAdmin(context);
+  const auth = await requireAdmin(context);
   if (auth.response) return auth.response;
   try {
     const env = context.env;
@@ -80,7 +80,7 @@ export async function onRequestPost(context) {
     const tree = await github(env, "/git/trees", { method: "POST", body: JSON.stringify({ base_tree: head.tree.sha, tree: blobs }) });
     const cleanMessage = String(body.message || "Update catalogue from mobile admin").replace(/[\r\n]+/g, " ").slice(0, 160);
     const commit = await github(env, "/git/commits", { method: "POST", body: JSON.stringify({
-      message: `${cleanMessage}\n\nAdmin: ${auth.email}\n[request:${idempotencyKey}]`, tree: tree.sha, parents: [head.sha],
+      message: `${cleanMessage}\n\nAdmin: GitHub @${auth.login}\n[request:${idempotencyKey}]`, tree: tree.sha, parents: [head.sha],
     }) });
     await github(env, `/git/refs/heads/${encodeURIComponent(env.GITHUB_BRANCH)}`, { method: "PATCH", body: JSON.stringify({ sha: commit.sha, force: false }) });
     return json({ ok: true, sha: commit.sha, shortSha: commit.sha.slice(0, 7) });

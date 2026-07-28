@@ -14,9 +14,9 @@
 
 ## 采用方案
 
-采用自建 `/admin` + Cloudflare Access + Cloudflare Pages Functions + GitHub Git Data API。
+采用自建 `/admin` + GitHub OAuth + Cloudflare Pages Functions + GitHub Git Data API。
 
-原因：现有前台高度定制，后台需要产品与分类联动、图片批量处理、一次 commit、删除保护、草稿和部署状态。该方案继续使用 GitHub 历史与 Cloudflare Pages，不需要传统服务器，也不接入 AI。管理员浏览器只向同域 Pages Function 提交数据；GitHub Token 与 Cloudflare Token 只保存在 Cloudflare Secret 中。
+原因：现有前台高度定制，后台需要产品与分类联动、图片批量处理、一次 commit、删除保护、草稿和部署状态。该方案继续使用 GitHub 历史与 Cloudflare Pages，不需要传统服务器、Cloudflare Zero Trust 付费资料或 AI。管理员通过 GitHub OAuth 登录；浏览器只向同域 Pages Function 提交数据，OAuth Secret、会话 Secret、GitHub Token 与 Cloudflare Token 只保存在 Cloudflare Secret 中。
 
 ## 数据迁移
 
@@ -49,11 +49,11 @@
 
 ## 尚需在真实账号环境完成
 
-- Cloudflare Access、环境变量和 Secret 必须由仓库/Cloudflare 账号管理员配置。
+- GitHub OAuth App、环境变量和 Secret 必须由仓库/Cloudflare 账号管理员配置。
 - 在配置完成并合并到生产分支前，无法真实产生 GitHub commit 或 Cloudflare 部署，也无法声称 iPhone 端端到端发布已通过。
 - HEIC/HEIF 使用 iPhone Safari 的原生解码能力；损坏文件或很旧的 iOS 会给出中文错误。正式验收应使用实际常见 HEIC 样本测试。
 - Cloudflare API Token 仅用于显示部署状态；不配置时自动部署仍会发生，但后台只能显示“GitHub 已保存，未配置状态查询”。
 
 ## 费用
 
-小型目录通常可落在 GitHub、Cloudflare Pages 和 Cloudflare Access 免费额度内。超出 Pages 构建、Functions 请求、Access 用户数或 GitHub 存储/带宽配额后，按各平台当期价格计费；本项目没有 AI API 费用和传统服务器费用。
+小型目录通常可落在 GitHub 与 Cloudflare Pages 免费额度内。超出 Pages 构建、Functions 请求或 GitHub 存储/带宽配额后，按各平台当期价格计费；本方案不需要 Cloudflare Zero Trust、AI API 或传统服务器。

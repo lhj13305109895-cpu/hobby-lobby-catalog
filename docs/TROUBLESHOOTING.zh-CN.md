@@ -1,6 +1,6 @@
 # 常见错误排查
 
-- “管理员身份无效”：确认 `/admin*` 和 `/api/admin/*` 都受 Cloudflare Access 保护，邮箱同时存在于 Access Policy 与 `ADMIN_EMAILS`。
+- “管理员登录无效”：检查 OAuth App 回调地址、`GITHUB_OAUTH_CLIENT_ID`、`GITHUB_OAUTH_CLIENT_SECRET`，并确认 GitHub 用户名存在于 `ADMIN_GITHUB_LOGINS`。如单独配置了可选的 `SESSION_SECRET`，它必须至少 32 个字符。
 - “GitHub 授权失败”：检查 `GITHUB_TOKEN` 是 Cloudflare Secret、未过期、只授权正确仓库且 Contents 为读写。
 - “GitHub 保存冲突”：后台提交期间有人更新了 `main`；刷新后台读取新版本后重做本次编辑。
 - “Cloudflare 状态未知”：补充 `CF_ACCOUNT_ID`、`CF_PAGES_PROJECT`、只读 `CF_API_TOKEN`。不影响 Git push 自动部署。

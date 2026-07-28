@@ -224,10 +224,10 @@ export function AdminApp() {
   useEffect(() => {
     document.title = "产品管理后台 | Hobby Lobby";
     if (!localPreview) api("/api/admin/session").then((data)=>{
-      if (!data.authenticated || !data.email) throw new Error("管理员会话响应无效");
-      setAuthorized(true);setStatus(`已登录：${data.email}`);
+      if (!data.authenticated || !data.login) throw new Error("管理员会话响应无效");
+      setAuthorized(true);setStatus(`已登录 GitHub @${data.login}`);
     }).catch((e)=>{setAuthorized(false);setStatus(e.message);});
-    else setStatus("本地预览模式（线上必须通过 Cloudflare Access）");
+    else setStatus("本地预览模式（线上使用 GitHub 安全登录）");
   }, []);
   const counts = useMemo(() => Object.fromEntries(categories.map((c)=>[c.categoryId, products.filter((p)=>p.categoryId===c.categoryId).length])), [products,categories]);
   const visibleProducts = useMemo(() => products.filter((p)=>(!filter||p.categoryId===filter)&&`${p.nameZh} ${p.nameEn} ${p.model} ${p.productId}`.toLowerCase().includes(query.toLowerCase())).sort((a,b)=>Number(b.pinned)-Number(a.pinned)||a.sortOrder-b.sortOrder),[products,query,filter]);
@@ -274,10 +274,10 @@ export function AdminApp() {
   function moveCategory(category,delta){const ordered=[...categories].sort((a,b)=>a.sortOrder-b.sortOrder);const index=ordered.findIndex((c)=>c.categoryId===category.categoryId);const swap=ordered[index+delta];if(!swap)return;const a=category.sortOrder;category={...category,sortOrder:swap.sortOrder};const next=categories.map((c)=>c.categoryId===category.categoryId?category:c.categoryId===swap.categoryId?{...swap,sortOrder:a}:c);publish(products,next,[],`Reorder category ${category.nameEn}`).then(()=>setCategories(next)).catch(e=>setStatus(e.message));}
   function positionCategory(category,where){const values=categories.filter((c)=>c.categoryId!==category.categoryId).map((c)=>c.sortOrder);const sortOrder=where==="top"?Math.min(...values,10)-10:Math.max(...values,0)+10;const next=categories.map((c)=>c.categoryId===category.categoryId?{...c,sortOrder,updatedAt:nowIso()}:c);publish(products,next,[],`Reorder category ${category.nameEn}`).then(()=>setCategories(next)).catch(e=>setStatus(e.message));}
 
-  if (!authorized) return <main className="admin-auth"><h1>产品管理后台</h1><p>{status}</p><p>请通过 Cloudflare Access 登录管理员邮箱后刷新此页。</p></main>;
+  if (!authorized) return <main className="admin-auth"><h1>产品管理后台</h1><p>{new URLSearchParams(location.search).get("auth_error") || status}</p><a className="primary-action" href="/api/admin/login">使用 GitHub 登录</a><small>只有配置的管理员 GitHub 账号可以进入</small></main>;
   if (editing) return <ProductEditor initial={editing} categories={categories} onCancel={()=>setEditing(null)} onCreateCategory={createCategory} onPublish={saveProduct}/>;
   return <main className="admin-shell">
-    <header className="admin-top"><div><strong>Hobby Lobby 管理后台</strong><small>{status}</small></div><a href="/" target="_blank" rel="noreferrer">查看网站</a></header>
+    <header className="admin-top"><div><strong>Hobby Lobby 管理后台</strong><small>{status}</small></div><div className="admin-header-actions"><a href="/" target="_blank" rel="noreferrer">查看网站</a>{!localPreview&&<button onClick={async()=>{await api("/api/admin/logout",{method:"POST",body:"{}"});location.reload();}}>退出</button>}</div></header>
     <nav className="admin-tabs"><button className={tab==="products"?"active":""} onClick={()=>{history.pushState({},"","/admin");setTab("products");}}>产品管理</button><button className={tab==="categories"?"active":""} onClick={()=>{history.pushState({},"","/admin/categories");setTab("categories");}}>分类管理</button></nav>
     {tab==="products"?<>
       <section className="admin-toolbar"><input type="search" placeholder="搜索名称、型号或 ID" value={query} onChange={(e)=>setQuery(e.target.value)}/><select value={filter} onChange={(e)=>setFilter(e.target.value)}><option value="">全部分类</option>{categories.map((c)=><option key={c.categoryId} value={c.categoryId}>{c.nameZh}（{counts[c.categoryId]||0}）</option>)}</select><button className="primary-action" onClick={()=>{const saved=localStorage.getItem(draftKey);if(saved&&confirm("发现未发布草稿，是否恢复？")){try{setEditing(JSON.parse(saved).form);return;}catch{}}setEditing(blankProduct(categories));}}>＋ 新增产品</button></section>
