@@ -963,24 +963,19 @@ function Storefront() {
     <div className={`site-shell ${language === "zh" ? "static-reference-active" : ""}`} lang={language}>
       <section className="hero-reference-exact" aria-label="花色，由你定义">
         <img className="hero-reference-base" src="/assets/hero-reference-exact.png" alt="花色由你定义，型号319花色定制展示" width="1586" height="1024" fetchPriority="high" decoding="async" />
-        <div className="hero-reference-motion hero-reference-motion-left" aria-hidden="true">
-          <div className="hero-reference-catalog-track hero-reference-track-left">
-            {[...heroShowcasePatterns, ...heroShowcasePatterns].map((pattern, index) => (
-              <figure className="hero-reference-catalog-item" key={`reference-left-${pattern.id}-${index}`}>
-                <img src={pattern.thumb} alt="" width="640" height="640" decoding="async" loading={index < 3 ? "eager" : "lazy"} />
-              </figure>
-            ))}
-          </div>
-        </div>
-        <div className="hero-reference-motion hero-reference-motion-right" aria-hidden="true">
-          <div className="hero-reference-catalog-track hero-reference-track-right">
-            {[...heroShowcasePatterns, ...heroShowcasePatterns].map((pattern, index) => (
-              <figure className="hero-reference-catalog-item" key={`reference-right-${pattern.id}-${index}`}>
+        {[0, 1].map((slotIndex) => (
+          <div className={`hero-reference-slot hero-reference-slot-${slotIndex + 1}`} aria-hidden="true" key={`reference-slot-${slotIndex}`}>
+            {heroShowcasePatterns.map((pattern, index) => (
+              <figure
+                className="hero-reference-slot-item"
+                key={`reference-slot-${slotIndex}-${pattern.id}`}
+                style={{ animationDelay: `${-((index * 3) + (slotIndex * 4.5))}s` }}
+              >
                 <img src={pattern.thumb} alt="" width="640" height="640" decoding="async" loading={index < 4 ? "eager" : "lazy"} />
               </figure>
             ))}
           </div>
-        </div>
+        ))}
         <a className="hero-reference-hotspot hero-reference-gallery-nav" href="#gallery" aria-label="花色目录" />
         <a className="hero-reference-hotspot hero-reference-custom-nav" href="#customization" aria-label="定制服务" />
         <a className="hero-reference-hotspot hero-reference-gallery-cta" href="#gallery" aria-label="探索花色" />
