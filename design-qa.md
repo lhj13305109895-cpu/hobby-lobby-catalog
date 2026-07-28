@@ -22,6 +22,7 @@
 **Interaction Verification**
 
 - Two rear catalogue slots render and cycle independently.
+- Rear products continue moving from right to left while the pointer is over the hero; computed animation state remained `running` and the transform changed during a 900 ms hover check.
 - Active products changed after 3.5 seconds: slot 1 changed from `today-thumb-42.jpg` to `today-thumb-57.jpg`; slot 2 changed from `today-thumb-57.jpg` to `today-thumb-55.jpg`.
 - Broken images: 0.
 - Horizontal overflow: false.
