@@ -23,6 +23,7 @@
 
 - Animated rear catalogue slots were removed completely.
 - The curtain uses unique static products with no repeated pattern and no floating thumbnail boxes.
+- Both inactive carousel arrow circles were removed from the static hero artwork.
 - Broken images: 0.
 - Horizontal overflow: false.
 - Browser warnings/errors: 0.
@@ -38,7 +39,7 @@
 
 **Focused Region Comparison**
 
-- Reviewed the central-pot edges, lid and handle, every rear curtain position, and the right arrow. No foreground duplication, repeated rear pattern, or floating rectangular overlay remains.
+- Reviewed the central-pot edges, lid and handle, every rear curtain position, and both former arrow locations. No foreground duplication, repeated rear pattern, floating rectangular overlay, or inactive arrow remains.
 
 **Follow-up Polish**
 

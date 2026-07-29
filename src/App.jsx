@@ -962,7 +962,7 @@ function Storefront() {
   return (
     <div className={`site-shell ${language === "zh" ? "static-reference-active" : ""}`} lang={language}>
       <section className="hero-reference-exact" aria-label="花色，由你定义">
-        <img className="hero-reference-base" src="/assets/hero-reference-products.png" alt="花色由你定义，型号319花色定制展示" width="1561" height="1008" fetchPriority="high" decoding="async" />
+        <img className="hero-reference-base" src="/assets/hero-reference-products.png" alt="花色由你定义，型号319花色定制展示" width="1560" height="1008" fetchPriority="high" decoding="async" />
         <a className="hero-reference-hotspot hero-reference-gallery-nav" href="#gallery" aria-label="花色目录" />
         <a className="hero-reference-hotspot hero-reference-custom-nav" href="#customization" aria-label="定制服务" />
         <a className="hero-reference-hotspot hero-reference-gallery-cta" href="#gallery" aria-label="探索花色" />
