@@ -41,10 +41,12 @@ function validate(products, categories, files) {
   }
   if (!categories.some((item) => item.categoryId === "uncategorized" && item.protected)) throw Object.assign(new Error("受保护的待分类分类不能删除"), { status: 400 });
   const productIds = new Set();
+  const productSlugs = new Set();
   for (const product of products) {
     if (!idPattern.test(product.productId) || productIds.has(product.productId)) throw Object.assign(new Error("产品 ID 格式不正确或重复"), { status: 409 });
+    if (!/^319-\d{2,3}$/.test(product.slug) || productSlugs.has(product.slug)) throw Object.assign(new Error("产品编号格式不正确或重复"), { status: 409 });
     if (!categoryIds.has(product.categoryId)) throw Object.assign(new Error(`产品 ${product.productId} 的分类不存在`), { status: 400 });
-    productIds.add(product.productId);
+    productIds.add(product.productId); productSlugs.add(product.slug);
   }
   let bytes = 0;
   for (const file of files) {

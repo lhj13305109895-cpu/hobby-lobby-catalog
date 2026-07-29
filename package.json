@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/prepare-sites-build.mjs",
+    "build": "node scripts/generate-seo-pages.mjs --public && vite build && node scripts/generate-seo-pages.mjs --dist && node scripts/prepare-sites-build.mjs",
     "preview": "vite preview",
     "test:admin": "node --test tests/admin-functions.test.mjs",
-    "test:sites": "node --test tests/sites-worker.test.mjs"
+    "test:sites": "node --test tests/sites-worker.test.mjs",
+    "test:seo": "node --test tests/seo-build.test.mjs"
   },
   "dependencies": {
     "@fontsource/dm-sans": "^5.3.0",

@@ -11,20 +11,28 @@ const clone = (value) => JSON.parse(JSON.stringify(value));
 const slugify = (value) => String(value || "item").toLowerCase().normalize("NFKD")
   .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || "item";
 const newId = (prefix) => `${prefix}-${crypto.randomUUID().slice(0, 12)}`;
+const nextProductSlug = (products) => {
+  const highest = products.reduce((max, product) => {
+    const match = String(product.slug || "").match(/^319-(\d+)$/);
+    return match ? Math.max(max, Number(match[1])) : max;
+  }, 0);
+  return `319-${String(highest + 1).padStart(2, "0")}`;
+};
 const versionUploadedAsset = (source, updatedAt) => {
   if (!source?.startsWith("/assets/uploads/")) return source;
   const version = Date.parse(updatedAt) || updatedAt || "1";
   return `${source}${source.includes("?") ? "&" : "?"}v=${encodeURIComponent(version)}`;
 };
 
-function blankProduct(categories) {
-  const stamp = Date.now();
+function blankProduct(categories, products = productsSeed) {
+  const slug = nextProductSlug(products);
+  const sequence = Number(slug.split("-")[1]);
   return {
-    productId: newId("product"), slug: `319-${stamp}`, nameZh: "", nameEn: "", model: "319",
+    productId: newId("product"), slug, nameZh: "", nameEn: "", model: "319",
     capacities: ["1.6L", "2.0L"], descriptionZh: "", descriptionEn: "",
     categoryId: categories.find((item) => item.enabled)?.categoryId || "uncategorized",
     bodyType: "白色壶身", mainImage: "", thumbnailImage: "", originalImage: "", detailImages: [],
-    imageAltZh: "", imageAltEn: "", sortOrder: 9990, isNew: true, featured: false,
+    imageAltZh: "", imageAltEn: "", sortOrder: sequence * 10, isNew: true, featured: false,
     pinned: false, visible: false, createdAt: nowIso(), updatedAt: nowIso(),
   };
 }
@@ -176,6 +184,7 @@ function ProductEditor({ initial, categories, onCancel, onCreateCategory, onPubl
 
   async function publish() {
     if (!form.nameZh || !form.categoryId || !form.mainImage) return setStatus("请填写中文名称、选择分类并上传主图");
+    if (!/^319-\d{2,3}$/.test(form.slug)) return setStatus("产品编号格式应为 319-88 这样的连续编号");
     if (form.visible && (!form.nameEn || !form.imageAltEn)) {
       if (!confirm("英文名称或英文 alt 尚未填写。可以保存草稿；确定仍要公开发布吗？")) return;
     }
@@ -197,6 +206,7 @@ function ProductEditor({ initial, categories, onCancel, onCreateCategory, onPubl
     <section className="admin-form-grid">
       <label>中文产品名称<input value={form.nameZh} onChange={(e) => set("nameZh", e.target.value)} /></label>
       <label>英文产品名称<input value={form.nameEn} onChange={(e) => set("nameEn", e.target.value)} /></label>
+      <label>产品编号<input value={form.slug} inputMode="numeric" pattern="319-[0-9]{2,3}" onChange={(e) => set("slug", e.target.value.trim())} /></label>
       <label>产品型号<input value={form.model} onChange={(e) => set("model", e.target.value)} /></label>
       <label>容量（逗号分隔）<input value={form.capacities.join(", ")} onChange={(e) => set("capacities", e.target.value.split(",").map((v) => v.trim()).filter(Boolean))} /></label>
       <label className="span-2">中文简介<textarea value={form.descriptionZh} onChange={(e) => set("descriptionZh", e.target.value)} /></label>
@@ -235,7 +245,7 @@ export function AdminApp() {
     else setStatus("本地预览模式（线上使用 GitHub 安全登录）");
   }, []);
   const counts = useMemo(() => Object.fromEntries(categories.map((c)=>[c.categoryId, products.filter((p)=>p.categoryId===c.categoryId).length])), [products,categories]);
-  const visibleProducts = useMemo(() => products.filter((p)=>(!filter||p.categoryId===filter)&&`${p.nameZh} ${p.nameEn} ${p.model} ${p.productId}`.toLowerCase().includes(query.toLowerCase())).sort((a,b)=>Number(b.pinned)-Number(a.pinned)||a.sortOrder-b.sortOrder),[products,query,filter]);
+  const visibleProducts = useMemo(() => products.filter((p)=>(!filter||p.categoryId===filter)&&`${p.nameZh} ${p.nameEn} ${p.model} ${p.slug} ${p.productId}`.toLowerCase().includes(query.toLowerCase())).sort((a,b)=>Number(b.pinned)-Number(a.pinned)||a.sortOrder-b.sortOrder),[products,query,filter]);
 
   async function publish(nextProducts, nextCategories, files, message) {
     if (publishing.current) throw new Error("已有发布任务正在进行，请勿重复点击");
@@ -259,6 +269,7 @@ export function AdminApp() {
   }
   async function saveProduct(product, files=[]) {
     const exists = products.some((p)=>p.productId===product.productId);
+    if (products.some((p)=>p.productId!==product.productId&&p.slug===product.slug)) throw new Error(`产品编号 ${product.slug} 已存在，请使用下一个连续编号`);
     const next = exists ? products.map((p)=>p.productId===product.productId?product:p) : [...products,product];
     await publish(next,categories,files,`${exists?"Update":"Add"} product ${product.model} ${product.productId}`);
     setProducts(next); setEditing(null);
@@ -285,7 +296,7 @@ export function AdminApp() {
     <header className="admin-top"><div><strong>Hobby Lobby 管理后台</strong><small>{status}</small></div><div className="admin-header-actions"><a href="/" target="_blank" rel="noreferrer">查看网站</a>{!localPreview&&<button onClick={async()=>{await api("/api/admin/logout",{method:"POST",body:"{}"});location.reload();}}>退出</button>}</div></header>
     <nav className="admin-tabs"><button className={tab==="products"?"active":""} onClick={()=>{history.pushState({},"","/admin");setTab("products");}}>产品管理</button><button className={tab==="categories"?"active":""} onClick={()=>{history.pushState({},"","/admin/categories");setTab("categories");}}>分类管理</button></nav>
     {tab==="products"?<>
-      <section className="admin-toolbar"><input type="search" placeholder="搜索名称、型号或 ID" value={query} onChange={(e)=>setQuery(e.target.value)}/><select value={filter} onChange={(e)=>setFilter(e.target.value)}><option value="">全部分类</option>{categories.map((c)=><option key={c.categoryId} value={c.categoryId}>{c.nameZh}（{counts[c.categoryId]||0}）</option>)}</select><button className="primary-action" onClick={()=>{const saved=localStorage.getItem(draftKey);if(saved&&confirm("发现未发布草稿，是否恢复？")){try{setEditing(JSON.parse(saved).form);return;}catch{}}setEditing(blankProduct(categories));}}>＋ 新增产品</button></section>
+      <section className="admin-toolbar"><input type="search" placeholder="搜索名称、型号或 ID" value={query} onChange={(e)=>setQuery(e.target.value)}/><select value={filter} onChange={(e)=>setFilter(e.target.value)}><option value="">全部分类</option>{categories.map((c)=><option key={c.categoryId} value={c.categoryId}>{c.nameZh}（{counts[c.categoryId]||0}）</option>)}</select><button className="primary-action" onClick={()=>{const saved=localStorage.getItem(draftKey);if(saved&&confirm("发现未发布草稿，是否恢复？")){try{setEditing(JSON.parse(saved).form);return;}catch{}}setEditing(blankProduct(categories,products));}}>＋ 新增产品</button></section>
       <section className="admin-list">{visibleProducts.map((p)=><article className="admin-card" key={p.productId}><img src={versionUploadedAsset(p.thumbnailImage||p.mainImage,p.updatedAt)} alt=""/><div className="card-copy"><strong>{p.nameZh||"未命名产品"}</strong><small>{p.nameEn||"英文未填写"}</small><span>{p.model} · {categories.find((c)=>c.categoryId===p.categoryId)?.nameZh||"待分类"} · {p.visible?"显示":"隐藏"}</span></div><div className="card-actions"><a href={`/#${p.productId}`} target="_blank" rel="noreferrer">查看</a><button onClick={()=>setEditing(p)}>编辑</button><button onClick={()=>quickProduct({...p,visible:!p.visible,updatedAt:nowIso()},`${p.visible?"Hide":"Show"} product ${p.productId}`)}>{p.visible?"隐藏":"显示"}</button><button onClick={()=>setEditing({...clone(p),productId:newId("product"),slug:`${p.slug}-copy-${Date.now()}`,nameZh:`${p.nameZh} 副本`,visible:false,createdAt:nowIso(),updatedAt:nowIso()})}>复制</button><button className="danger" onClick={()=>deleteProduct(p)}>删除</button></div></article>)}</section>
     </>:<>
       <section className="admin-toolbar"><input type="search" placeholder="搜索分类" value={query} onChange={(e)=>setQuery(e.target.value)}/><button className="primary-action" onClick={()=>setEditingCategory(blankCategory())}>＋ 新建分类</button></section>

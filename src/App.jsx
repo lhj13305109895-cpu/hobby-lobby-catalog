@@ -54,6 +54,8 @@ const languageOptions = [
 const quoteNumberKey = "hobby-lobby-319-quote-number";
 const quoteNumberPrefix = "XSD202607";
 const quoteNumberStart = 3;
+const siteOrigin = "https://hobby-lobby-catalog.pages.dev";
+const productUrl = (product) => `${siteOrigin}/products/${product.slug}/`;
 
 const escapeXml = (value) => String(value ?? "")
   .replaceAll("&", "&amp;")
@@ -556,7 +558,7 @@ const copy = {
     heroEyebrow: "花色定制 · 型号319",
     heroTitleTop: "花色，",
     heroTitleBottom: "由你定义",
-    heroLead: "83 款现有花色随心选择，也支持根据图片、配色或品牌需求定制专属图案。",
+    heroLead: `${catalogue.length} 款现有花色随心选择，也支持根据图片、配色或品牌需求定制专属图案。`,
     browseAll: "探索花色",
     viewSpecs: "了解定制",
     heroNotePatterns: "真实产品花色自动滚动展示",
@@ -566,7 +568,7 @@ const copy = {
     nextPatterns: "查看更多花色",
     stripModel: "型号",
     stripPatterns: "花色",
-    stripPatternCount: "83款",
+    stripPatternCount: `${catalogue.length}款`,
     galleryEyebrow: "完整花色库",
     galleryTitle: "按系列查看花色",
     galleryText: "每张卡片都是今天提供的新图。单击图片直接放大查看，下面可选择容量和箱数。",
@@ -630,7 +632,7 @@ const copy = {
     heroEyebrow: "Pattern Customization · Model 319",
     heroTitleTop: "Patterns,",
     heroTitleBottom: "Defined by You",
-    heroLead: "Choose from 83 ready patterns, or create an exclusive design from your artwork, colors, and brand identity.",
+    heroLead: `Choose from ${catalogue.length} ready patterns, or create an exclusive design from your artwork, colors, and brand identity.`,
     browseAll: "Explore Patterns",
     viewSpecs: "Customization",
     heroNotePatterns: "Real catalogue products in motion",
@@ -640,7 +642,7 @@ const copy = {
     nextPatterns: "View more patterns",
     stripModel: "Model",
     stripPatterns: "Patterns",
-    stripPatternCount: "83 styles",
+    stripPatternCount: `${catalogue.length} styles`,
     galleryEyebrow: "Complete Pattern Library",
     galleryTitle: "Browse by series",
     galleryText: "All cards use the latest product images. Click an image to enlarge it, then select capacity and carton quantity below.",
@@ -697,6 +699,103 @@ const copy = {
     ],
   },
 };
+
+function productStructuredData(product) {
+  const category = categoryById.get(product.categoryId);
+  const imageUrls = [product.mainImage, product.originalImage, ...(product.detailImages || [])]
+    .filter(Boolean)
+    .map((source) => new URL(source, siteOrigin).href);
+  return {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "@id": `${productUrl(product)}#product`,
+    name: `${product.nameZh}保温壶（${product.slug}）`,
+    alternateName: product.nameEn || undefined,
+    description: product.descriptionZh || `${product.nameZh}花色型号319保温壶，提供1.6L和2.0L两种容量。`,
+    image: [...new Set(imageUrls)],
+    sku: product.slug,
+    mpn: product.slug,
+    brand: { "@type": "Brand", name: "Hobby Lobby Ask for More" },
+    category: category?.nameZh || "保温壶",
+    material: product.bodyType,
+    offers: {
+      "@type": "AggregateOffer",
+      url: productUrl(product),
+      priceCurrency: "CNY",
+      lowPrice: "29",
+      highPrice: "31",
+      offerCount: 2,
+      availability: "https://schema.org/InStock",
+    },
+  };
+}
+
+function ProductDetail({ product }) {
+  const [language, setLanguage] = useState("zh");
+  const category = categoryById.get(product.categoryId);
+  const name = language === "zh" ? product.nameZh : (product.nameEn || product.nameZh);
+  const description = language === "zh"
+    ? (product.descriptionZh || `${product.nameZh}花色型号319保温壶，提供1.6L和2.0L两种容量。`)
+    : (product.descriptionEn || `Model 319 thermal pot in the ${product.nameEn || product.nameZh} pattern, available in 1.6L and 2.0L.`);
+  const imageAlt = language === "zh" ? product.imageAltZh : (product.imageAltEn || product.imageAltZh);
+  const structuredData = productStructuredData(product);
+
+  useEffect(() => {
+    document.title = `${product.slug} ${product.nameZh}保温壶 | Hobby Lobby`;
+    const descriptionMeta = document.querySelector('meta[name="description"]');
+    if (descriptionMeta) descriptionMeta.setAttribute("content", description);
+    const canonical = document.querySelector('link[rel="canonical"]');
+    if (canonical) canonical.setAttribute("href", productUrl(product));
+    let jsonLd = document.getElementById("product-structured-data");
+    if (!jsonLd) {
+      jsonLd = document.createElement("script");
+      jsonLd.id = "product-structured-data";
+      jsonLd.type = "application/ld+json";
+      document.head.append(jsonLd);
+    }
+    jsonLd.textContent = JSON.stringify(structuredData);
+  }, [description, product]);
+
+  return (
+    <div className="site-shell product-page-shell" lang={language}>
+      <header className="topbar product-topbar">
+        <a className="brand-link" href="/" aria-label="Hobby Lobby home"><img src="/assets/brand-logo.webp" alt="Hobby Lobby Ask for More" width="256" height="256" /></a>
+        <nav aria-label={language === "zh" ? "商品导航" : "Product navigation"}><a href="/#gallery">{language === "zh" ? "全部花色" : "All patterns"}</a><a href="/#specifications">{language === "zh" ? "价格规格" : "Prices"}</a></nav>
+        <div className="language-switcher" role="group" aria-label={language === "zh" ? "语言" : "Language"}>
+          {languageOptions.map((option) => <button type="button" key={option.id} className={language === option.id ? "active" : ""} onClick={() => setLanguage(option.id)}>{option.label}</button>)}
+        </div>
+        <a className="button button-primary header-cta" href="/#gallery">{language === "zh" ? "浏览目录" : "Browse catalogue"}</a>
+      </header>
+      <main className="product-detail-page">
+        <nav className="product-breadcrumb" aria-label={language === "zh" ? "面包屑" : "Breadcrumb"}><a href="/">{language === "zh" ? "首页" : "Home"}</a><span>/</span><a href="/#gallery">{language === "zh" ? "花色目录" : "Patterns"}</a><span>/</span><strong>{product.slug}</strong></nav>
+        <article className="product-detail-card">
+          <figure className="product-detail-media"><img src={product.displayImage} alt={imageAlt} width="1600" height="1600" fetchPriority="high" decoding="async" /></figure>
+          <div className="product-detail-copy">
+            <p className="eyebrow">MODEL 319 · {product.slug}</p>
+            <h1>{name}</h1>
+            {language === "zh" && product.nameEn && <p className="product-name-en">{product.nameEn}</p>}
+            <p className="product-description">{description}</p>
+            <dl className="product-attributes">
+              <div><dt>{language === "zh" ? "系列" : "Series"}</dt><dd>{language === "zh" ? category?.nameZh : (category?.nameEn || category?.nameZh)}</dd></div>
+              <div><dt>{language === "zh" ? "壶身" : "Body"}</dt><dd>{product.bodyType}</dd></div>
+              <div><dt>{language === "zh" ? "货号" : "SKU"}</dt><dd>{product.slug}</dd></div>
+            </dl>
+            <div className="product-offers" aria-label={language === "zh" ? "容量和价格" : "Capacities and prices"}>
+              {capacities.map((capacity) => <div key={capacity.id}><strong>{capacity.id}</strong><span>{capacity.price}</span><small>{capacity.packing} / {language === "zh" ? "箱" : "carton"}</small></div>)}
+            </div>
+            <a className="button button-primary product-back" href="/#gallery"><ArrowLeft weight="bold" /> {language === "zh" ? "返回全部花色" : "Back to all patterns"}</a>
+          </div>
+        </article>
+        <section className="product-index-copy">
+          <p className="eyebrow">{language === "zh" ? "型号319花色" : "Model 319 pattern"}</p>
+          <h2>{language === "zh" ? `${product.nameZh}保温壶产品图` : `${product.nameEn || product.nameZh} thermal pot image`}</h2>
+          <p>{language === "zh" ? `本页展示 ${product.slug} ${product.nameZh}花色的清晰产品图片、容量、价格和装箱信息，支持从现有花色中选款，也支持来图定制。` : `This page shows clear product imagery, capacities, pricing, and carton details for ${product.slug}. Existing patterns and custom artwork are supported.`}</p>
+        </section>
+      </main>
+      <footer><img src="/assets/brand-logo.webp" alt="" width="256" height="256" loading="lazy" /><p>Hobby Lobby Ask for More · {product.slug}</p><a href="/#gallery">{language === "zh" ? "查看全部花色" : "View all patterns"} <ArrowRight weight="bold" /></a></footer>
+    </div>
+  );
+}
 
 function Storefront() {
   const [language, setLanguage] = useState("zh");
@@ -962,7 +1061,7 @@ function Storefront() {
   return (
     <div className={`site-shell ${language === "zh" ? "static-reference-active" : ""}`} lang={language}>
       <section className="hero-reference-exact" aria-label="花色，由你定义">
-        <img className="hero-reference-base" src="/assets/hero-reference-products.png" alt="花色由你定义，型号319花色定制展示" width="1560" height="1008" fetchPriority="high" decoding="async" />
+        <img className="hero-reference-base" src="/assets/hero-reference-products.webp" alt="花色由你定义，型号319花色定制展示" width="1560" height="1008" fetchPriority="high" decoding="async" />
         <a className="hero-reference-hotspot hero-reference-gallery-nav" href="#gallery" aria-label="花色目录" />
         <a className="hero-reference-hotspot hero-reference-custom-nav" href="#customization" aria-label="定制服务" />
         <a className="hero-reference-hotspot hero-reference-gallery-cta" href="#gallery" aria-label="探索花色" />
@@ -1008,7 +1107,7 @@ function Storefront() {
               </div>
             </div>
             <div className="hero-featured-product">
-              <img src="/assets/hero-featured-product.png" alt={language === "zh" ? `${displayPatternName(heroFeaturedPattern)}真实产品` : `${displayPatternName(heroFeaturedPattern)} real product`} width="1254" height="1254" loading="eager" decoding="async" fetchPriority="high" />
+              <img src="/assets/hero-featured-product.webp" alt={language === "zh" ? `${displayPatternName(heroFeaturedPattern)}真实产品` : `${displayPatternName(heroFeaturedPattern)} real product`} width="1100" height="1100" loading="eager" decoding="async" fetchPriority="high" />
             </div>
             <div className="hero-runway-controls">
               <button type="button" aria-label={t.previousPatterns} onClick={() => heroCarouselRef.current?.scrollBy({ left: -260, behavior: "smooth" })}><ArrowLeft weight="bold" /></button>
@@ -1047,6 +1146,7 @@ function Storefront() {
                     <article className={`pattern-card ${active ? "selected" : ""}`} id={pattern.id} key={pattern.id}>
                       <button className="pattern-image-wrap" type="button" onClick={() => openExpanded(pattern)} aria-label={`${displayPatternName(pattern)}，${displayFamily(pattern.family)}，${t.zoomHint}。`}><img src={pattern.thumb} srcSet={`${pattern.thumb} 720w, ${pattern.displayImage} 1600w`} sizes="(max-width: 700px) 46vw, (max-width: 1100px) 30vw, 240px" alt={language === "zh" ? pattern.imageAltZh : (pattern.imageAltEn || displayPatternName(pattern))} width="640" height="640" loading={seriesIndex === 0 ? "eager" : "lazy"} decoding="async" fetchPriority={seriesIndex === 0 ? "high" : undefined} />{active && <span className="check-mark"><Check weight="bold" /></span>}<span className="zoom-hint"><MagnifyingGlassPlus weight="bold" /> {t.zoomHint}</span></button>
                       <span className="pattern-code">MODEL 319 · {catalogueCode}</span><span className="pattern-name">{displayPatternName(pattern)}</span><span className="pattern-family">{displayBody(pattern.body)} · 1.6L ¥29 · 2.0L ¥31</span>
+                      <a className="product-detail-link" href={`/products/${pattern.slug}/`}>{language === "zh" ? "查看商品详情" : "View product details"} <ArrowRight weight="bold" /></a>
                       <div className="capacity-picker" aria-label={`${pattern.name} 容量选择`}>
                         {capacities.map((capacity) => (
                           <button className={isCapacitySelected(pattern.id, capacity.id) ? "active" : ""} type="button" key={capacity.id} onClick={() => toggleCapacity(pattern, capacity.id)} aria-pressed={isCapacitySelected(pattern.id, capacity.id)}>
@@ -1168,7 +1268,10 @@ function Storefront() {
 
 
 export function App() {
-  return window.location.pathname.startsWith("/admin")
-    ? <Suspense fallback={<main style={{ padding: 24 }}>正在加载管理后台…</main>}><AdminApp /></Suspense>
-    : <Storefront />;
+  if (window.location.pathname.startsWith("/admin")) {
+    return <Suspense fallback={<main style={{ padding: 24 }}>正在加载管理后台…</main>}><AdminApp /></Suspense>;
+  }
+  const productSlug = decodeURIComponent(window.location.pathname.match(/^\/products\/([^/]+)\/?$/)?.[1] || "");
+  const product = catalogue.find((item) => item.slug === productSlug);
+  return product ? <ProductDetail product={product} /> : <Storefront />;
 }

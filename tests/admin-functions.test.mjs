@@ -46,3 +46,16 @@ test("publish rejects unsafe upload paths before contacting GitHub", async () =>
   assert.equal(response.status, 400);
   assert.match((await response.json()).error, /不安全/);
 });
+
+test("publish rejects duplicate catalogue numbers before contacting GitHub", async () => {
+  const categories = [{ categoryId: "uncategorized", slug: "uncategorized", protected: true }];
+  const products = [
+    { productId: "product-one", slug: "319-88", categoryId: "uncategorized" },
+    { productId: "product-two", slug: "319-88", categoryId: "uncategorized" },
+  ];
+  const response = await publish({ request: request(await adminCookie(), {
+    products, categories, files: [], message: "test", idempotencyKey: "12345678-1234-1234-1234-123456789012",
+  }), env });
+  assert.equal(response.status, 409);
+  assert.match((await response.json()).error, /产品编号/);
+});
