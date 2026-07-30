@@ -1,8 +1,8 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import productsData from "./data/products.json";
 import categoriesData from "./data/categories.json";
 import {
-  ArrowDown, ArrowRight, Check, Heart,
+  ArrowDown, ArrowLeft, ArrowRight, Check, Heart,
   DownloadSimple, MagnifyingGlassPlus, PaintBrush, ShieldCheck, ShoppingCart, Trash, X,
 } from "@phosphor-icons/react";
 
@@ -35,6 +35,9 @@ const catalogue = [...productsData]
     displayImage: versionUploadedAsset(product.mainImage, product.updatedAt),
     thumb: versionUploadedAsset(product.thumbnailImage, product.updatedAt),
   }));
+
+const heroShowcasePatterns = catalogue.filter((product) => product.categoryId === "botanical-floral").slice(-10);
+const heroFeaturedPattern = catalogue.find((product) => product.no === 54) || heroShowcasePatterns[0] || catalogue[0];
 
 const filters = ["全部花色", "白色壶身", "316不锈钢", "混色套装"];
 
@@ -550,14 +553,17 @@ const copy = {
     navSteel: "不锈钢款",
     navSpecs: "型号价格",
     headerCta: "查看全部花色",
-    heroEyebrow: "2026 · 产品目录 · 型号319",
-    heroTitleTop: "319花色",
-    heroTitleBottom: "产品目录",
-    heroLead: "用于给客人快速查看全部花色：按系列分类，单击图片可放大查看，1.6L / 2.0L 价格直接标清。",
-    browseAll: "浏览全部花色",
-    viewSpecs: "查看型号价格",
-    heroNotePatterns: "83 个当前花色，已按系列分类",
-    heroNoteModel: "型号319 · 1.6L ¥29 RMB / 2.0L ¥31 RMB",
+    heroEyebrow: "花色定制 · 型号319",
+    heroTitleTop: "花色，",
+    heroTitleBottom: "由你定义",
+    heroLead: "83 款现有花色随心选择，也支持根据图片、配色或品牌需求定制专属图案。",
+    browseAll: "探索花色",
+    viewSpecs: "了解定制",
+    heroNotePatterns: "真实产品花色自动滚动展示",
+    heroNoteModel: "现有花色可选 · 支持来图定制",
+    heroCarouselLabel: "真实产品花色滚动展示",
+    previousPatterns: "查看前面的花色",
+    nextPatterns: "查看更多花色",
     stripModel: "型号",
     stripPatterns: "花色",
     stripPatternCount: "83款",
@@ -611,7 +617,7 @@ const copy = {
     },
     benefits: [
       { icon: ShieldCheck, title: "316内胆", text: "型号319，316不锈钢内胆，适合日常保温使用。" },
-      { icon: PaintBrush, title: "全花色目录", text: "按系列查看 83 个当前花色，方便给客人快速选款。" },
+      { icon: PaintBrush, title: "花色专属定制", text: "现有花色可直接选款，也支持根据图片、配色或品牌需求定制。" },
       { icon: MagnifyingGlassPlus, title: "单击放大", text: "单击任意图片即可看大图，滚轮可继续放大查看细节。" },
       { icon: Heart, title: "两种容量", text: "1.6L ¥29 RMB，2.0L ¥31 RMB，价格清楚直接。" },
     ],
@@ -621,14 +627,17 @@ const copy = {
     navSteel: "Stainless Steel",
     navSpecs: "Prices",
     headerCta: "View All Patterns",
-    heroEyebrow: "2026 · Product Catalogue · Model 319",
-    heroTitleTop: "Model 319",
-    heroTitleBottom: "Pattern Catalogue",
-    heroLead: "A premium catalogue for buyers to browse every available pattern by series. Click any image to enlarge, then select 1.6L or 2.0L directly.",
-    browseAll: "Browse Patterns",
-    viewSpecs: "View Prices",
-    heroNotePatterns: "83 current patterns grouped by series",
-    heroNoteModel: "Model 319 · 1.6L ¥29 RMB / 2.0L ¥31 RMB",
+    heroEyebrow: "Pattern Customization · Model 319",
+    heroTitleTop: "Patterns,",
+    heroTitleBottom: "Defined by You",
+    heroLead: "Choose from 83 ready patterns, or create an exclusive design from your artwork, colors, and brand identity.",
+    browseAll: "Explore Patterns",
+    viewSpecs: "Customization",
+    heroNotePatterns: "Real catalogue products in motion",
+    heroNoteModel: "Ready patterns · Custom artwork supported",
+    heroCarouselLabel: "Scrolling showcase of real catalogue products",
+    previousPatterns: "View previous patterns",
+    nextPatterns: "View more patterns",
     stripModel: "Model",
     stripPatterns: "Patterns",
     stripPatternCount: "83 styles",
@@ -682,7 +691,7 @@ const copy = {
     },
     benefits: [
       { icon: ShieldCheck, title: "316 inner liner", text: "Model 319 uses a 316 stainless-steel inner liner for everyday thermal use." },
-      { icon: PaintBrush, title: "Full pattern catalogue", text: "83 current patterns are grouped by series for faster buyer selection." },
+      { icon: PaintBrush, title: "Custom pattern service", text: "Choose existing patterns or customize artwork, colors, and branded designs." },
       { icon: MagnifyingGlassPlus, title: "Click to enlarge", text: "Click any image for a larger preview, then use the mouse wheel to zoom in." },
       { icon: Heart, title: "Two capacities", text: "1.6L ¥29 RMB and 2.0L ¥31 RMB, with clear catalogue pricing." },
     ],
@@ -701,6 +710,7 @@ function Storefront() {
   const [expandedId, setExpandedId] = useState(null);
   const [zoom, setZoom] = useState(1);
   const [catalogueReady, setCatalogueReady] = useState(false);
+  const heroCarouselRef = useRef(null);
   const t = copy[language];
   const filteredPatterns = useMemo(() => (
     filter === "全部花色"
@@ -950,7 +960,15 @@ function Storefront() {
   }
 
   return (
-    <div className="site-shell" lang={language}>
+    <div className={`site-shell ${language === "zh" ? "static-reference-active" : ""}`} lang={language}>
+      <section className="hero-reference-exact" aria-label="花色，由你定义">
+        <img className="hero-reference-base" src="/assets/hero-reference-products.png" alt="花色由你定义，型号319花色定制展示" width="1560" height="1008" fetchPriority="high" decoding="async" />
+        <a className="hero-reference-hotspot hero-reference-gallery-nav" href="#gallery" aria-label="花色目录" />
+        <a className="hero-reference-hotspot hero-reference-custom-nav" href="#customization" aria-label="定制服务" />
+        <a className="hero-reference-hotspot hero-reference-gallery-cta" href="#gallery" aria-label="探索花色" />
+        <a className="hero-reference-hotspot hero-reference-custom-cta" href="#customization" aria-label="了解定制" />
+        <button className="hero-reference-hotspot hero-reference-english" type="button" onClick={() => setLanguage("en")} aria-label="English" />
+      </section>
       <header className="topbar">
         <a className="brand-link" href="#top" aria-label="Hobby Lobby home"><img src="/assets/brand-logo.webp" alt="Hobby Lobby Ask for More" width="256" height="256" decoding="async" /></a>
         <nav aria-label={language === "zh" ? "主导航" : "Main navigation"}>
@@ -968,18 +986,35 @@ function Storefront() {
         <section className="hero" aria-labelledby="hero-title">
           <div className="hero-copy">
             <p className="eyebrow">{t.heroEyebrow}</p>
-            <h1 id="hero-title">{t.heroTitleTop}<br />{t.heroTitleBottom}</h1>
+            <h1 id="hero-title"><span>{t.heroTitleTop}</span><br /><span className="hero-title-accent">{t.heroTitleBottom}</span></h1>
             <p className="hero-lede">{t.heroLead}</p>
             <div className="hero-actions">
               <a className="button button-primary" href="#gallery">{t.browseAll} <ArrowDown weight="bold" /></a>
-              <a className="button button-secondary" href="#specifications">{t.viewSpecs} <ArrowRight weight="bold" /></a>
+              <a className="button button-secondary" href="#customization">{t.viewSpecs} <ArrowRight weight="bold" /></a>
             </div>
             <div className="hero-notes" aria-label={language === "zh" ? "产品摘要" : "Product summary"}>
               <span><PaintBrush weight="regular" /> {t.heroNotePatterns}</span>
               <span><ShieldCheck weight="regular" /> {t.heroNoteModel}</span>
             </div>
           </div>
-          <div className="hero-media"><img src="/assets/hero-pattern-02.webp" alt={language === "zh" ? "316不锈钢保温壶花色展示" : "316 stainless steel thermal pot pattern display"} width="1000" height="1000" loading="eager" decoding="async" fetchPriority="high" /></div>
+          <div className="hero-media">
+            <div className="hero-runway" id="hero-product-runway" ref={heroCarouselRef} aria-label={t.heroCarouselLabel}>
+              <div className="hero-runway-track">
+                {[...heroShowcasePatterns, ...heroShowcasePatterns].map((pattern, index) => (
+                  <figure className="hero-runway-item" key={`${pattern.id}-${index}`} aria-hidden={index >= heroShowcasePatterns.length}>
+                    <img src={pattern.thumb} alt={index < heroShowcasePatterns.length ? displayPatternName(pattern) : ""} width="640" height="640" decoding="async" loading={index < 4 ? "eager" : "lazy"} />
+                  </figure>
+                ))}
+              </div>
+            </div>
+            <div className="hero-featured-product">
+              <img src="/assets/hero-featured-product.png" alt={language === "zh" ? `${displayPatternName(heroFeaturedPattern)}真实产品` : `${displayPatternName(heroFeaturedPattern)} real product`} width="1254" height="1254" loading="eager" decoding="async" fetchPriority="high" />
+            </div>
+            <div className="hero-runway-controls">
+              <button type="button" aria-label={t.previousPatterns} onClick={() => heroCarouselRef.current?.scrollBy({ left: -260, behavior: "smooth" })}><ArrowLeft weight="bold" /></button>
+              <button type="button" aria-label={t.nextPatterns} onClick={() => heroCarouselRef.current?.scrollBy({ left: 260, behavior: "smooth" })}><ArrowRight weight="bold" /></button>
+            </div>
+          </div>
         </section>
 
         <div className="catalog-strip" aria-label={language === "zh" ? "目录摘要" : "Catalogue summary"}><span><small>{t.stripModel}</small><strong>319</strong></span><span><small>1.6L</small><strong>¥29 RMB</strong></span><span><small>2.0L</small><strong>¥31 RMB</strong></span><span><small>{t.stripPatterns}</small><strong>{t.stripPatternCount}</strong></span></div>
@@ -1039,7 +1074,7 @@ function Storefront() {
           <div><p className="eyebrow">{t.steelEyebrow}</p><h2>{t.steelTitle}</h2><p>{t.steelText}</p><a href="#gallery" onClick={() => chooseFilter("316不锈钢")}>{t.steelLink} <ArrowRight weight="bold" /></a></div>
         </section>
 
-        <section className="benefit-row section" aria-label={language === "zh" ? "产品卖点" : "Product benefits"}>{t.benefits.map(({ icon: Icon, title, text }) => <article key={title}><Icon weight="regular" /><h3>{title}</h3><p>{text}</p></article>)}</section>
+        <section className="benefit-row section" id="customization" aria-label={language === "zh" ? "产品卖点" : "Product benefits"}>{t.benefits.map(({ icon: Icon, title, text }) => <article key={title}><Icon weight="regular" /><h3>{title}</h3><p>{text}</p></article>)}</section>
       </main>
 
       <aside className={`selection-cart ${cartOpen ? "is-open" : "is-collapsed"}`} aria-label="已选花色">

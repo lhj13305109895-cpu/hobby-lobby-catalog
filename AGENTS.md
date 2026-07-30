@@ -13,7 +13,8 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 - The selected visual target is Product Design ideation option 1: a warm editorial brand showcase with ivory surfaces, charcoal serif headings, and restrained Hobby Lobby red accents.
 - The product model is 319, offered in 1.6L and 2.0L capacities.
 - The catalogue price is ¥29 RMB for 1.6L and ¥31 RMB for 2.0L.
-- Do not include customization or inquiry functionality.
+- The homepage hero must prominently communicate pattern customization: buyers can choose existing patterns or supply artwork, colors, or branding for a custom pattern. Keep this informational for now; do not add an inquiry form unless requested.
+- The selected hero direction is “花色，由你定义”: one fixed real product image in front, with a slow continuously scrolling runway of real catalogue products behind it. New visible white-body products should join this showcase automatically.
 - Product display is the primary purpose of the site. The gallery must show every supplied pattern individually and group patterns by design series.
 - The catalogue now contains 83 visible images: the previous 70-image catalogue after removing `319-12 不锈钢光板`, plus 13 additional images numbered 319-72 through 319-84 from `C:\Users\33865\Documents\WXWork\1688855150255110\Cache\Image\2026-07`.
 - The 13 additional images use `阿拉伯茶饮系列`, `斋月祝福系列`, and `花鸟雅集系列`; any image showing several different patterns belongs to `混色套装系列` and uses a clear mixed-set name in Chinese and English.
