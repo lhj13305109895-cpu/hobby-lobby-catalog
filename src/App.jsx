@@ -1174,7 +1174,26 @@ function Storefront() {
           <div><p className="eyebrow">{t.steelEyebrow}</p><h2>{t.steelTitle}</h2><p>{t.steelText}</p><a href="#gallery" onClick={() => chooseFilter("316不锈钢")}>{t.steelLink} <ArrowRight weight="bold" /></a></div>
         </section>
 
-        <section className="benefit-row section" id="customization" aria-label={language === "zh" ? "产品卖点" : "Product benefits"}>{t.benefits.map(({ icon: Icon, title, text }) => <article key={title}><Icon weight="regular" /><h3>{title}</h3><p>{text}</p></article>)}</section>
+        <section className="customization-contact section" id="customization" aria-labelledby="customization-title">
+          <div className="customization-contact-head">
+            <div>
+              <p className="eyebrow">{language === "zh" ? "定制服务" : "Customization Service"}</p>
+              <h2 id="customization-title">{language === "zh" ? "定制花色，欢迎联系我们" : "Custom patterns, made for your brand"}</h2>
+            </div>
+            <p>{language === "zh" ? "支持来图、配色及品牌定制，可通过 WhatsApp 或微信联系 Jackie Lee。" : "Send your artwork, colors, or branding requirements to Jackie Lee via WhatsApp or WeChat."}</p>
+          </div>
+          <figure className="customization-card">
+            <div className="customization-card-scroll">
+              <img src="/assets/custom-service-contact-card.webp" alt={language === "zh" ? "Hobby Lobby 定制服务联系名片，含 Jackie Lee 电话、WhatsApp、微信二维码及义乌商贸城地址" : "Hobby Lobby customization contact card with Jackie Lee phone, WhatsApp, WeChat QR codes, and Yiwu showroom address"} width="2172" height="724" loading="lazy" decoding="async" />
+            </div>
+            <figcaption>
+              <span>{language === "zh" ? "手机端可左右滑动查看完整名片" : "Swipe horizontally on mobile to view the complete card"}</span>
+              <a href="/assets/custom-service-contact-card.webp" target="_blank" rel="noreferrer">{language === "zh" ? "打开高清名片" : "Open full-size card"} <ArrowRight weight="bold" /></a>
+            </figcaption>
+          </figure>
+        </section>
+
+        <section className="benefit-row section" aria-label={language === "zh" ? "产品卖点" : "Product benefits"}>{t.benefits.map(({ icon: Icon, title, text }) => <article key={title}><Icon weight="regular" /><h3>{title}</h3><p>{text}</p></article>)}</section>
       </main>
 
       <aside className={`selection-cart ${cartOpen ? "is-open" : "is-collapsed"}`} aria-label="已选花色">
