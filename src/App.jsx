@@ -3,7 +3,8 @@ import productsData from "./data/products.json";
 import categoriesData from "./data/categories.json";
 import {
   ArrowDown, ArrowLeft, ArrowRight, Check, Heart,
-  DownloadSimple, MagnifyingGlassPlus, PaintBrush, ShieldCheck, ShoppingCart, Trash, X,
+  DownloadSimple, FacebookLogo, InstagramLogo, MagnifyingGlassPlus, PaintBrush,
+  ShieldCheck, ShoppingCart, Trash, WechatLogo, WhatsappLogo, X,
 } from "@phosphor-icons/react";
 
 const AdminApp = lazy(() => import("./admin/AdminApp.jsx").then((module) => ({ default: module.AdminApp })));
@@ -1182,12 +1183,35 @@ function Storefront() {
             </div>
             <p>{language === "zh" ? "支持来图、配色及品牌定制，可通过 WhatsApp 或微信联系 Jackie Lee。" : "Send your artwork, colors, or branding requirements to Jackie Lee via WhatsApp or WeChat."}</p>
           </div>
-          <figure className="customization-card">
-            <div className="customization-card-scroll">
-              <img src="/assets/custom-service-contact-card.webp" alt={language === "zh" ? "Hobby Lobby 定制服务联系名片，含 Jackie Lee 电话、WhatsApp、微信二维码及义乌商贸城地址" : "Hobby Lobby customization contact card with Jackie Lee phone, WhatsApp, WeChat QR codes, and Yiwu showroom address"} width="2172" height="724" loading="lazy" decoding="async" />
+          <div className="customization-channels">
+            <div className="contact-channel-list" aria-label={language === "zh" ? "社交媒体联系方式" : "Social contact links"}>
+              <a className="contact-channel instagram" href="https://www.instagram.com/jackieleefirst?igsh=MXBxZG4xdWx0YjlvdQ%3D%3D&utm_source=qr" target="_blank" rel="noreferrer">
+                <InstagramLogo weight="fill" /><span><strong>Instagram</strong><small>@jackieleefirst</small></span><ArrowRight weight="bold" />
+              </a>
+              <a className="contact-channel whatsapp" href="https://wa.me/qr/TGGNQVOHCRPOO1" target="_blank" rel="noreferrer">
+                <WhatsappLogo weight="fill" /><span><strong>WhatsApp</strong><small>{language === "zh" ? "添加 Jackie Lee 为联系人" : "Add Jackie Lee as a contact"}</small></span><ArrowRight weight="bold" />
+              </a>
+              <a className="contact-channel facebook" href="https://www.facebook.com/share/1BYzmSBqqq/?mibextid=wwXIfr" target="_blank" rel="noreferrer">
+                <FacebookLogo weight="fill" /><span><strong>Facebook</strong><small>Jackie Lee</small></span><ArrowRight weight="bold" />
+              </a>
+              <a className="contact-channel wecom" href="https://work.weixin.qq.com/u/vcd336fb02ace7d676?v=5.0.9.224799&bb=c3721e643c" target="_blank" rel="noreferrer">
+                <WechatLogo weight="fill" /><span><strong>{language === "zh" ? "企业微信" : "WeCom"}</strong><small>{language === "zh" ? "打开企业微信联系方式" : "Open WeCom contact"}</small></span><ArrowRight weight="bold" />
+              </a>
+            </div>
+            <article className="wecom-contact-card">
+              <div><WechatLogo weight="fill" /><span><strong>{language === "zh" ? "添加企业微信" : "Add on WeCom"}</strong><small>{language === "zh" ? "Jackie Lee · 国发保温瓶小家电" : "Jackie Lee · Thermal household products"}</small></span></div>
+              <a href="https://work.weixin.qq.com/u/vcd336fb02ace7d676?v=5.0.9.224799&bb=c3721e643c" target="_blank" rel="noreferrer" aria-label={language === "zh" ? "打开 Jackie Lee 企业微信联系方式" : "Open Jackie Lee WeCom contact"}>
+                <img src="/assets/jackie-lee-wecom.webp" alt={language === "zh" ? "Jackie Lee 企业微信联系人二维码" : "Jackie Lee WeCom contact QR code"} width="1206" height="2030" loading="lazy" decoding="async" />
+              </a>
+              <p>{language === "zh" ? "点击图片直接打开，或使用另一台手机扫码添加。" : "Tap the image to open the contact, or scan it from another phone."}</p>
+            </article>
+          </div>
+          <figure className="contact-brand-card">
+            <div className="contact-brand-card-scroll">
+              <img src="/assets/custom-service-contact-card.webp" alt={language === "zh" ? "Hobby Lobby 联系名片，含 Jackie Lee 电话、WhatsApp、微信二维码及义乌商贸城地址" : "Hobby Lobby contact card with Jackie Lee phone, WhatsApp, WeChat QR codes, and Yiwu showroom address"} width="2172" height="724" loading="lazy" decoding="async" />
             </div>
             <figcaption>
-              <span>{language === "zh" ? "手机端可左右滑动查看完整名片" : "Swipe horizontally on mobile to view the complete card"}</span>
+              <span>{language === "zh" ? "完整电话、地址与品牌资料" : "Complete phone, address, and brand details"}</span>
               <a href="/assets/custom-service-contact-card.webp" target="_blank" rel="noreferrer">{language === "zh" ? "打开高清名片" : "Open full-size card"} <ArrowRight weight="bold" /></a>
             </figcaption>
           </figure>
