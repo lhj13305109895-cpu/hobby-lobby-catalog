@@ -8,6 +8,7 @@ import {
 } from "@phosphor-icons/react";
 
 const AdminApp = lazy(() => import("./admin/AdminApp.jsx").then((module) => ({ default: module.AdminApp })));
+const PatternStudio = lazy(() => import("./PatternStudio.tsx").then((module) => ({ default: module.PotStudio })));
 
 const versionUploadedAsset = (source, updatedAt) => {
   if (!source?.startsWith("/assets/uploads/")) return source;
@@ -761,7 +762,7 @@ function ProductDetail({ product }) {
     <div className="site-shell product-page-shell" lang={language}>
       <header className="topbar product-topbar">
         <a className="brand-link" href="/" aria-label="Hobby Lobby home"><img src="/assets/brand-logo.webp" alt="Hobby Lobby Ask for More" width="256" height="256" /></a>
-        <nav aria-label={language === "zh" ? "商品导航" : "Product navigation"}><a href="/#gallery">{language === "zh" ? "全部花色" : "All patterns"}</a><a href="/#specifications">{language === "zh" ? "价格规格" : "Prices"}</a></nav>
+        <nav aria-label={language === "zh" ? "商品导航" : "Product navigation"}><a href="/#gallery">{language === "zh" ? "全部花色" : "All patterns"}</a><a href="/studio/">{language === "zh" ? "在线试样" : "Pattern studio"}</a><a href="/#specifications">{language === "zh" ? "价格规格" : "Prices"}</a></nav>
         <div className="language-switcher" role="group" aria-label={language === "zh" ? "语言" : "Language"}>
           {languageOptions.map((option) => <button type="button" key={option.id} className={language === option.id ? "active" : ""} onClick={() => setLanguage(option.id)}>{option.label}</button>)}
         </div>
@@ -1067,12 +1068,13 @@ function Storefront() {
         <a className="hero-reference-hotspot hero-reference-custom-nav" href="#customization" aria-label="定制服务" />
         <a className="hero-reference-hotspot hero-reference-gallery-cta" href="#gallery" aria-label="探索花色" />
         <a className="hero-reference-hotspot hero-reference-custom-cta" href="#customization" aria-label="了解定制" />
+        <a className="hero-reference-studio-entry" href="/studio/">在线试样</a>
         <button className="hero-reference-hotspot hero-reference-english" type="button" onClick={() => setLanguage("en")} aria-label="English" />
       </section>
       <header className="topbar">
         <a className="brand-link" href="#top" aria-label="Hobby Lobby home"><img src="/assets/brand-logo.webp" alt="Hobby Lobby Ask for More" width="256" height="256" decoding="async" /></a>
         <nav aria-label={language === "zh" ? "主导航" : "Main navigation"}>
-          <a href="#gallery">{t.navGallery}</a><a href="#details">{t.navSteel}</a><a href="#specifications">{t.navSpecs}</a>
+          <a href="#gallery">{t.navGallery}</a><a href="/studio/">{language === "zh" ? "在线试样" : "Pattern studio"}</a><a href="#details">{t.navSteel}</a><a href="#specifications">{t.navSpecs}</a>
         </nav>
         <div className="language-switcher" role="group" aria-label={t.languageLabel}>
           {languageOptions.map((option) => (
@@ -1090,7 +1092,7 @@ function Storefront() {
             <p className="hero-lede">{t.heroLead}</p>
             <div className="hero-actions">
               <a className="button button-primary" href="#gallery">{t.browseAll} <ArrowDown weight="bold" /></a>
-              <a className="button button-secondary" href="#customization">{t.viewSpecs} <ArrowRight weight="bold" /></a>
+              <a className="button button-secondary" href="/studio/">{language === "zh" ? "上传图案试样" : "Try your artwork"} <ArrowRight weight="bold" /></a>
             </div>
             <div className="hero-notes" aria-label={language === "zh" ? "产品摘要" : "Product summary"}>
               <span><PaintBrush weight="regular" /> {t.heroNotePatterns}</span>
@@ -1313,6 +1315,9 @@ function Storefront() {
 export function App() {
   if (window.location.pathname.startsWith("/admin")) {
     return <Suspense fallback={<main style={{ padding: 24 }}>正在加载管理后台…</main>}><AdminApp /></Suspense>;
+  }
+  if (window.location.pathname.startsWith("/studio")) {
+    return <Suspense fallback={<main style={{ padding: 24 }}>正在加载在线试样台…</main>}><PatternStudio /></Suspense>;
   }
   const productSlug = decodeURIComponent(window.location.pathname.match(/^\/products\/([^/]+)\/?$/)?.[1] || "");
   const product = catalogue.find((item) => item.slug === productSlug);
