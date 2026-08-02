@@ -32,3 +32,4 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 - Include a cart-like selected-pattern basket. Customers select the specific capacity for each pattern, not just the pattern itself. A pattern can include 1.6L, 2.0L, or both.
 - The selected-pattern basket can export a Word-compatible `.doc` selection sheet containing images, model/pattern number, series, capacity, price, and packing count.
 - Keep the page background warmer and more premium than plain white; use subtle gradients and catalogue-like depth.
+- Keep `混色套装系列` / `Mixed Set Series` as the final visible catalogue series. Give every set a descriptive Chinese and English name; do not use sequence-only names such as `混色套装 01` or `Mixed Set 01`.

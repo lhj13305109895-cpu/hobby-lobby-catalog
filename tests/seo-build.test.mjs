@@ -11,7 +11,7 @@ test("visible products have unique sequential catalogue slugs", () => {
   const slugs = products.map((product) => product.slug);
   assert.equal(new Set(slugs).size, slugs.length);
   for (const product of products) assert.match(product.slug, /^319-\d{2,3}$/);
-  assert.deepEqual(products.slice(-3).map((product) => product.slug), ["319-98", "319-99", "319-100"]);
+  assert.deepEqual(products.slice(-3).map((product) => product.slug), ["319-102", "319-103", "319-104"]);
 });
 
 test("image sitemap contains every visible product and image", () => {
