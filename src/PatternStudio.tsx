@@ -37,7 +37,7 @@ const STANDARD_WRAP_HEIGHT_MM = 183;
 const TWO_LITER_WRAP_HEIGHT_MM = 235;
 // The generated print shell also contains the narrowed shoulder above the
 // horizontal body seam. Keep artwork on the printable body below that seam.
-const PRINTABLE_BODY_TOP_RATIO = 0.985;
+const PRINTABLE_BODY_TOP_RATIO = 0.998;
 const LOCKED_POLAR_ANGLE = Math.atan2(Math.hypot(3.2, 4.8), 1.35 - 0.15);
 const BODY_TINTS: Record<Finish, number> = {
   matte: 0xe9e5d3,
@@ -51,10 +51,10 @@ const FINISH_SURFACE: Record<Finish, { roughness: number; clearcoat: number; cle
 };
 
 function createSeamClippedPrintGeometry(source: THREE.BufferGeometry) {
-  const geometry = source.clone();
-  const position = geometry.getAttribute("position");
-  const sourceUv = geometry.getAttribute("uv");
-  if (!position || !sourceUv || position.count !== sourceUv.count) return geometry;
+  const position = source.getAttribute("position");
+  const sourceUv = source.getAttribute("uv");
+  const sourceNormal = source.getAttribute("normal");
+  if (!position || !sourceUv || !sourceNormal || position.count !== sourceUv.count) return source.clone();
 
   let minY = Number.POSITIVE_INFINITY;
   let maxY = Number.NEGATIVE_INFINITY;
@@ -84,42 +84,82 @@ function createSeamClippedPrintGeometry(source: THREE.BufferGeometry) {
     return uvIncreasesWithHeight ? uvY : 1 - uvY;
   };
 
-  let clippedTop = 0;
-  for (let vertex = 0; vertex < position.count; vertex++) {
-    const artworkHeight = artworkHeightAt(vertex);
-    if (artworkHeight <= PRINTABLE_BODY_TOP_RATIO + 0.0005) {
-      clippedTop = Math.max(clippedTop, artworkHeight);
+  type PrintVertex = {
+    position: THREE.Vector3;
+    normal: THREE.Vector3;
+    u: number;
+    v: number;
+    artworkHeight: number;
+  };
+  const readVertex = (vertex: number): PrintVertex => ({
+    position: new THREE.Vector3(position.getX(vertex), position.getY(vertex), position.getZ(vertex)),
+    normal: new THREE.Vector3(sourceNormal.getX(vertex), sourceNormal.getY(vertex), sourceNormal.getZ(vertex)),
+    u: sourceUv.getX(vertex),
+    v: sourceUv.getY(vertex),
+    artworkHeight: artworkHeightAt(vertex),
+  });
+  const intersect = (from: PrintVertex, to: PrintVertex): PrintVertex => {
+    const amount = (PRINTABLE_BODY_TOP_RATIO - from.artworkHeight)
+      / (to.artworkHeight - from.artworkHeight);
+    return {
+      position: from.position.clone().lerp(to.position, amount),
+      normal: from.normal.clone().lerp(to.normal, amount).normalize(),
+      u: THREE.MathUtils.lerp(from.u, to.u, amount),
+      v: THREE.MathUtils.lerp(from.v, to.v, amount),
+      artworkHeight: PRINTABLE_BODY_TOP_RATIO,
+    };
+  };
+  const clipTriangle = (triangle: PrintVertex[]) => {
+    const clipped: PrintVertex[] = [];
+    for (let index = 0; index < triangle.length; index++) {
+      const from = triangle[index];
+      const to = triangle[(index + 1) % triangle.length];
+      const fromInside = from.artworkHeight <= PRINTABLE_BODY_TOP_RATIO;
+      const toInside = to.artworkHeight <= PRINTABLE_BODY_TOP_RATIO;
+      if (toInside) {
+        if (!fromInside) clipped.push(intersect(from, to));
+        clipped.push(to);
+      } else if (fromInside) {
+        clipped.push(intersect(from, to));
+      }
     }
-  }
-  clippedTop = Math.max(clippedTop, 0.001);
+    return clipped;
+  };
 
-  const remappedUv = new Float32Array(sourceUv.count * 2);
-  for (let vertex = 0; vertex < sourceUv.count; vertex++) {
-    const artworkHeight = artworkHeightAt(vertex);
-    const remappedHeight = THREE.MathUtils.clamp(artworkHeight / clippedTop, 0, 1);
-    remappedUv[vertex * 2] = sourceUv.getX(vertex);
-    remappedUv[vertex * 2 + 1] = uvIncreasesWithHeight ? remappedHeight : 1 - remappedHeight;
-  }
-  geometry.setAttribute("uv", new THREE.BufferAttribute(remappedUv, 2));
+  const outputPositions: number[] = [];
+  const outputNormals: number[] = [];
+  const outputUvs: number[] = [];
+  const emitVertex = (vertex: PrintVertex) => {
+    outputPositions.push(vertex.position.x, vertex.position.y, vertex.position.z);
+    outputNormals.push(vertex.normal.x, vertex.normal.y, vertex.normal.z);
+    const remappedHeight = THREE.MathUtils.clamp(
+      vertex.artworkHeight / PRINTABLE_BODY_TOP_RATIO,
+      0,
+      1,
+    );
+    outputUvs.push(vertex.u, uvIncreasesWithHeight ? remappedHeight : 1 - remappedHeight);
+  };
 
-  const sourceIndex = geometry.getIndex();
+  const sourceIndex = source.getIndex();
   const indexCount = sourceIndex?.count ?? position.count;
   const getVertex = (index: number) => sourceIndex ? sourceIndex.getX(index) : index;
-  const clippedIndices: number[] = [];
   for (let index = 0; index + 2 < indexCount; index += 3) {
-    const a = getVertex(index);
-    const b = getVertex(index + 1);
-    const c = getVertex(index + 2);
-    if (
-      artworkHeightAt(a) <= clippedTop + 0.0005
-      && artworkHeightAt(b) <= clippedTop + 0.0005
-      && artworkHeightAt(c) <= clippedTop + 0.0005
-    ) {
-      clippedIndices.push(a, b, c);
+    const polygon = clipTriangle([
+      readVertex(getVertex(index)),
+      readVertex(getVertex(index + 1)),
+      readVertex(getVertex(index + 2)),
+    ]);
+    for (let triangle = 1; triangle + 1 < polygon.length; triangle++) {
+      emitVertex(polygon[0]);
+      emitVertex(polygon[triangle]);
+      emitVertex(polygon[triangle + 1]);
     }
   }
-  geometry.setIndex(clippedIndices);
-  geometry.clearGroups();
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(outputPositions, 3));
+  geometry.setAttribute("normal", new THREE.Float32BufferAttribute(outputNormals, 3));
+  geometry.setAttribute("uv", new THREE.Float32BufferAttribute(outputUvs, 2));
   geometry.computeBoundingBox();
   geometry.computeBoundingSphere();
   return geometry;
