@@ -102,6 +102,9 @@ h2 { font-size:clamp(42px,4vw,62px); line-height:1.04; }
 .series-directory strong { font-family:"Playfair Display",Georgia,serif; font-size:16px; font-weight:500; line-height:1.15; transition:color .16s ease; }
 .series-directory small { color:var(--muted); font-size:11px; }
 .series-list { min-width:0; display:grid; gap:54px; }
+.series-loader { min-height:72px; display:grid; place-items:center; }
+.series-loader button { min-height:44px; padding:0 24px; border:1px solid var(--line); border-radius:999px; background:var(--white); color:var(--ink); font-weight:600; cursor:pointer; }
+.series-loader button:hover { border-color:rgba(201,8,22,.35); color:var(--red); }
 .gallery-loading { min-height:420px; display:grid; place-items:center; border:1px solid var(--line); background:linear-gradient(110deg,#fffdfa 20%,#f3e9dc 38%,#fffdfa 56%); background-size:240% 100%; color:var(--muted); font-size:13px; font-weight:700; animation:gallery-loading 1.3s ease-in-out infinite; }
 @keyframes gallery-loading { to { background-position:-240% 0; } }
 .pattern-series { min-width:0; }

@@ -38,7 +38,7 @@ const catalogue = [...productsData]
     thumb: versionUploadedAsset(product.thumbnailImage, product.updatedAt),
   }));
 
-const heroShowcasePatterns = catalogue.filter((product) => product.categoryId === "botanical-floral").slice(-10);
+const heroShowcasePatterns = catalogue.filter((product) => product.categoryId === "botanical-floral").slice(-4);
 const heroFeaturedPattern = catalogue.find((product) => product.no === 54) || heroShowcasePatterns[0] || catalogue[0];
 
 const filters = ["全部花色", "白色壶身", "316不锈钢", "混色套装"];
@@ -810,8 +810,9 @@ function Storefront() {
   const [cartOpen, setCartOpen] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [zoom, setZoom] = useState(1);
-  const [catalogueReady, setCatalogueReady] = useState(false);
+  const [visibleSeriesCount, setVisibleSeriesCount] = useState(1);
   const heroCarouselRef = useRef(null);
+  const seriesLoaderRef = useRef(null);
   const t = copy[language];
   const filteredPatterns = useMemo(() => (
     filter === "全部花色"
@@ -828,6 +829,8 @@ function Storefront() {
     (groups[pattern.family] ||= []).push(pattern);
     return groups;
   }, {})), [filteredPatterns]);
+  const visibleGroupedPatterns = groupedPatterns.slice(0, visibleSeriesCount);
+  const hasMoreSeries = visibleSeriesCount < groupedPatterns.length;
   const selectedEntries = useMemo(() => (
     Object.entries(selectedCapacities).flatMap(([patternId, capacityIds]) => {
       const pattern = catalogue.find((item) => item.id === patternId);
@@ -872,18 +875,31 @@ function Storefront() {
   }, [expandedId]);
 
   useEffect(() => {
-    let idleId;
-    let timeoutId;
-    if ("requestIdleCallback" in window) {
-      idleId = window.requestIdleCallback(() => setCatalogueReady(true), { timeout: 400 });
-    } else {
-      timeoutId = window.setTimeout(() => setCatalogueReady(true), 80);
+    setVisibleSeriesCount(1);
+  }, [filter]);
+
+  useEffect(() => {
+    const loader = seriesLoaderRef.current;
+    if (!loader || !hasMoreSeries) return undefined;
+    if (!("IntersectionObserver" in window)) {
+      setVisibleSeriesCount(groupedPatterns.length);
+      return undefined;
     }
-    return () => {
-      if (idleId !== undefined) window.cancelIdleCallback(idleId);
-      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
-    };
-  }, []);
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) setVisibleSeriesCount((count) => Math.min(count + 1, groupedPatterns.length));
+    }, { rootMargin: "300px 0px" });
+    observer.observe(loader);
+    return () => observer.disconnect();
+  }, [hasMoreSeries, groupedPatterns.length, visibleSeriesCount]);
+
+  function revealSeries(event, seriesIndex) {
+    if (seriesIndex < visibleSeriesCount) return;
+    event.preventDefault();
+    setVisibleSeriesCount(seriesIndex + 1);
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+      document.getElementById(`series-${seriesIndex + 1}`)?.scrollIntoView();
+    }));
+  }
 
   function chooseFilter(nextFilter) {
     setFilter(nextFilter);
@@ -1063,7 +1079,7 @@ function Storefront() {
   return (
     <div className={`site-shell ${language === "zh" ? "static-reference-active" : ""}`} lang={language}>
       <section className="hero-reference-exact" aria-label="花色，由你定义">
-        <img className="hero-reference-base" src="/assets/hero-reference-products.webp" alt="花色由你定义，型号319花色定制展示" width="1560" height="1008" fetchPriority="high" decoding="async" />
+        <img className="hero-reference-base" src="/assets/hero-reference-products.webp" alt="花色由你定义，型号319花色定制展示" width="1560" height="1008" loading="lazy" decoding="async" />
         <a className="hero-reference-hotspot hero-reference-gallery-nav" href="#gallery" aria-label="花色目录" />
         <a className="hero-reference-hotspot hero-reference-custom-nav" href="#customization" aria-label="定制服务" />
         <a className="hero-reference-hotspot hero-reference-gallery-cta" href="#gallery" aria-label="探索花色" />
@@ -1104,13 +1120,13 @@ function Storefront() {
               <div className="hero-runway-track">
                 {[...heroShowcasePatterns, ...heroShowcasePatterns].map((pattern, index) => (
                   <figure className="hero-runway-item" key={`${pattern.id}-${index}`} aria-hidden={index >= heroShowcasePatterns.length}>
-                    <img src={pattern.thumb} alt={index < heroShowcasePatterns.length ? displayPatternName(pattern) : ""} width="640" height="640" decoding="async" loading={index < 4 ? "eager" : "lazy"} />
+                    <img src={pattern.thumb} alt={index < heroShowcasePatterns.length ? displayPatternName(pattern) : ""} width="640" height="640" decoding="async" loading="lazy" />
                   </figure>
                 ))}
               </div>
             </div>
             <div className="hero-featured-product">
-              <img src="/assets/hero-featured-product.webp" alt={language === "zh" ? `${displayPatternName(heroFeaturedPattern)}真实产品` : `${displayPatternName(heroFeaturedPattern)} real product`} width="1100" height="1100" loading="eager" decoding="async" fetchPriority="high" />
+              <img src="/assets/hero-featured-product.webp" alt={language === "zh" ? `${displayPatternName(heroFeaturedPattern)}真实产品` : `${displayPatternName(heroFeaturedPattern)} real product`} width="1100" height="1100" loading="lazy" decoding="async" />
             </div>
             <div className="hero-runway-controls">
               <button type="button" aria-label={t.previousPatterns} onClick={() => heroCarouselRef.current?.scrollBy({ left: -260, behavior: "smooth" })}><ArrowLeft weight="bold" /></button>
@@ -1128,18 +1144,18 @@ function Storefront() {
               {filters.map((item) => <button key={item} className={filter === item ? "active" : ""} onClick={() => chooseFilter(item)} aria-pressed={filter === item}>{displayFilter(item)}</button>)}
             </div>
           </div>
-          {catalogueReady ? <div className="catalogue-layout">
+          <div className="catalogue-layout">
             <aside className="series-directory" aria-label={language === "zh" ? "花色系列目录" : "Pattern series directory"}>
               <span>{t.directory}</span>
               {groupedPatterns.map(([series, seriesPatterns], seriesIndex) => (
-                <a href={`#series-${seriesIndex + 1}`} key={series}>
+                <a href={`#series-${seriesIndex + 1}`} key={series} onClick={(event) => revealSeries(event, seriesIndex)}>
                   <strong>{displayFamily(series)}</strong>
                   <small>{seriesPatterns.length} {t.itemUnit}</small>
                 </a>
               ))}
             </aside>
             <div className="series-list" aria-live="polite">
-            {groupedPatterns.map(([series, seriesPatterns], seriesIndex) => <section className="pattern-series" id={`series-${seriesIndex + 1}`} key={series} aria-label={`${series}`}>
+            {visibleGroupedPatterns.map(([series, seriesPatterns], seriesIndex) => <section className="pattern-series" id={`series-${seriesIndex + 1}`} key={series} aria-label={`${series}`}>
               <div className="series-heading"><span>{displayFamily(series)}</span><small>{seriesPatterns.length} {t.patternUnit}</small></div>
               <div className="pattern-grid">
                 {seriesPatterns.map((pattern) => {
@@ -1147,7 +1163,7 @@ function Storefront() {
                   const catalogueCode = `319-${String(pattern.no).padStart(2, "0")}`;
                   return (
                     <article className={`pattern-card ${active ? "selected" : ""}`} id={pattern.id} key={pattern.id}>
-                      <button className="pattern-image-wrap" type="button" onClick={() => openExpanded(pattern)} aria-label={`${displayPatternName(pattern)}，${displayFamily(pattern.family)}，${t.zoomHint}。`}><img src={pattern.thumb} srcSet={`${pattern.thumb} 720w, ${pattern.displayImage} 1600w`} sizes="(max-width: 700px) 46vw, (max-width: 1100px) 30vw, 240px" alt={language === "zh" ? pattern.imageAltZh : (pattern.imageAltEn || displayPatternName(pattern))} width="640" height="640" loading={seriesIndex === 0 ? "eager" : "lazy"} decoding="async" fetchPriority={seriesIndex === 0 ? "high" : undefined} />{active && <span className="check-mark"><Check weight="bold" /></span>}<span className="zoom-hint"><MagnifyingGlassPlus weight="bold" /> {t.zoomHint}</span></button>
+                      <button className="pattern-image-wrap" type="button" onClick={() => openExpanded(pattern)} aria-label={`${displayPatternName(pattern)}，${displayFamily(pattern.family)}，${t.zoomHint}。`}><img src={pattern.thumb} srcSet={`${pattern.thumb} 640w, ${pattern.displayImage} 1600w`} sizes="(max-width: 700px) 46vw, (max-width: 1100px) 30vw, 240px" alt={language === "zh" ? pattern.imageAltZh : (pattern.imageAltEn || displayPatternName(pattern))} width="640" height="640" loading="lazy" decoding="async" />{active && <span className="check-mark"><Check weight="bold" /></span>}<span className="zoom-hint"><MagnifyingGlassPlus weight="bold" /> {t.zoomHint}</span></button>
                       <span className="pattern-code">MODEL 319 · {catalogueCode}</span><span className="pattern-name">{displayPatternName(pattern)}</span><span className="pattern-family">{displayBody(pattern.body)} · 1.6L ¥29 · 2.0L ¥31</span>
                       <a className="product-detail-link" href={`/products/${pattern.slug}/`}>{language === "zh" ? "查看商品详情" : "View product details"} <ArrowRight weight="bold" /></a>
                       <div className="capacity-picker" aria-label={`${pattern.name} 容量选择`}>
@@ -1162,8 +1178,13 @@ function Storefront() {
                 })}
               </div>
             </section>)}
+            {hasMoreSeries && <div className="series-loader" ref={seriesLoaderRef}>
+              <button type="button" onClick={() => setVisibleSeriesCount((count) => Math.min(count + 1, groupedPatterns.length))}>
+                {language === "zh" ? "继续加载花色" : "Load more patterns"}
+              </button>
+            </div>}
             </div>
-          </div> : <div className="gallery-loading" role="status">{language === "zh" ? "正在准备花色目录…" : "Preparing pattern catalogue…"}</div>}
+          </div>
           <p className="gallery-note">{t.currentShowing} {filteredPatterns.length} {t.currentSuffix}</p>
         </section>
 
