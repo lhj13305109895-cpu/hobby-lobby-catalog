@@ -35,6 +35,9 @@ const IVORY_COLOR = 0xf0ecd8;
 const WRAP_WIDTH_MM = 365.99;
 const STANDARD_WRAP_HEIGHT_MM = 183;
 const TWO_LITER_WRAP_HEIGHT_MM = 235;
+// The generated print shell also contains the narrowed shoulder above the
+// horizontal body seam. Keep artwork on the printable body below that seam.
+const PRINTABLE_BODY_TOP_RATIO = 0.985;
 const LOCKED_POLAR_ANGLE = Math.atan2(Math.hypot(3.2, 4.8), 1.35 - 0.15);
 const BODY_TINTS: Record<Finish, number> = {
   matte: 0xe9e5d3,
@@ -46,6 +49,81 @@ const FINISH_SURFACE: Record<Finish, { roughness: number; clearcoat: number; cle
   satin: { roughness: 0.42, clearcoat: 0.08, clearcoatRoughness: 0.5 },
   gloss: { roughness: 0.22, clearcoat: 0.36, clearcoatRoughness: 0.2 },
 };
+
+function createSeamClippedPrintGeometry(source: THREE.BufferGeometry) {
+  const geometry = source.clone();
+  const position = geometry.getAttribute("position");
+  const sourceUv = geometry.getAttribute("uv");
+  if (!position || !sourceUv || position.count !== sourceUv.count) return geometry;
+
+  let minY = Number.POSITIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+  for (let vertex = 0; vertex < position.count; vertex++) {
+    minY = Math.min(minY, position.getY(vertex));
+    maxY = Math.max(maxY, position.getY(vertex));
+  }
+  const height = Math.max(maxY - minY, Number.EPSILON);
+  let topUvTotal = 0;
+  let topUvCount = 0;
+  let bottomUvTotal = 0;
+  let bottomUvCount = 0;
+  for (let vertex = 0; vertex < position.count; vertex++) {
+    const heightRatio = (position.getY(vertex) - minY) / height;
+    if (heightRatio >= 0.9) {
+      topUvTotal += sourceUv.getY(vertex);
+      topUvCount++;
+    } else if (heightRatio <= 0.1) {
+      bottomUvTotal += sourceUv.getY(vertex);
+      bottomUvCount++;
+    }
+  }
+  const uvIncreasesWithHeight = (topUvTotal / Math.max(topUvCount, 1))
+    > (bottomUvTotal / Math.max(bottomUvCount, 1));
+  const artworkHeightAt = (vertex: number) => {
+    const uvY = sourceUv.getY(vertex);
+    return uvIncreasesWithHeight ? uvY : 1 - uvY;
+  };
+
+  let clippedTop = 0;
+  for (let vertex = 0; vertex < position.count; vertex++) {
+    const artworkHeight = artworkHeightAt(vertex);
+    if (artworkHeight <= PRINTABLE_BODY_TOP_RATIO + 0.0005) {
+      clippedTop = Math.max(clippedTop, artworkHeight);
+    }
+  }
+  clippedTop = Math.max(clippedTop, 0.001);
+
+  const remappedUv = new Float32Array(sourceUv.count * 2);
+  for (let vertex = 0; vertex < sourceUv.count; vertex++) {
+    const artworkHeight = artworkHeightAt(vertex);
+    const remappedHeight = THREE.MathUtils.clamp(artworkHeight / clippedTop, 0, 1);
+    remappedUv[vertex * 2] = sourceUv.getX(vertex);
+    remappedUv[vertex * 2 + 1] = uvIncreasesWithHeight ? remappedHeight : 1 - remappedHeight;
+  }
+  geometry.setAttribute("uv", new THREE.BufferAttribute(remappedUv, 2));
+
+  const sourceIndex = geometry.getIndex();
+  const indexCount = sourceIndex?.count ?? position.count;
+  const getVertex = (index: number) => sourceIndex ? sourceIndex.getX(index) : index;
+  const clippedIndices: number[] = [];
+  for (let index = 0; index + 2 < indexCount; index += 3) {
+    const a = getVertex(index);
+    const b = getVertex(index + 1);
+    const c = getVertex(index + 2);
+    if (
+      artworkHeightAt(a) <= clippedTop + 0.0005
+      && artworkHeightAt(b) <= clippedTop + 0.0005
+      && artworkHeightAt(c) <= clippedTop + 0.0005
+    ) {
+      clippedIndices.push(a, b, c);
+    }
+  }
+  geometry.setIndex(clippedIndices);
+  geometry.clearGroups();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  return geometry;
+}
 
 function extendBodyToTwoLiterLegacy(model: THREE.Object3D) {
   let printSurface: THREE.Mesh | null = null;
@@ -332,8 +410,9 @@ export function PotStudio() {
   const controlsRef = useRef<OrbitControls | null>(null);
   const modelRef = useRef<THREE.Object3D | null>(null);
   const modelMaterialsRef = useRef<THREE.MeshPhysicalMaterial[]>([]);
+  const printMaterialsRef = useRef<THREE.MeshPhysicalMaterial[]>([]);
+  const printSurfacesRef = useRef<THREE.Mesh[]>([]);
   const fixtureMaterialsRef = useRef<THREE.MeshPhysicalMaterial[]>([]);
-  const originalMapsRef = useRef<(THREE.Texture | null)[]>([]);
   const uploadedTextureRef = useRef<THREE.Texture | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const objectUrlRef = useRef<string | null>(null);
@@ -440,16 +519,27 @@ export function PotStudio() {
 
           const materials: THREE.MeshPhysicalMaterial[] = [];
           const bodyMaterial = new THREE.MeshPhysicalMaterial({
-            color: uploadedTextureRef.current ? 0xffffff : IVORY_COLOR,
+            color: IVORY_COLOR,
+            roughness: FINISH_SURFACE.gloss.roughness,
+            metalness: 0,
+            clearcoat: FINISH_SURFACE.gloss.clearcoat,
+            clearcoatRoughness: FINISH_SURFACE.gloss.clearcoatRoughness,
+            side: THREE.DoubleSide,
+          });
+          const printMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0xffffff,
             map: uploadedTextureRef.current,
             roughness: FINISH_SURFACE.gloss.roughness,
             metalness: 0,
             clearcoat: FINISH_SURFACE.gloss.clearcoat,
             clearcoatRoughness: FINISH_SURFACE.gloss.clearcoatRoughness,
             side: THREE.DoubleSide,
+            transparent: true,
+            alphaTest: 0.001,
+            depthWrite: false,
             polygonOffset: true,
-            polygonOffsetFactor: -1,
-            polygonOffsetUnits: -1,
+            polygonOffsetFactor: -2,
+            polygonOffsetUnits: -2,
           });
           const fixtureMaterial = new THREE.MeshPhysicalMaterial({
             color: lidColor,
@@ -460,6 +550,7 @@ export function PotStudio() {
             side: THREE.DoubleSide,
           });
           let bodyFound = false;
+          const printSources: THREE.Mesh[] = [];
           model.traverse((child) => {
             if (!(child instanceof THREE.Mesh)) return;
             child.castShadow = true;
@@ -470,6 +561,7 @@ export function PotStudio() {
               child.renderOrder = 1;
               bodyFound = true;
               materials.push(bodyMaterial);
+              printSources.push(child);
             } else {
               child.material = fixtureMaterial;
             }
@@ -478,9 +570,22 @@ export function PotStudio() {
             setLoadError(true);
             return;
           }
+          const printSurfaces = printSources.map((source) => {
+            const overlay = source.clone(false) as THREE.Mesh;
+            overlay.name = "BODY_PRINT_TRANSPARENT_OVERLAY";
+            overlay.geometry = createSeamClippedPrintGeometry(source.geometry as THREE.BufferGeometry);
+            overlay.material = printMaterial;
+            overlay.castShadow = false;
+            overlay.receiveShadow = false;
+            overlay.renderOrder = 2;
+            overlay.visible = Boolean(uploadedTextureRef.current);
+            source.parent?.add(overlay);
+            return overlay;
+          });
           modelMaterialsRef.current = materials;
+          printMaterialsRef.current = [printMaterial];
+          printSurfacesRef.current = printSurfaces;
           fixtureMaterialsRef.current = [fixtureMaterial];
-          originalMapsRef.current = materials.map(() => null);
           modelRef.current = model;
           scene.add(model);
           setReady(true);
@@ -518,6 +623,8 @@ export function PotStudio() {
       disposed = true;
       modelRef.current = null;
       modelMaterialsRef.current = [];
+      printMaterialsRef.current = [];
+      printSurfacesRef.current = [];
       fixtureMaterialsRef.current = [];
       cancelAnimationFrame(frame);
       observer.disconnect();
@@ -544,9 +651,15 @@ export function PotStudio() {
   }, [settings]);
 
   useEffect(() => {
+    const surface = FINISH_SURFACE[finish];
     modelMaterialsRef.current.forEach((material) => {
-      const surface = FINISH_SURFACE[finish];
-      material.color.set(material.map ? 0xffffff : BODY_TINTS[finish]);
+      material.color.set(BODY_TINTS[finish]);
+      material.roughness = surface.roughness;
+      material.clearcoat = surface.clearcoat;
+      material.clearcoatRoughness = surface.clearcoatRoughness;
+      material.needsUpdate = true;
+    });
+    printMaterialsRef.current.forEach((material) => {
       material.roughness = surface.roughness;
       material.clearcoat = surface.clearcoat;
       material.clearcoatRoughness = surface.clearcoatRoughness;
@@ -610,15 +723,18 @@ export function PotStudio() {
       texture.center.set(0.5, 0.5);
       texture.rotation = THREE.MathUtils.degToRad(settings.rotation);
       uploadedTextureRef.current = texture;
-      modelMaterialsRef.current.forEach((material) => {
+      printMaterialsRef.current.forEach((material) => {
         material.map = texture;
         material.color.set(0xffffff);
         material.needsUpdate = true;
       });
+      printSurfacesRef.current.forEach((surface) => {
+        surface.visible = true;
+      });
       setTextureName(file.name);
       setTexturePreview(url);
     }, undefined, () => setTextureError("图案读取失败，请重新导出图片后再试。"));
-  }, [settings, finish]);
+  }, [settings]);
 
   const onFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     void applyFile(event.target.files?.[0]);
@@ -646,8 +762,16 @@ export function PotStudio() {
   }, [applyFile]);
 
   const restoreOriginal = () => {
-    modelMaterialsRef.current.forEach((material, index) => {
-      material.map = originalMapsRef.current[index] ?? null;
+    uploadedTextureRef.current?.dispose();
+    uploadedTextureRef.current = null;
+    printMaterialsRef.current.forEach((material) => {
+      material.map = null;
+      material.needsUpdate = true;
+    });
+    printSurfacesRef.current.forEach((surface) => {
+      surface.visible = false;
+    });
+    modelMaterialsRef.current.forEach((material) => {
       material.color.set(BODY_TINTS[finish]);
       material.needsUpdate = true;
     });
