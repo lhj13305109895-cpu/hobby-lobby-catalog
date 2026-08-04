@@ -404,6 +404,117 @@ function extendBodyToTwoLiter(model: THREE.Object3D) {
   });
 }
 
+type FixtureColorTarget = {
+  colorAttribute: THREE.BufferAttribute;
+  fixtureMask: Uint8Array;
+};
+
+function createFixturePartColors(
+  geometry: THREE.BufferGeometry,
+  printGeometry: THREE.BufferGeometry,
+  bodyColorHex: number,
+  fixtureColorHex: string,
+): FixtureColorTarget | null {
+  const position = geometry.getAttribute("position");
+  if (!position) return null;
+  printGeometry.computeBoundingBox();
+  const printBox = printGeometry.boundingBox;
+  if (!printBox) return null;
+
+  const centerX = (printBox.min.x + printBox.max.x) / 2;
+  const centerY = (printBox.min.z + printBox.max.z) / 2;
+  const bodyRadius = Math.max(printBox.max.x - printBox.min.x, printBox.max.z - printBox.min.z) / 2;
+  const outsideBodyRadius = bodyRadius * 1.35;
+  const bodyTopHeight = printBox.max.y;
+  const fixtureMask = new Uint8Array(position.count);
+  const meshIndex = geometry.getIndex();
+
+  if (meshIndex) {
+    const parent = new Int32Array(position.count);
+    const rank = new Uint8Array(position.count);
+    for (let vertex = 0; vertex < parent.length; vertex++) parent[vertex] = vertex;
+    const findRoot = (vertex: number) => {
+      let root = vertex;
+      while (parent[root] !== root) root = parent[root];
+      while (parent[vertex] !== vertex) {
+        const next = parent[vertex];
+        parent[vertex] = root;
+        vertex = next;
+      }
+      return root;
+    };
+    const join = (left: number, right: number) => {
+      let leftRoot = findRoot(left);
+      let rightRoot = findRoot(right);
+      if (leftRoot === rightRoot) return;
+      if (rank[leftRoot] < rank[rightRoot]) [leftRoot, rightRoot] = [rightRoot, leftRoot];
+      parent[rightRoot] = leftRoot;
+      if (rank[leftRoot] === rank[rightRoot]) rank[leftRoot]++;
+    };
+    for (let index = 0; index + 2 < meshIndex.count; index += 3) {
+      const a = meshIndex.getX(index);
+      const b = meshIndex.getX(index + 1);
+      const c = meshIndex.getX(index + 2);
+      join(a, b);
+      join(b, c);
+    }
+
+    type ComponentStats = { count: number; sumX: number; sumY: number; sumHeight: number };
+    const statsByRoot = new Map<number, ComponentStats>();
+    for (let vertex = 0; vertex < position.count; vertex++) {
+      const root = findRoot(vertex);
+      const stats = statsByRoot.get(root) ?? { count: 0, sumX: 0, sumY: 0, sumHeight: 0 };
+      stats.count++;
+      stats.sumX += position.getX(vertex);
+      stats.sumY += position.getY(vertex);
+      stats.sumHeight += -position.getZ(vertex);
+      statsByRoot.set(root, stats);
+    }
+    const fixtureByRoot = new Map<number, boolean>();
+    statsByRoot.forEach((stats, root) => {
+      const componentX = stats.sumX / stats.count;
+      const componentY = stats.sumY / stats.count;
+      const componentHeight = stats.sumHeight / stats.count;
+      const radialDistance = Math.hypot(componentX - centerX, componentY - centerY);
+      fixtureByRoot.set(root, radialDistance > outsideBodyRadius || componentHeight >= bodyTopHeight);
+    });
+    for (let vertex = 0; vertex < position.count; vertex++) {
+      fixtureMask[vertex] = fixtureByRoot.get(findRoot(vertex)) ? 1 : 0;
+    }
+  } else {
+    for (let vertex = 0; vertex < position.count; vertex++) {
+      const radialDistance = Math.hypot(position.getX(vertex) - centerX, position.getY(vertex) - centerY);
+      fixtureMask[vertex] = radialDistance > outsideBodyRadius || -position.getZ(vertex) >= bodyTopHeight ? 1 : 0;
+    }
+  }
+
+  const bodyColor = new THREE.Color(bodyColorHex);
+  const fixtureColor = new THREE.Color(fixtureColorHex);
+  const colors = new Float32Array(position.count * 3);
+  for (let vertex = 0; vertex < position.count; vertex++) {
+    (fixtureMask[vertex] ? fixtureColor : bodyColor).toArray(colors, vertex * 3);
+  }
+  const colorAttribute = new THREE.BufferAttribute(colors, 3);
+  geometry.setAttribute("color", colorAttribute);
+  return { colorAttribute, fixtureMask };
+}
+
+function updateFixturePartColors(
+  targets: FixtureColorTarget[],
+  bodyColorHex: number,
+  fixtureColorHex: string,
+) {
+  const bodyColor = new THREE.Color(bodyColorHex);
+  const fixtureColor = new THREE.Color(fixtureColorHex);
+  targets.forEach(({ colorAttribute, fixtureMask }) => {
+    for (let vertex = 0; vertex < fixtureMask.length; vertex++) {
+      const color = fixtureMask[vertex] ? fixtureColor : bodyColor;
+      colorAttribute.setXYZ(vertex, color.r, color.g, color.b);
+    }
+    colorAttribute.needsUpdate = true;
+  });
+}
+
 function Slider({
   label,
   value,
@@ -453,6 +564,7 @@ export function PotStudio() {
   const printMaterialsRef = useRef<THREE.MeshPhysicalMaterial[]>([]);
   const printSurfacesRef = useRef<THREE.Mesh[]>([]);
   const fixtureMaterialsRef = useRef<THREE.MeshPhysicalMaterial[]>([]);
+  const fixtureColorTargetsRef = useRef<FixtureColorTarget[]>([]);
   const uploadedTextureRef = useRef<THREE.Texture | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const objectUrlRef = useRef<string | null>(null);
@@ -582,15 +694,17 @@ export function PotStudio() {
             polygonOffsetUnits: -2,
           });
           const fixtureMaterial = new THREE.MeshPhysicalMaterial({
-            color: lidColor,
+            color: 0xffffff,
             roughness: 0.34,
             metalness: 0,
             clearcoat: 0.18,
             clearcoatRoughness: 0.3,
             side: THREE.DoubleSide,
+            vertexColors: true,
           });
           let bodyFound = false;
           const printSources: THREE.Mesh[] = [];
+          const fixtureMeshes: THREE.Mesh[] = [];
           model.traverse((child) => {
             if (!(child instanceof THREE.Mesh)) return;
             child.castShadow = true;
@@ -604,12 +718,21 @@ export function PotStudio() {
               printSources.push(child);
             } else {
               child.material = fixtureMaterial;
+              fixtureMeshes.push(child);
             }
           });
           if (!bodyFound) {
             setLoadError(true);
             return;
           }
+          const fixtureColorTargets = fixtureMeshes
+            .map((mesh) => createFixturePartColors(
+              mesh.geometry as THREE.BufferGeometry,
+              printSources[0].geometry as THREE.BufferGeometry,
+              BODY_TINTS[finish],
+              lidColor,
+            ))
+            .filter((target): target is FixtureColorTarget => Boolean(target));
           const printSurfaces = printSources.map((source) => {
             const overlay = source.clone(false) as THREE.Mesh;
             overlay.name = "BODY_PRINT_TRANSPARENT_OVERLAY";
@@ -626,6 +749,7 @@ export function PotStudio() {
           printMaterialsRef.current = [printMaterial];
           printSurfacesRef.current = printSurfaces;
           fixtureMaterialsRef.current = [fixtureMaterial];
+          fixtureColorTargetsRef.current = fixtureColorTargets;
           modelRef.current = model;
           scene.add(model);
           setReady(true);
@@ -666,6 +790,7 @@ export function PotStudio() {
       printMaterialsRef.current = [];
       printSurfacesRef.current = [];
       fixtureMaterialsRef.current = [];
+      fixtureColorTargetsRef.current = [];
       cancelAnimationFrame(frame);
       observer.disconnect();
       controls.dispose();
@@ -708,11 +833,12 @@ export function PotStudio() {
   }, [finish, ready]);
 
   useEffect(() => {
+    updateFixturePartColors(fixtureColorTargetsRef.current, BODY_TINTS[finish], lidColor);
     fixtureMaterialsRef.current.forEach((material) => {
-      material.color.set(lidColor);
+      material.color.set(0xffffff);
       material.needsUpdate = true;
     });
-  }, [lidColor, ready]);
+  }, [finish, lidColor, ready]);
 
   const changeCapacity = (nextCapacity: "1.6" | "2.0") => {
     if (nextCapacity === capacity) return;
