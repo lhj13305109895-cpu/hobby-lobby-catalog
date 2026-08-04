@@ -426,6 +426,8 @@ function createFixturePartColors(
   const bodyRadius = Math.max(printBox.max.x - printBox.min.x, printBox.max.z - printBox.min.z) / 2;
   const outsideBodyRadius = bodyRadius * 1.35;
   const bodyTopHeight = printBox.max.y;
+  const fixtureVertexRadius = bodyRadius * 1.12;
+  const fixtureTopHeight = bodyTopHeight + (printBox.max.y - printBox.min.y) * 0.012;
   const fixtureMask = new Uint8Array(position.count);
   const meshIndex = geometry.getIndex();
 
@@ -479,12 +481,18 @@ function createFixturePartColors(
       fixtureByRoot.set(root, radialDistance > outsideBodyRadius || componentHeight >= bodyTopHeight);
     });
     for (let vertex = 0; vertex < position.count; vertex++) {
-      fixtureMask[vertex] = fixtureByRoot.get(findRoot(vertex)) ? 1 : 0;
+      const radialDistance = Math.hypot(position.getX(vertex) - centerX, position.getY(vertex) - centerY);
+      const height = -position.getZ(vertex);
+      const isFixtureComponent = Boolean(fixtureByRoot.get(findRoot(vertex)));
+      fixtureMask[vertex] = isFixtureComponent
+        && (radialDistance > fixtureVertexRadius || height >= fixtureTopHeight)
+        ? 1
+        : 0;
     }
   } else {
     for (let vertex = 0; vertex < position.count; vertex++) {
       const radialDistance = Math.hypot(position.getX(vertex) - centerX, position.getY(vertex) - centerY);
-      fixtureMask[vertex] = radialDistance > outsideBodyRadius || -position.getZ(vertex) >= bodyTopHeight ? 1 : 0;
+      fixtureMask[vertex] = radialDistance > fixtureVertexRadius || -position.getZ(vertex) >= fixtureTopHeight ? 1 : 0;
     }
   }
 
