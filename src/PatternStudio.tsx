@@ -35,9 +35,10 @@ const IVORY_COLOR = 0xf0ecd8;
 const WRAP_WIDTH_MM = 365.99;
 const STANDARD_WRAP_HEIGHT_MM = 183;
 const TWO_LITER_WRAP_HEIGHT_MM = 235;
-// The generated print shell also contains the narrowed shoulder above the
-// horizontal body seam. Keep artwork on the printable body below that seam.
-const PRINTABLE_BODY_TOP_RATIO = 0.998;
+// Both the artwork and the lid/body color split must terminate on the lower
+// edge of the same raised seam ring. Sharing this value prevents overlap.
+const SEAM_RING_HEIGHT_RATIO = 0.028;
+const PRINTABLE_BODY_TOP_RATIO = 1 - SEAM_RING_HEIGHT_RATIO;
 const LOCKED_POLAR_ANGLE = Math.atan2(Math.hypot(3.2, 4.8), 1.35 - 0.15);
 const BODY_TINTS: Record<Finish, number> = {
   matte: 0xe9e5d3,
@@ -404,19 +405,20 @@ function extendBodyToTwoLiter(model: THREE.Object3D) {
   });
 }
 
-type FixtureColorTarget = {
-  colorAttribute: THREE.BufferAttribute;
-  fixtureMask: Uint8Array;
+type FixturePartUniforms = {
+  bodyColor: { value: THREE.Color };
+  fixtureColor: { value: THREE.Color };
+  bodyTopHeight: { value: number };
+  bodyCenter: { value: THREE.Vector2 };
+  fixtureRadius: { value: number };
 };
 
-function createFixturePartColors(
-  geometry: THREE.BufferGeometry,
+function configureFixturePartMaterial(
+  material: THREE.MeshPhysicalMaterial,
   printGeometry: THREE.BufferGeometry,
   bodyColorHex: number,
   fixtureColorHex: string,
-): FixtureColorTarget | null {
-  const position = geometry.getAttribute("position");
-  if (!position) return null;
+): FixturePartUniforms | null {
   printGeometry.computeBoundingBox();
   const printBox = printGeometry.boundingBox;
   if (!printBox) return null;
@@ -424,102 +426,68 @@ function createFixturePartColors(
   const centerX = (printBox.min.x + printBox.max.x) / 2;
   const centerY = (printBox.min.z + printBox.max.z) / 2;
   const bodyRadius = Math.max(printBox.max.x - printBox.min.x, printBox.max.z - printBox.min.z) / 2;
-  const outsideBodyRadius = bodyRadius * 1.35;
-  const bodyTopHeight = printBox.max.y;
-  const fixtureVertexRadius = bodyRadius * 1.12;
-  const fixtureTopHeight = bodyTopHeight + (printBox.max.y - printBox.min.y) * 0.012;
-  const fixtureMask = new Uint8Array(position.count);
-  const meshIndex = geometry.getIndex();
+  const printHeight = printBox.max.y - printBox.min.y;
+  const uniforms: FixturePartUniforms = {
+    bodyColor: { value: new THREE.Color(bodyColorHex) },
+    fixtureColor: { value: new THREE.Color(fixtureColorHex) },
+    // The UV shell reaches the upper lip of the raised seam ring. The actual
+    // lid/body joint is the lower lip, so include the whole ring with the lid.
+    bodyTopHeight: { value: printBox.max.y - printHeight * SEAM_RING_HEIGHT_RATIO },
+    bodyCenter: { value: new THREE.Vector2(centerX, centerY) },
+    fixtureRadius: { value: bodyRadius * 1.12 },
+  };
 
-  if (meshIndex) {
-    const parent = new Int32Array(position.count);
-    const rank = new Uint8Array(position.count);
-    for (let vertex = 0; vertex < parent.length; vertex++) parent[vertex] = vertex;
-    const findRoot = (vertex: number) => {
-      let root = vertex;
-      while (parent[root] !== root) root = parent[root];
-      while (parent[vertex] !== vertex) {
-        const next = parent[vertex];
-        parent[vertex] = root;
-        vertex = next;
-      }
-      return root;
-    };
-    const join = (left: number, right: number) => {
-      let leftRoot = findRoot(left);
-      let rightRoot = findRoot(right);
-      if (leftRoot === rightRoot) return;
-      if (rank[leftRoot] < rank[rightRoot]) [leftRoot, rightRoot] = [rightRoot, leftRoot];
-      parent[rightRoot] = leftRoot;
-      if (rank[leftRoot] === rank[rightRoot]) rank[leftRoot]++;
-    };
-    for (let index = 0; index + 2 < meshIndex.count; index += 3) {
-      const a = meshIndex.getX(index);
-      const b = meshIndex.getX(index + 1);
-      const c = meshIndex.getX(index + 2);
-      join(a, b);
-      join(b, c);
-    }
-
-    type ComponentStats = { count: number; sumX: number; sumY: number; sumHeight: number };
-    const statsByRoot = new Map<number, ComponentStats>();
-    for (let vertex = 0; vertex < position.count; vertex++) {
-      const root = findRoot(vertex);
-      const stats = statsByRoot.get(root) ?? { count: 0, sumX: 0, sumY: 0, sumHeight: 0 };
-      stats.count++;
-      stats.sumX += position.getX(vertex);
-      stats.sumY += position.getY(vertex);
-      stats.sumHeight += -position.getZ(vertex);
-      statsByRoot.set(root, stats);
-    }
-    const fixtureByRoot = new Map<number, boolean>();
-    statsByRoot.forEach((stats, root) => {
-      const componentX = stats.sumX / stats.count;
-      const componentY = stats.sumY / stats.count;
-      const componentHeight = stats.sumHeight / stats.count;
-      const radialDistance = Math.hypot(componentX - centerX, componentY - centerY);
-      fixtureByRoot.set(root, radialDistance > outsideBodyRadius || componentHeight >= bodyTopHeight);
-    });
-    for (let vertex = 0; vertex < position.count; vertex++) {
-      const radialDistance = Math.hypot(position.getX(vertex) - centerX, position.getY(vertex) - centerY);
-      const height = -position.getZ(vertex);
-      const isFixtureComponent = Boolean(fixtureByRoot.get(findRoot(vertex)));
-      fixtureMask[vertex] = isFixtureComponent
-        && (radialDistance > fixtureVertexRadius || height >= fixtureTopHeight)
-        ? 1
-        : 0;
-    }
-  } else {
-    for (let vertex = 0; vertex < position.count; vertex++) {
-      const radialDistance = Math.hypot(position.getX(vertex) - centerX, position.getY(vertex) - centerY);
-      fixtureMask[vertex] = radialDistance > fixtureVertexRadius || -position.getZ(vertex) >= fixtureTopHeight ? 1 : 0;
-    }
-  }
-
-  const bodyColor = new THREE.Color(bodyColorHex);
-  const fixtureColor = new THREE.Color(fixtureColorHex);
-  const colors = new Float32Array(position.count * 3);
-  for (let vertex = 0; vertex < position.count; vertex++) {
-    (fixtureMask[vertex] ? fixtureColor : bodyColor).toArray(colors, vertex * 3);
-  }
-  const colorAttribute = new THREE.BufferAttribute(colors, 3);
-  geometry.setAttribute("color", colorAttribute);
-  return { colorAttribute, fixtureMask };
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.uPartBodyColor = uniforms.bodyColor;
+    shader.uniforms.uPartFixtureColor = uniforms.fixtureColor;
+    shader.uniforms.uPartBodyTopHeight = uniforms.bodyTopHeight;
+    shader.uniforms.uPartBodyCenter = uniforms.bodyCenter;
+    shader.uniforms.uPartFixtureRadius = uniforms.fixtureRadius;
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        "#include <common>",
+        "#include <common>\nvarying vec3 vPartLocalPosition;",
+      )
+      .replace(
+        "#include <begin_vertex>",
+        "#include <begin_vertex>\nvPartLocalPosition = position;",
+      );
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        "#include <common>",
+        `#include <common>
+varying vec3 vPartLocalPosition;
+uniform vec3 uPartBodyColor;
+uniform vec3 uPartFixtureColor;
+uniform float uPartBodyTopHeight;
+uniform vec2 uPartBodyCenter;
+uniform float uPartFixtureRadius;`,
+      )
+      .replace(
+        "vec4 diffuseColor = vec4( diffuse, opacity );",
+        `float partHeight = -vPartLocalPosition.z;
+float partRadius = length(vPartLocalPosition.xy - uPartBodyCenter);
+vec3 partSurfaceColor = (partHeight >= uPartBodyTopHeight || partRadius > uPartFixtureRadius)
+  ? uPartFixtureColor
+  : uPartBodyColor;
+vec4 diffuseColor = vec4(partSurfaceColor, opacity);`,
+      );
+  };
+  material.customProgramCacheKey = () => "fixture-part-hard-seam-v1";
+  material.needsUpdate = true;
+  return uniforms;
 }
 
-function updateFixturePartColors(
-  targets: FixtureColorTarget[],
+function updateFixturePartUniforms(
+  targets: FixturePartUniforms[],
   bodyColorHex: number,
   fixtureColorHex: string,
 ) {
   const bodyColor = new THREE.Color(bodyColorHex);
   const fixtureColor = new THREE.Color(fixtureColorHex);
-  targets.forEach(({ colorAttribute, fixtureMask }) => {
-    for (let vertex = 0; vertex < fixtureMask.length; vertex++) {
-      const color = fixtureMask[vertex] ? fixtureColor : bodyColor;
-      colorAttribute.setXYZ(vertex, color.r, color.g, color.b);
-    }
-    colorAttribute.needsUpdate = true;
+  targets.forEach((uniforms) => {
+    uniforms.bodyColor.value.copy(bodyColor);
+    uniforms.fixtureColor.value.copy(fixtureColor);
   });
 }
 
@@ -572,7 +540,7 @@ export function PotStudio() {
   const printMaterialsRef = useRef<THREE.MeshPhysicalMaterial[]>([]);
   const printSurfacesRef = useRef<THREE.Mesh[]>([]);
   const fixtureMaterialsRef = useRef<THREE.MeshPhysicalMaterial[]>([]);
-  const fixtureColorTargetsRef = useRef<FixtureColorTarget[]>([]);
+  const fixturePartUniformsRef = useRef<FixturePartUniforms[]>([]);
   const uploadedTextureRef = useRef<THREE.Texture | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const objectUrlRef = useRef<string | null>(null);
@@ -685,6 +653,9 @@ export function PotStudio() {
             clearcoat: FINISH_SURFACE.gloss.clearcoat,
             clearcoatRoughness: FINISH_SURFACE.gloss.clearcoatRoughness,
             side: THREE.DoubleSide,
+            polygonOffset: true,
+            polygonOffsetFactor: -1,
+            polygonOffsetUnits: -1,
           });
           const printMaterial = new THREE.MeshPhysicalMaterial({
             color: 0xffffff,
@@ -708,11 +679,9 @@ export function PotStudio() {
             clearcoat: 0.18,
             clearcoatRoughness: 0.3,
             side: THREE.DoubleSide,
-            vertexColors: true,
           });
           let bodyFound = false;
           const printSources: THREE.Mesh[] = [];
-          const fixtureMeshes: THREE.Mesh[] = [];
           model.traverse((child) => {
             if (!(child instanceof THREE.Mesh)) return;
             child.castShadow = true;
@@ -726,21 +695,18 @@ export function PotStudio() {
               printSources.push(child);
             } else {
               child.material = fixtureMaterial;
-              fixtureMeshes.push(child);
             }
           });
           if (!bodyFound) {
             setLoadError(true);
             return;
           }
-          const fixtureColorTargets = fixtureMeshes
-            .map((mesh) => createFixturePartColors(
-              mesh.geometry as THREE.BufferGeometry,
-              printSources[0].geometry as THREE.BufferGeometry,
-              BODY_TINTS[finish],
-              lidColor,
-            ))
-            .filter((target): target is FixtureColorTarget => Boolean(target));
+          const fixturePartUniforms = configureFixturePartMaterial(
+            fixtureMaterial,
+            printSources[0].geometry as THREE.BufferGeometry,
+            BODY_TINTS[finish],
+            lidColor,
+          );
           const printSurfaces = printSources.map((source) => {
             const overlay = source.clone(false) as THREE.Mesh;
             overlay.name = "BODY_PRINT_TRANSPARENT_OVERLAY";
@@ -751,13 +717,17 @@ export function PotStudio() {
             overlay.renderOrder = 2;
             overlay.visible = Boolean(uploadedTextureRef.current);
             source.parent?.add(overlay);
+            // The original UV shell is only a carrier for the artwork. Keeping
+            // it visible creates a second white surface whose uneven top edge
+            // can protrude above the physical lid/body seam.
+            source.visible = false;
             return overlay;
           });
           modelMaterialsRef.current = materials;
           printMaterialsRef.current = [printMaterial];
           printSurfacesRef.current = printSurfaces;
           fixtureMaterialsRef.current = [fixtureMaterial];
-          fixtureColorTargetsRef.current = fixtureColorTargets;
+          fixturePartUniformsRef.current = fixturePartUniforms ? [fixturePartUniforms] : [];
           modelRef.current = model;
           scene.add(model);
           setReady(true);
@@ -798,7 +768,7 @@ export function PotStudio() {
       printMaterialsRef.current = [];
       printSurfacesRef.current = [];
       fixtureMaterialsRef.current = [];
-      fixtureColorTargetsRef.current = [];
+      fixturePartUniformsRef.current = [];
       cancelAnimationFrame(frame);
       observer.disconnect();
       controls.dispose();
@@ -841,10 +811,9 @@ export function PotStudio() {
   }, [finish, ready]);
 
   useEffect(() => {
-    updateFixturePartColors(fixtureColorTargetsRef.current, BODY_TINTS[finish], lidColor);
+    updateFixturePartUniforms(fixturePartUniformsRef.current, BODY_TINTS[finish], lidColor);
     fixtureMaterialsRef.current.forEach((material) => {
       material.color.set(0xffffff);
-      material.needsUpdate = true;
     });
   }, [finish, lidColor, ready]);
 
