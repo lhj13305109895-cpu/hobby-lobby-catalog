@@ -491,6 +491,49 @@ function updateFixturePartUniforms(
   });
 }
 
+function smoothBodySurfaceNormals(
+  geometry: THREE.BufferGeometry,
+  printGeometry: THREE.BufferGeometry,
+) {
+  const position = geometry.getAttribute("position");
+  const normal = geometry.getAttribute("normal");
+  if (!position || !normal || position.count !== normal.count) return;
+
+  printGeometry.computeBoundingBox();
+  const printBox = printGeometry.boundingBox;
+  if (!printBox) return;
+  const centerX = (printBox.min.x + printBox.max.x) / 2;
+  const centerY = (printBox.min.z + printBox.max.z) / 2;
+  const bodyRadius = Math.max(printBox.max.x - printBox.min.x, printBox.max.z - printBox.min.z) / 2;
+  const bodyTopHeight = printBox.max.y - (printBox.max.y - printBox.min.y) * SEAM_RING_HEIGHT_RATIO;
+
+  for (let vertex = 0; vertex < position.count; vertex++) {
+    const radialX = position.getX(vertex) - centerX;
+    const radialY = position.getY(vertex) - centerY;
+    const radialDistance = Math.hypot(radialX, radialY);
+    const height = -position.getZ(vertex);
+    if (
+      height >= bodyTopHeight
+      || radialDistance < bodyRadius * 0.62
+      || radialDistance > bodyRadius * 1.12
+    ) continue;
+
+    const directionX = radialX / radialDistance;
+    const directionY = radialY / radialDistance;
+    const normalZ = THREE.MathUtils.clamp(normal.getZ(vertex), -1, 1);
+    const outwardDot = normal.getX(vertex) * directionX + normal.getY(vertex) * directionY;
+    if (outwardDot <= 0) continue;
+    const radialNormalLength = Math.sqrt(Math.max(0, 1 - normalZ * normalZ));
+    normal.setXYZ(
+      vertex,
+      directionX * radialNormalLength,
+      directionY * radialNormalLength,
+      normalZ,
+    );
+  }
+  normal.needsUpdate = true;
+}
+
 function Slider({
   label,
   value,
@@ -682,6 +725,7 @@ export function PotStudio() {
           });
           let bodyFound = false;
           const printSources: THREE.Mesh[] = [];
+          const fixtureMeshes: THREE.Mesh[] = [];
           model.traverse((child) => {
             if (!(child instanceof THREE.Mesh)) return;
             child.castShadow = true;
@@ -695,12 +739,19 @@ export function PotStudio() {
               printSources.push(child);
             } else {
               child.material = fixtureMaterial;
+              fixtureMeshes.push(child);
             }
           });
           if (!bodyFound) {
             setLoadError(true);
             return;
           }
+          fixtureMeshes.forEach((mesh) => {
+            smoothBodySurfaceNormals(
+              mesh.geometry as THREE.BufferGeometry,
+              printSources[0].geometry as THREE.BufferGeometry,
+            );
+          });
           const fixturePartUniforms = configureFixturePartMaterial(
             fixtureMaterial,
             printSources[0].geometry as THREE.BufferGeometry,
