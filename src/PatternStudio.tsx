@@ -446,7 +446,16 @@ function configureFixturePartMaterial(
     shader.vertexShader = shader.vertexShader
       .replace(
         "#include <common>",
-        "#include <common>\nvarying vec3 vPartLocalPosition;",
+        `#include <common>
+uniform vec2 uPartBodyCenter;
+varying vec3 vPartLocalPosition;
+varying vec3 vPartRadialViewNormal;`,
+      )
+      .replace(
+        "#include <normal_vertex>",
+        `#include <normal_vertex>
+vec2 partRadialDirection = normalize(position.xy - uPartBodyCenter);
+vPartRadialViewNormal = normalize(normalMatrix * vec3(partRadialDirection, 0.0));`,
       )
       .replace(
         "#include <begin_vertex>",
@@ -457,6 +466,7 @@ function configureFixturePartMaterial(
         "#include <common>",
         `#include <common>
 varying vec3 vPartLocalPosition;
+varying vec3 vPartRadialViewNormal;
 uniform vec3 uPartBodyColor;
 uniform vec3 uPartFixtureColor;
 uniform float uPartBodyTopHeight;
@@ -471,9 +481,17 @@ vec3 partSurfaceColor = (partHeight >= uPartBodyTopHeight || partRadius > uPartF
   ? uPartFixtureColor
   : uPartBodyColor;
 vec4 diffuseColor = vec4(partSurfaceColor, opacity);`,
+      )
+      .replace(
+        "#include <normal_fragment_maps>",
+        `#include <normal_fragment_maps>
+if (partHeight < uPartBodyTopHeight && partRadius <= uPartFixtureRadius) {
+  normal = normalize(vPartRadialViewNormal) * faceDirection;
+  nonPerturbedNormal = normal;
+}`,
       );
   };
-  material.customProgramCacheKey = () => "fixture-part-hard-seam-v1";
+  material.customProgramCacheKey = () => "fixture-part-hard-seam-smooth-body-v2";
   material.needsUpdate = true;
   return uniforms;
 }
@@ -489,49 +507,6 @@ function updateFixturePartUniforms(
     uniforms.bodyColor.value.copy(bodyColor);
     uniforms.fixtureColor.value.copy(fixtureColor);
   });
-}
-
-function smoothBodySurfaceNormals(
-  geometry: THREE.BufferGeometry,
-  printGeometry: THREE.BufferGeometry,
-) {
-  const position = geometry.getAttribute("position");
-  const normal = geometry.getAttribute("normal");
-  if (!position || !normal || position.count !== normal.count) return;
-
-  printGeometry.computeBoundingBox();
-  const printBox = printGeometry.boundingBox;
-  if (!printBox) return;
-  const centerX = (printBox.min.x + printBox.max.x) / 2;
-  const centerY = (printBox.min.z + printBox.max.z) / 2;
-  const bodyRadius = Math.max(printBox.max.x - printBox.min.x, printBox.max.z - printBox.min.z) / 2;
-  const bodyTopHeight = printBox.max.y - (printBox.max.y - printBox.min.y) * SEAM_RING_HEIGHT_RATIO;
-
-  for (let vertex = 0; vertex < position.count; vertex++) {
-    const radialX = position.getX(vertex) - centerX;
-    const radialY = position.getY(vertex) - centerY;
-    const radialDistance = Math.hypot(radialX, radialY);
-    const height = -position.getZ(vertex);
-    if (
-      height >= bodyTopHeight
-      || radialDistance < bodyRadius * 0.62
-      || radialDistance > bodyRadius * 1.12
-    ) continue;
-
-    const directionX = radialX / radialDistance;
-    const directionY = radialY / radialDistance;
-    const normalZ = THREE.MathUtils.clamp(normal.getZ(vertex), -1, 1);
-    const outwardDot = normal.getX(vertex) * directionX + normal.getY(vertex) * directionY;
-    if (outwardDot <= 0) continue;
-    const radialNormalLength = Math.sqrt(Math.max(0, 1 - normalZ * normalZ));
-    normal.setXYZ(
-      vertex,
-      directionX * radialNormalLength,
-      directionY * radialNormalLength,
-      normalZ,
-    );
-  }
-  normal.needsUpdate = true;
 }
 
 function Slider({
@@ -580,7 +555,7 @@ export function PotStudio() {
   const controlsRef = useRef<OrbitControls | null>(null);
   const modelRef = useRef<THREE.Object3D | null>(null);
   const modelMaterialsRef = useRef<THREE.MeshPhysicalMaterial[]>([]);
-  const printMaterialsRef = useRef<THREE.MeshPhysicalMaterial[]>([]);
+  const printMaterialsRef = useRef<THREE.MeshBasicMaterial[]>([]);
   const printSurfacesRef = useRef<THREE.Mesh[]>([]);
   const fixtureMaterialsRef = useRef<THREE.MeshPhysicalMaterial[]>([]);
   const fixturePartUniformsRef = useRef<FixturePartUniforms[]>([]);
@@ -641,17 +616,19 @@ export function PotStudio() {
     controls.target.set(0, 0.15, 0);
     controlsRef.current = controls;
 
-    scene.add(new THREE.HemisphereLight(0xfffbef, 0x74796f, 2.2));
-    const key = new THREE.DirectionalLight(0xfff4dc, 4.2);
-    key.position.set(4, 6, 5);
+    // Use neutral, symmetrical studio lights so uploaded artwork keeps the
+    // same colour on the left and right sides of the pot.
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xb8b8b8, 2.0));
+    const key = new THREE.DirectionalLight(0xffffff, 3.1);
+    key.position.set(4.5, 5.5, 4.5);
     key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048);
     scene.add(key);
-    const fill = new THREE.DirectionalLight(0xc9ddff, 2.1);
-    fill.position.set(-5, 2, 2);
+    const fill = new THREE.DirectionalLight(0xffffff, 3.1);
+    fill.position.set(-4.5, 5.5, 4.5);
     scene.add(fill);
-    const rim = new THREE.DirectionalLight(0xffffff, 2.4);
-    rim.position.set(0, 3, -5);
+    const rim = new THREE.DirectionalLight(0xffffff, 1.4);
+    rim.position.set(0, 4, -5);
     scene.add(rim);
 
     const floor = new THREE.Mesh(
@@ -700,13 +677,9 @@ export function PotStudio() {
             polygonOffsetFactor: -1,
             polygonOffsetUnits: -1,
           });
-          const printMaterial = new THREE.MeshPhysicalMaterial({
+          const printMaterial = new THREE.MeshBasicMaterial({
             color: 0xffffff,
             map: uploadedTextureRef.current,
-            roughness: FINISH_SURFACE.gloss.roughness,
-            metalness: 0,
-            clearcoat: FINISH_SURFACE.gloss.clearcoat,
-            clearcoatRoughness: FINISH_SURFACE.gloss.clearcoatRoughness,
             side: THREE.DoubleSide,
             transparent: true,
             alphaTest: 0.001,
@@ -715,6 +688,9 @@ export function PotStudio() {
             polygonOffsetFactor: -2,
             polygonOffsetUnits: -2,
           });
+          // Artwork is colour-calibrated and intentionally independent from
+          // scene lighting, so every rotation keeps the same source colours.
+          printMaterial.toneMapped = false;
           const fixtureMaterial = new THREE.MeshPhysicalMaterial({
             color: 0xffffff,
             roughness: 0.34,
@@ -725,7 +701,6 @@ export function PotStudio() {
           });
           let bodyFound = false;
           const printSources: THREE.Mesh[] = [];
-          const fixtureMeshes: THREE.Mesh[] = [];
           model.traverse((child) => {
             if (!(child instanceof THREE.Mesh)) return;
             child.castShadow = true;
@@ -739,19 +714,12 @@ export function PotStudio() {
               printSources.push(child);
             } else {
               child.material = fixtureMaterial;
-              fixtureMeshes.push(child);
             }
           });
           if (!bodyFound) {
             setLoadError(true);
             return;
           }
-          fixtureMeshes.forEach((mesh) => {
-            smoothBodySurfaceNormals(
-              mesh.geometry as THREE.BufferGeometry,
-              printSources[0].geometry as THREE.BufferGeometry,
-            );
-          });
           const fixturePartUniforms = configureFixturePartMaterial(
             fixtureMaterial,
             printSources[0].geometry as THREE.BufferGeometry,
@@ -848,12 +816,6 @@ export function PotStudio() {
     const surface = FINISH_SURFACE[finish];
     modelMaterialsRef.current.forEach((material) => {
       material.color.set(BODY_TINTS[finish]);
-      material.roughness = surface.roughness;
-      material.clearcoat = surface.clearcoat;
-      material.clearcoatRoughness = surface.clearcoatRoughness;
-      material.needsUpdate = true;
-    });
-    printMaterialsRef.current.forEach((material) => {
       material.roughness = surface.roughness;
       material.clearcoat = surface.clearcoat;
       material.clearcoatRoughness = surface.clearcoatRoughness;

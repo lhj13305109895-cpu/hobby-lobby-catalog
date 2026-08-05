@@ -38,7 +38,10 @@ const catalogue = [...productsData]
     thumb: versionUploadedAsset(product.thumbnailImage, product.updatedAt),
   }));
 
-const heroShowcasePatterns = catalogue.filter((product) => product.categoryId === "botanical-floral").slice(-4);
+const heroShowcasePatterns = catalogue
+  .filter((product) => product.bodyType === "白色壶身")
+  .sort((a, b) => a.sortOrder - b.sortOrder)
+  .slice(-4);
 const heroFeaturedPattern = catalogue.find((product) => product.no === 54) || heroShowcasePatterns[0] || catalogue[0];
 
 const filters = ["全部花色", "白色壶身", "316不锈钢", "混色套装"];

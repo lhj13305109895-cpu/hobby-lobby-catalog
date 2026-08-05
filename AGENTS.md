@@ -16,7 +16,9 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 - The homepage hero must prominently communicate pattern customization: buyers can choose existing patterns or supply artwork, colors, or branding for a custom pattern. Keep this informational for now; do not add an inquiry form unless requested.
 - The selected hero direction is “花色，由你定义”: one fixed real product image in front, with a slow continuously scrolling runway of real catalogue products behind it. New visible white-body products should join this showcase automatically.
 - Product display is the primary purpose of the site. The gallery must show every supplied pattern individually and group patterns by design series.
-- The catalogue now contains 83 visible images: the previous 70-image catalogue after removing `319-12 不锈钢光板`, plus 13 additional images numbered 319-72 through 319-84 from `C:\Users\33865\Documents\WXWork\1688855150255110\Cache\Image\2026-07`.
+- The catalogue now contains 149 visible images. The 28 images added from `E:\电脑相册` are numbered 319-105 through 319-132; 20 single-product images are assigned to descriptive series and 8 multi-product scene images belong to `混色套装系列`.
+- The added catalogue series are `柔彩花园系列`, `瓷韵华纹系列`, `东方意境系列`, `欢乐童趣系列`, and `丝路故事系列`.
+- The 18 images added on 2026-08-05 are numbered 319-133 through 319-150; 14 are single-product images and 4 are multi-product scene images. The new series are `民俗繁花系列` and `极简艺术系列`; scene images remain in `混色套装系列`.
 - The 13 additional images use `阿拉伯茶饮系列`, `斋月祝福系列`, and `花鸟雅集系列`; any image showing several different patterns belongs to `混色套装系列` and uses a clear mixed-set name in Chinese and English.
 - The 13 newly supplied set images belong to `混色套装系列`; mixed colors can be selected together.
 - Include supplied plain blank-board/base product images as the `素色光板系列` when they are part of today's product image set.
