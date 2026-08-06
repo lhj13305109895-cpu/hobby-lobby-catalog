@@ -38,8 +38,10 @@ const TWO_LITER_WRAP_HEIGHT_MM = 235;
 // lid above, body and artwork below.
 const SEAM_RING_HEIGHT_RATIO = 0;
 const PRINTABLE_BODY_TOP_RATIO = 1 - SEAM_RING_HEIGHT_RATIO;
-const PRINT_SURFACE_TOP_EXTENSION_RATIO = 0.018;
-const PRINT_SURFACE_NORMAL_OFFSET_RATIO = 0.0012;
+// Extend the carrier slightly past the physical joint, then clip it back to a
+// perfectly horizontal plane. The source mesh has an uneven open top edge, so
+// stopping at its authored boundary exposes a jagged row around the shoulder.
+const PRINT_SURFACE_TOP_EXTENSION_RATIO = 0.04;
 const LOCKED_POLAR_ANGLE = Math.atan2(Math.hypot(3.2, 4.8), 1.35 - 0.15);
 const DEFAULT_BODY_COLOR = "#f8f5e8";
 const FINISH_SURFACE: Record<Finish, { roughness: number; clearcoat: number; clearcoatRoughness: number }> = {
@@ -84,13 +86,21 @@ function createSeamClippedPrintGeometry(source: THREE.BufferGeometry) {
     v: number;
     heightRatio: number;
   };
-  const readVertex = (vertex: number): PrintVertex => ({
-    position: new THREE.Vector3(position.getX(vertex), position.getY(vertex), position.getZ(vertex)),
-    normal: new THREE.Vector3(sourceNormal.getX(vertex), sourceNormal.getY(vertex), sourceNormal.getZ(vertex)),
-    u: sourceUv.getX(vertex),
-    v: sourceUv.getY(vertex),
-    heightRatio: (position.getY(vertex) - minY) / height,
-  });
+  const readVertex = (vertex: number): PrintVertex => {
+    const sourceHeightRatio = (position.getY(vertex) - minY) / height;
+    const extendedHeightRatio = sourceHeightRatio * (1 + PRINT_SURFACE_TOP_EXTENSION_RATIO);
+    return {
+      position: new THREE.Vector3(
+        position.getX(vertex),
+        minY + extendedHeightRatio * height,
+        position.getZ(vertex),
+      ),
+      normal: new THREE.Vector3(sourceNormal.getX(vertex), sourceNormal.getY(vertex), sourceNormal.getZ(vertex)),
+      u: sourceUv.getX(vertex),
+      v: sourceUv.getY(vertex),
+      heightRatio: extendedHeightRatio,
+    };
+  };
   const intersect = (from: PrintVertex, to: PrintVertex): PrintVertex => {
     const amount = (PRINTABLE_BODY_TOP_RATIO - from.heightRatio)
       / (to.heightRatio - from.heightRatio);
@@ -123,18 +133,10 @@ function createSeamClippedPrintGeometry(source: THREE.BufferGeometry) {
   const outputNormals: number[] = [];
   const outputUvs: number[] = [];
   const emitVertex = (vertex: PrintVertex) => {
-    const extendedY = minY + (vertex.position.y - minY)
-      * ((PRINTABLE_BODY_TOP_RATIO + PRINT_SURFACE_TOP_EXTENSION_RATIO) / PRINTABLE_BODY_TOP_RATIO);
-    // Keep the artwork microscopically above the body instead of relying only
-    // on depth-buffer bias. This removes the broken white line caused by the
-    // two surfaces competing at shallow viewing angles, without moving the
-    // upper artwork/lid boundary vertically.
-    const radialNormalLength = Math.hypot(vertex.normal.x, vertex.normal.z) || 1;
-    const normalOffset = height * PRINT_SURFACE_NORMAL_OFFSET_RATIO;
     outputPositions.push(
-      vertex.position.x + (vertex.normal.x / radialNormalLength) * normalOffset,
-      extendedY,
-      vertex.position.z + (vertex.normal.z / radialNormalLength) * normalOffset,
+      vertex.position.x,
+      vertex.position.y,
+      vertex.position.z,
     );
     outputNormals.push(vertex.normal.x, vertex.normal.y, vertex.normal.z);
     const remappedHeight = THREE.MathUtils.clamp(
@@ -685,7 +687,9 @@ export function PotStudio() {
           const printMaterial = new THREE.MeshBasicMaterial({
             color: 0xffffff,
             map: uploadedTextureRef.current,
-            side: THREE.DoubleSide,
+            // Only the outward-facing carrier is printable. Rendering its back
+            // faces exposes thin open-edge triangles beyond the pot silhouette.
+            side: THREE.FrontSide,
             transparent: true,
             alphaTest: 0.001,
             depthWrite: false,
