@@ -31,20 +31,17 @@ const BACKGROUNDS: Record<Backdrop, string> = {
   charcoal: "#222322",
 };
 
-const IVORY_COLOR = 0xf0ecd8;
 const WRAP_WIDTH_MM = 365.99;
 const STANDARD_WRAP_HEIGHT_MM = 183;
 const TWO_LITER_WRAP_HEIGHT_MM = 235;
-// Both the artwork and the lid/body color split must terminate on the lower
-// edge of the same raised seam ring. Sharing this value prevents overlap.
-const SEAM_RING_HEIGHT_RATIO = 0.028;
+// The visible joint at the upper edge of the raised ring is the single split:
+// lid above, body and artwork below.
+const SEAM_RING_HEIGHT_RATIO = 0;
 const PRINTABLE_BODY_TOP_RATIO = 1 - SEAM_RING_HEIGHT_RATIO;
+const PRINT_SURFACE_TOP_EXTENSION_RATIO = 0.018;
+const PRINT_SURFACE_NORMAL_OFFSET_RATIO = 0.0012;
 const LOCKED_POLAR_ANGLE = Math.atan2(Math.hypot(3.2, 4.8), 1.35 - 0.15);
-const BODY_TINTS: Record<Finish, number> = {
-  matte: 0xe9e5d3,
-  satin: IVORY_COLOR,
-  gloss: 0xf8f5e8,
-};
+const DEFAULT_BODY_COLOR = "#f8f5e8";
 const FINISH_SURFACE: Record<Finish, { roughness: number; clearcoat: number; clearcoatRoughness: number }> = {
   matte: { roughness: 0.72, clearcoat: 0, clearcoatRoughness: 0.8 },
   satin: { roughness: 0.42, clearcoat: 0.08, clearcoatRoughness: 0.5 },
@@ -126,7 +123,19 @@ function createSeamClippedPrintGeometry(source: THREE.BufferGeometry) {
   const outputNormals: number[] = [];
   const outputUvs: number[] = [];
   const emitVertex = (vertex: PrintVertex) => {
-    outputPositions.push(vertex.position.x, vertex.position.y, vertex.position.z);
+    const extendedY = minY + (vertex.position.y - minY)
+      * ((PRINTABLE_BODY_TOP_RATIO + PRINT_SURFACE_TOP_EXTENSION_RATIO) / PRINTABLE_BODY_TOP_RATIO);
+    // Keep the artwork microscopically above the body instead of relying only
+    // on depth-buffer bias. This removes the broken white line caused by the
+    // two surfaces competing at shallow viewing angles, without moving the
+    // upper artwork/lid boundary vertically.
+    const radialNormalLength = Math.hypot(vertex.normal.x, vertex.normal.z) || 1;
+    const normalOffset = height * PRINT_SURFACE_NORMAL_OFFSET_RATIO;
+    outputPositions.push(
+      vertex.position.x + (vertex.normal.x / radialNormalLength) * normalOffset,
+      extendedY,
+      vertex.position.z + (vertex.normal.z / radialNormalLength) * normalOffset,
+    );
     outputNormals.push(vertex.normal.x, vertex.normal.y, vertex.normal.z);
     const remappedHeight = THREE.MathUtils.clamp(
       vertex.heightRatio / PRINTABLE_BODY_TOP_RATIO,
@@ -565,6 +574,7 @@ export function PotStudio() {
   const [textureError, setTextureError] = useState("");
   const [settings, setSettings] = useState<TextureSettings>(INITIAL_SETTINGS);
   const [finish, setFinish] = useState<Finish>("gloss");
+  const [bodyColor, setBodyColor] = useState(DEFAULT_BODY_COLOR);
   const [lidColor, setLidColor] = useState("#f3f1e9");
   const [backdrop, setBackdrop] = useState<Backdrop>("warm");
   const [isDragging, setIsDragging] = useState(false);
@@ -662,7 +672,7 @@ export function PotStudio() {
 
           const materials: THREE.MeshPhysicalMaterial[] = [];
           const bodyMaterial = new THREE.MeshPhysicalMaterial({
-            color: IVORY_COLOR,
+            color: bodyColor,
             roughness: FINISH_SURFACE.gloss.roughness,
             metalness: 0,
             clearcoat: FINISH_SURFACE.gloss.clearcoat,
@@ -680,8 +690,8 @@ export function PotStudio() {
             alphaTest: 0.001,
             depthWrite: false,
             polygonOffset: true,
-            polygonOffsetFactor: -2,
-            polygonOffsetUnits: -2,
+            polygonOffsetFactor: -4,
+            polygonOffsetUnits: -4,
           });
           // Artwork is colour-calibrated and intentionally independent from
           // scene lighting, so every rotation keeps the same source colours.
@@ -718,7 +728,7 @@ export function PotStudio() {
           const fixturePartUniforms = configureFixturePartMaterial(
             fixtureMaterial,
             printSources[0].geometry as THREE.BufferGeometry,
-            BODY_TINTS[finish],
+            new THREE.Color(bodyColor).getHex(),
             lidColor,
           );
           const printSurfaces = printSources.map((source) => {
@@ -810,20 +820,20 @@ export function PotStudio() {
   useEffect(() => {
     const surface = FINISH_SURFACE[finish];
     modelMaterialsRef.current.forEach((material) => {
-      material.color.set(BODY_TINTS[finish]);
+      material.color.set(bodyColor);
       material.roughness = surface.roughness;
       material.clearcoat = surface.clearcoat;
       material.clearcoatRoughness = surface.clearcoatRoughness;
       material.needsUpdate = true;
     });
-  }, [finish, ready]);
+  }, [finish, bodyColor, ready]);
 
   useEffect(() => {
-    updateFixturePartUniforms(fixturePartUniformsRef.current, BODY_TINTS[finish], lidColor);
+    updateFixturePartUniforms(fixturePartUniformsRef.current, new THREE.Color(bodyColor).getHex(), lidColor);
     fixtureMaterialsRef.current.forEach((material) => {
       material.color.set(0xffffff);
     });
-  }, [finish, lidColor, ready]);
+  }, [bodyColor, lidColor, ready]);
 
   const changeCapacity = (nextCapacity: "1.6" | "2.0") => {
     if (nextCapacity === capacity) return;
@@ -923,7 +933,7 @@ export function PotStudio() {
       surface.visible = false;
     });
     modelMaterialsRef.current.forEach((material) => {
-      material.color.set(BODY_TINTS[finish]);
+      material.color.set(bodyColor);
       material.needsUpdate = true;
     });
     setTextureName("");
@@ -1091,7 +1101,36 @@ export function PotStudio() {
                 </button>
               ))}
             </div>
-            <div className="lid-color-control">
+            <div className="product-color-control">
+              <div>
+                <strong>壶身颜色</strong>
+                <small>调整图案透明区域与无图案时的壶身底色</small>
+              </div>
+              <label className="color-picker" title="选择壶身颜色">
+                <input type="color" value={bodyColor} onChange={(event) => setBodyColor(event.target.value)} aria-label="选择壶身颜色" />
+                <span style={{ background: bodyColor }} />
+                <output>{bodyColor.toUpperCase()}</output>
+              </label>
+            </div>
+            <div className="product-color-presets" aria-label="壶身常用颜色">
+              {[
+                ["#f8f5e8", "象牙白"],
+                ["#ffffff", "纯白"],
+                ["#efe2c7", "奶油色"],
+                ["#dbe5dc", "浅绿色"],
+                ["#d9dde3", "浅灰色"],
+              ].map(([color, name]) => (
+                <button
+                  key={color}
+                  className={bodyColor === color ? "active" : ""}
+                  style={{ background: color }}
+                  onClick={() => setBodyColor(color)}
+                  aria-label={`壶身颜色：${name}`}
+                  title={name}
+                />
+              ))}
+            </div>
+            <div className="product-color-control">
               <div>
                 <strong>盖子颜色</strong>
                 <small>同时调整壶嘴与把手颜色</small>
@@ -1102,7 +1141,7 @@ export function PotStudio() {
                 <output>{lidColor.toUpperCase()}</output>
               </label>
             </div>
-            <div className="lid-color-presets" aria-label="盖子常用颜色">
+            <div className="product-color-presets" aria-label="盖子常用颜色">
               {[
                 ["#f3f1e9", "暖白"],
                 ["#e3d8c6", "米杏"],
