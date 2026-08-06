@@ -80,34 +80,29 @@ function createSeamClippedPrintGeometry(source: THREE.BufferGeometry) {
   }
   const uvIncreasesWithHeight = (topUvTotal / Math.max(topUvCount, 1))
     > (bottomUvTotal / Math.max(bottomUvCount, 1));
-  const artworkHeightAt = (vertex: number) => {
-    const uvY = sourceUv.getY(vertex);
-    return uvIncreasesWithHeight ? uvY : 1 - uvY;
-  };
-
   type PrintVertex = {
     position: THREE.Vector3;
     normal: THREE.Vector3;
     u: number;
     v: number;
-    artworkHeight: number;
+    heightRatio: number;
   };
   const readVertex = (vertex: number): PrintVertex => ({
     position: new THREE.Vector3(position.getX(vertex), position.getY(vertex), position.getZ(vertex)),
     normal: new THREE.Vector3(sourceNormal.getX(vertex), sourceNormal.getY(vertex), sourceNormal.getZ(vertex)),
     u: sourceUv.getX(vertex),
     v: sourceUv.getY(vertex),
-    artworkHeight: artworkHeightAt(vertex),
+    heightRatio: (position.getY(vertex) - minY) / height,
   });
   const intersect = (from: PrintVertex, to: PrintVertex): PrintVertex => {
-    const amount = (PRINTABLE_BODY_TOP_RATIO - from.artworkHeight)
-      / (to.artworkHeight - from.artworkHeight);
+    const amount = (PRINTABLE_BODY_TOP_RATIO - from.heightRatio)
+      / (to.heightRatio - from.heightRatio);
     return {
       position: from.position.clone().lerp(to.position, amount),
       normal: from.normal.clone().lerp(to.normal, amount).normalize(),
       u: THREE.MathUtils.lerp(from.u, to.u, amount),
       v: THREE.MathUtils.lerp(from.v, to.v, amount),
-      artworkHeight: PRINTABLE_BODY_TOP_RATIO,
+      heightRatio: PRINTABLE_BODY_TOP_RATIO,
     };
   };
   const clipTriangle = (triangle: PrintVertex[]) => {
@@ -115,8 +110,8 @@ function createSeamClippedPrintGeometry(source: THREE.BufferGeometry) {
     for (let index = 0; index < triangle.length; index++) {
       const from = triangle[index];
       const to = triangle[(index + 1) % triangle.length];
-      const fromInside = from.artworkHeight <= PRINTABLE_BODY_TOP_RATIO;
-      const toInside = to.artworkHeight <= PRINTABLE_BODY_TOP_RATIO;
+      const fromInside = from.heightRatio <= PRINTABLE_BODY_TOP_RATIO;
+      const toInside = to.heightRatio <= PRINTABLE_BODY_TOP_RATIO;
       if (toInside) {
         if (!fromInside) clipped.push(intersect(from, to));
         clipped.push(to);
@@ -134,7 +129,7 @@ function createSeamClippedPrintGeometry(source: THREE.BufferGeometry) {
     outputPositions.push(vertex.position.x, vertex.position.y, vertex.position.z);
     outputNormals.push(vertex.normal.x, vertex.normal.y, vertex.normal.z);
     const remappedHeight = THREE.MathUtils.clamp(
-      vertex.artworkHeight / PRINTABLE_BODY_TOP_RATIO,
+      vertex.heightRatio / PRINTABLE_BODY_TOP_RATIO,
       0,
       1,
     );
