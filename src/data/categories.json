@@ -264,5 +264,19 @@
     "protected": false,
     "createdAt": "2026-08-05T00:00:00.000Z",
     "updatedAt": "2026-08-05T00:00:00.000Z"
+  },
+  {
+    "categoryId": "cottage-rabbit",
+    "nameZh": "田园萌兔系列",
+    "nameEn": "Cottage Rabbit Series",
+    "slug": "cottage-rabbit",
+    "descriptionZh": "温柔水彩笔触描绘的田园兔子、花篮与复活节故事。",
+    "descriptionEn": "Gentle watercolor rabbits, cottage baskets and Easter story illustrations.",
+    "sortOrder": 83,
+    "enabled": true,
+    "visible": true,
+    "protected": false,
+    "createdAt": "2026-08-13T00:00:00.000Z",
+    "updatedAt": "2026-08-13T00:00:00.000Z"
   }
 ]

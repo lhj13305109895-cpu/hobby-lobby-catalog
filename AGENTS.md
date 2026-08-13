@@ -10,6 +10,8 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 
 ## Durable Product Decisions
 
+- The 28 images added on 2026-08-13 are numbered 319-151 through 319-178. Every image showing multiple pots is retained as one `混色套装系列` / `Mixed Set Series` entry; single-pot images use `316不锈钢花卉系列` or the new `田园萌兔系列` / `Cottage Rabbit Series`.
+
 - The selected visual target is Product Design ideation option 1: a warm editorial brand showcase with ivory surfaces, charcoal serif headings, and restrained Hobby Lobby red accents.
 - The product model is 319, offered in 1.6L and 2.0L capacities.
 - The catalogue price is ¥29 RMB for 1.6L and ¥31 RMB for 2.0L.

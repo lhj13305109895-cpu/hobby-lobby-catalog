@@ -94,7 +94,10 @@ h2 { font-size:clamp(42px,4vw,62px); line-height:1.04; }
 .finish-tabs button:last-child,.segmented-control button:last-child { border-right:0; }
 .finish-tabs button.active,.segmented-control button.active { background:var(--red); color:white; }
 .catalogue-layout { max-width:1390px; margin:0 auto; display:grid; grid-template-columns:210px minmax(0,1fr); gap:32px; align-items:start; }
-.series-directory { position:sticky; top:112px; display:grid; gap:8px; padding:18px; border:1px solid var(--line); background:var(--white); border-radius:4px; }
+.series-directory { position:sticky; top:112px; display:grid; gap:8px; max-height:calc(100dvh - 132px); overflow-y:auto; overscroll-behavior:contain; scrollbar-gutter:stable; padding:18px; border:1px solid var(--line); background:var(--white); border-radius:4px; scrollbar-width:thin; scrollbar-color:rgba(201,8,22,.45) #f4eee7; }
+.series-directory::-webkit-scrollbar { width:8px; }
+.series-directory::-webkit-scrollbar-track { background:#f4eee7; }
+.series-directory::-webkit-scrollbar-thumb { border:2px solid #f4eee7; border-radius:999px; background:rgba(201,8,22,.45); }
 .series-directory>span { margin-bottom:6px; color:var(--red); font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
 .series-directory a { display:grid; gap:3px; padding:11px 0; border-top:1px solid #eee7df; text-decoration:none; }
 .series-directory a:first-of-type { border-top:0; }
@@ -328,6 +331,7 @@ footer a { display:inline-flex; align-items:center; gap:7px; text-decoration:non
   .wecom-contact-card>a { width:min(100%,360px); }
 }
 @media (max-width:800px) {
+  .series-directory { max-height:none; overflow-y:hidden; scrollbar-gutter:auto; touch-action:pan-x; }
   .contact-brand-card-scroll img { width:960px; max-width:none; }
   .contact-brand-card figcaption { padding-right:6px; }
 }
