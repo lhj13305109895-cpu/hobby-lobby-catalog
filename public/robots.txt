@@ -1,3 +1,9 @@
+# OpenAI search crawler: allows pages and product images to appear in ChatGPT search.
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /admin/
+Disallow: /api/admin/
+
 User-agent: *
 Allow: /
 Disallow: /admin/

@@ -278,5 +278,19 @@
     "protected": false,
     "createdAt": "2026-08-13T00:00:00.000Z",
     "updatedAt": "2026-08-13T00:00:00.000Z"
+  },
+  {
+    "categoryId": "coffee-food",
+    "nameZh": "咖啡美食系列",
+    "nameEn": "Coffee & Food Series",
+    "slug": "coffee-food",
+    "descriptionZh": "以咖啡、甜点、汉堡和趣味餐饮元素组成的生活化图案。",
+    "descriptionEn": "Lively everyday patterns featuring coffee, desserts, burgers and food motifs.",
+    "sortOrder": 84,
+    "enabled": true,
+    "visible": true,
+    "protected": false,
+    "createdAt": "2026-08-14T00:00:00.000Z",
+    "updatedAt": "2026-08-14T00:00:00.000Z"
   }
 ]

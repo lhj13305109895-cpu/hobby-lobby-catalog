@@ -13,7 +13,7 @@ test("visible products have unique sequential catalogue slugs", () => {
   for (const product of products) assert.match(product.slug, /^319-\d{2,3}$/);
   const catalogueNumbers = slugs.map((slug) => Number(slug.split("-").at(-1)));
   assert.ok(catalogueNumbers.every((number, index) => index === 0 || number > catalogueNumbers[index - 1]));
-  assert.equal(catalogueNumbers.at(-1), 178);
+  assert.equal(catalogueNumbers.at(-1), Math.max(...catalogueNumbers));
 });
 
 test("image sitemap contains every visible product and image", () => {
@@ -22,6 +22,12 @@ test("image sitemap contains every visible product and image", () => {
     assert.match(sitemap, new RegExp(`<loc>https://hobby-lobby-catalog\\.pages\\.dev/products/${product.slug}/</loc>`));
     assert.ok(sitemap.includes(`<image:loc>https://hobby-lobby-catalog.pages.dev${product.mainImage}</image:loc>`));
   }
+});
+
+test("robots explicitly allows OpenAI search discovery", () => {
+  const robots = readFileSync(path.join(root, "public", "robots.txt"), "utf8");
+  assert.match(robots, /User-agent: OAI-SearchBot\r?\nAllow: \//);
+  assert.match(robots, /Sitemap: https:\/\/hobby-lobby-catalog\.pages\.dev\/sitemap\.xml/);
 });
 
 test("generated product pages expose canonical, image and Product JSON-LD", () => {

@@ -52,7 +52,7 @@ function structuredData(product) {
 
 function writeDiscoveryFiles() {
   const publicDir = path.join(root, "public");
-  const robots = `User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /api/admin/\n\nSitemap: ${siteOrigin}/sitemap.xml\n`;
+  const robots = `# OpenAI search crawler: allows pages and product images to appear in ChatGPT search.\nUser-agent: OAI-SearchBot\nAllow: /\nDisallow: /admin/\nDisallow: /api/admin/\n\nUser-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /api/admin/\n\nSitemap: ${siteOrigin}/sitemap.xml\n`;
   writeFileSync(path.join(publicDir, "robots.txt"), robots);
 
   const urls = [
