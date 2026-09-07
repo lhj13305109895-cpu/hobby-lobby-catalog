@@ -4,7 +4,7 @@ import categoriesData from "./data/categories.json";
 import {
   ArrowDown, ArrowLeft, ArrowRight, Check, Heart,
   DownloadSimple, FacebookLogo, InstagramLogo, MagnifyingGlassPlus, PaintBrush,
-  ShieldCheck, ShoppingCart, Trash, WechatLogo, WhatsappLogo, X,
+  ShieldCheck, ShoppingCart, SquaresFour, Trash, WechatLogo, WhatsappLogo, X,
 } from "@phosphor-icons/react";
 
 const AdminApp = lazy(() => import("./admin/AdminApp.jsx").then((module) => ({ default: module.AdminApp })));
@@ -319,6 +319,7 @@ function Storefront() {
   const [exportStatus, setExportStatus] = useState("");
   const [quotePreview, setQuotePreview] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
+  const [seriesMenuOpen, setSeriesMenuOpen] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [zoom, setZoom] = useState(1);
   const [visibleSeriesCount, setVisibleSeriesCount] = useState(1);
@@ -371,6 +372,7 @@ function Storefront() {
       if (event.key === "Escape") {
         closeExpanded();
         setCartOpen(false);
+        setSeriesMenuOpen(false);
         setQuotePreview((current) => {
           if (current?.pdfUrl) URL.revokeObjectURL(current.pdfUrl);
           return null;
@@ -387,6 +389,7 @@ function Storefront() {
 
   useEffect(() => {
     setVisibleSeriesCount(1);
+    setSeriesMenuOpen(false);
   }, [filter]);
 
   useEffect(() => {
@@ -404,16 +407,17 @@ function Storefront() {
   }, [hasMoreSeries, groupedPatterns.length, visibleSeriesCount]);
 
   function revealSeries(event, seriesIndex) {
-    if (seriesIndex < visibleSeriesCount) return;
     event.preventDefault();
-    setVisibleSeriesCount(seriesIndex + 1);
+    if (seriesIndex >= visibleSeriesCount) setVisibleSeriesCount(seriesIndex + 1);
+    setSeriesMenuOpen(false);
     window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
-      document.getElementById(`series-${seriesIndex + 1}`)?.scrollIntoView();
+      document.getElementById(`series-${seriesIndex + 1}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
     }));
   }
 
   function chooseFilter(nextFilter) {
     setFilter(nextFilter);
+    setSeriesMenuOpen(false);
     const nextPattern = nextFilter === "全部花色"
       ? catalogue[0]
       : catalogue.find((pattern) => pattern.body === nextFilter || pattern.family === `${nextFilter}系列`);
@@ -730,9 +734,45 @@ function Storefront() {
         <section className="benefit-row section" aria-label={language === "zh" ? "产品卖点" : "Product benefits"}>{t.benefits.map(({ icon: Icon, title, text }) => <article key={title}><Icon weight="regular" /><h3>{title}</h3><p>{text}</p></article>)}</section>
       </main>
 
+      <aside className={`mobile-series-nav ${seriesMenuOpen ? "is-open" : ""}`} aria-label={language === "zh" ? "系列快捷导航" : "Series quick navigation"}>
+        {seriesMenuOpen && (
+          <div className="mobile-series-panel" id="mobile-series-panel">
+            <div className="mobile-series-head">
+              <div>
+                <span>{language === "zh" ? "快速跳转" : "Quick jump"}</span>
+                <strong>{language === "zh" ? "选择系列" : "Choose a series"}</strong>
+              </div>
+              <button type="button" onClick={() => setSeriesMenuOpen(false)} aria-label={language === "zh" ? "关闭系列导航" : "Close series navigation"}><X weight="bold" /></button>
+            </div>
+            <nav className="mobile-series-list" aria-label={language === "zh" ? "产品系列" : "Product series"}>
+              {groupedPatterns.map(([series, seriesPatterns], seriesIndex) => (
+                <a href={`#series-${seriesIndex + 1}`} key={series} onClick={(event) => revealSeries(event, seriesIndex)}>
+                  <strong>{displayFamily(series)}</strong>
+                  <small>{seriesPatterns.length} {t.itemUnit}</small>
+                </a>
+              ))}
+            </nav>
+          </div>
+        )}
+        <button
+          className="mobile-series-fab"
+          type="button"
+          onClick={() => {
+            setSeriesMenuOpen((open) => !open);
+            setCartOpen(false);
+          }}
+          aria-expanded={seriesMenuOpen}
+          aria-controls="mobile-series-panel"
+        >
+          <SquaresFour weight="fill" />
+          <span>{language === "zh" ? "系列" : "Series"}</span>
+          <strong>{groupedPatterns.length}</strong>
+        </button>
+      </aside>
+
       <aside className={`selection-cart ${cartOpen ? "is-open" : "is-collapsed"}`} aria-label="已选花色">
         {!cartOpen ? (
-          <button className="cart-fab" type="button" onClick={() => setCartOpen(true)} aria-expanded="false" aria-label={`展开购物车，当前共 ${totalCartons} 箱`}>
+          <button className="cart-fab" type="button" onClick={() => { setCartOpen(true); setSeriesMenuOpen(false); }} aria-expanded="false" aria-label={`展开购物车，当前共 ${totalCartons} 箱`}>
             <ShoppingCart weight="bold" />
             <span>购物车</span>
             <strong aria-live="polite">{totalCartons}</strong>

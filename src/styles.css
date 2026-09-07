@@ -144,6 +144,7 @@ h2 { font-size:clamp(42px,4vw,62px); line-height:1.04; }
 .capacity-picker strong { font-size:13px; font-weight:800; }
 .capacity-picker span { font-size:10px; }
 .capacity-picker em { font-style:normal; font-size:10px; opacity:.86; }
+.mobile-series-nav { display:none; }
 .selection-cart { position:fixed; right:24px; bottom:24px; z-index:75; transition:width .2s ease,transform .2s ease,box-shadow .2s ease; }
 .selection-cart.is-open { width:320px; max-height:60vh; display:grid; gap:12px; padding:16px; border:1px solid rgba(53,47,43,.12); border-radius:12px; background:rgba(255,253,250,.96); box-shadow:0 22px 60px rgba(31,27,25,.18); backdrop-filter:blur(12px); }
 .selection-cart.is-collapsed { width:auto; max-height:none; }
@@ -331,7 +332,27 @@ footer a { display:inline-flex; align-items:center; gap:7px; text-decoration:non
   .wecom-contact-card>a { width:min(100%,360px); }
 }
 @media (max-width:800px) {
-  .series-directory { max-height:none; overflow-y:hidden; scrollbar-gutter:auto; touch-action:pan-x; }
+  .series-directory { display:none; }
+  .pattern-series { scroll-margin-top:92px; }
+  .mobile-series-nav { position:fixed; left:14px; bottom:14px; z-index:76; display:block; }
+  .mobile-series-fab { min-height:58px; display:inline-flex; align-items:center; gap:9px; padding:0 10px 0 17px; border:1px solid rgba(255,255,255,.2); border-radius:999px; background:#302b28; color:#fff; box-shadow:0 16px 42px rgba(31,27,25,.25); cursor:pointer; font-weight:800; }
+  .mobile-series-fab:active { transform:translateY(1px); }
+  .mobile-series-fab svg { font-size:20px; color:#f3c451; }
+  .mobile-series-fab span { font-size:13px; letter-spacing:.06em; }
+  .mobile-series-fab strong { min-width:38px; height:38px; display:grid; place-items:center; padding-inline:7px; border-radius:999px; background:#f3c451; color:#302b28; font-size:13px; }
+  .mobile-series-panel { position:absolute; left:0; bottom:68px; width:min(360px,calc(100vw - 28px)); max-height:min(66dvh,560px); display:grid; grid-template-rows:auto minmax(0,1fr); overflow:hidden; border:1px solid rgba(53,47,43,.12); border-radius:16px; background:rgba(255,253,250,.98); box-shadow:0 22px 60px rgba(31,27,25,.22); backdrop-filter:blur(14px); animation:mobile-series-in .18s ease-out; }
+  .mobile-series-head { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:17px 18px 14px; border-bottom:1px solid var(--line); }
+  .mobile-series-head>div { display:grid; gap:3px; }
+  .mobile-series-head span { color:var(--red); font-size:10px; font-weight:800; letter-spacing:.13em; text-transform:uppercase; }
+  .mobile-series-head strong { font-family:"Playfair Display",Georgia,serif; font-size:22px; font-weight:600; }
+  .mobile-series-head button { width:34px; height:34px; display:grid; place-items:center; border:1px solid var(--line); border-radius:50%; background:#fff; color:var(--ink); cursor:pointer; }
+  .mobile-series-head button svg { font-size:16px; }
+  .mobile-series-list { min-height:0; display:grid; grid-template-columns:1fr 1fr; gap:8px; overflow-y:auto; overscroll-behavior:contain; padding:12px; }
+  .mobile-series-list a { min-width:0; display:grid; gap:4px; padding:13px 12px; border:1px solid #ebe3da; border-radius:9px; background:#fff; color:var(--ink); text-decoration:none; }
+  .mobile-series-list a:active { border-color:var(--red); background:#fff7f6; }
+  .mobile-series-list strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:"Playfair Display",Georgia,serif; font-size:15px; font-weight:600; }
+  .mobile-series-list small { color:var(--muted); font-size:10px; }
+  @keyframes mobile-series-in { from { opacity:0; transform:translateY(8px) scale(.98); } to { opacity:1; transform:none; } }
   .contact-brand-card-scroll img { width:960px; max-width:none; }
   .contact-brand-card figcaption { padding-right:6px; }
 }
