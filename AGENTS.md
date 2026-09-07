@@ -38,3 +38,4 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 - Keep the page background warmer and more premium than plain white; use subtle gradients and catalogue-like depth.
 - Keep `混色套装系列` / `Mixed Set Series` as the final visible catalogue series. Give every set a descriptive Chinese and English name; do not use sequence-only names such as `混色套装 01` or `Mixed Set 01`.
 - The catalogue includes an integrated `/studio/` pattern preview tool. It accepts JPG, PNG, and WEBP artwork by file selection, drag-and-drop, or clipboard paste for the 365.99 × 183 mm body wrap; the 3D model may rotate horizontally only, with vertical orbit locked.
+- For the 1.6L / 365.99 × 183 mm studio model, keep the original ivory body color and scene exposure. Match the physical product: the vessel body is a smooth high-gloss coated surface with broad continuous highlights, while the lid, spout, and handle are softly matte. Avoid mesh-like self-shadow banding.

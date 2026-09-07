@@ -4,6 +4,7 @@ import { ChangeEvent, DragEvent, useCallback, useEffect, useRef, useState } from
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
 import "./pattern-studio-source.css";
 
 type Finish = "matte" | "satin" | "gloss";
@@ -47,7 +48,7 @@ const DEFAULT_BODY_COLOR = "#f8f5e8";
 const FINISH_SURFACE: Record<Finish, { roughness: number; clearcoat: number; clearcoatRoughness: number }> = {
   matte: { roughness: 0.72, clearcoat: 0, clearcoatRoughness: 0.8 },
   satin: { roughness: 0.42, clearcoat: 0.08, clearcoatRoughness: 0.5 },
-  gloss: { roughness: 0.22, clearcoat: 0.36, clearcoatRoughness: 0.2 },
+  gloss: { roughness: 0.15, clearcoat: 0.68, clearcoatRoughness: 0.1 },
 };
 
 function createSeamClippedPrintGeometry(source: THREE.BufferGeometry) {
@@ -483,21 +484,33 @@ uniform float uPartFixtureRadius;`,
         "vec4 diffuseColor = vec4( diffuse, opacity );",
         `float partHeight = -vPartLocalPosition.z;
 float partRadius = length(vPartLocalPosition.xy - uPartBodyCenter);
-vec3 partSurfaceColor = (partHeight >= uPartBodyTopHeight || partRadius > uPartFixtureRadius)
-  ? uPartFixtureColor
-  : uPartBodyColor;
+float partIsBody = (partHeight < uPartBodyTopHeight && partRadius <= uPartFixtureRadius) ? 1.0 : 0.0;
+vec3 partSurfaceColor = mix(uPartFixtureColor, uPartBodyColor, partIsBody);
 vec4 diffuseColor = vec4(partSurfaceColor, opacity);`,
       )
       .replace(
         "#include <normal_fragment_maps>",
         `#include <normal_fragment_maps>
-if (partHeight < uPartBodyTopHeight && partRadius <= uPartFixtureRadius) {
+if (partIsBody > 0.5) {
   normal = normalize(vPartRadialViewNormal) * faceDirection;
   nonPerturbedNormal = normal;
 }`,
+      )
+      .replace(
+        "#include <lights_physical_fragment>",
+        `#include <lights_physical_fragment>
+// The real product combines a high-gloss coated vessel with softly matte
+// plastic fixtures, even though both regions share this source mesh.
+if (partIsBody < 0.5) {
+  material.roughness = max(material.roughness, 0.56);
+#ifdef USE_CLEARCOAT
+  material.clearcoat = 0.035;
+  material.clearcoatRoughness = 0.58;
+#endif
+}`,
       );
   };
-  material.customProgramCacheKey = () => "fixture-part-hard-seam-smooth-body-v2";
+  material.customProgramCacheKey = () => "fixture-part-real-product-finish-v3";
   material.needsUpdate = true;
   return uniforms;
 }
@@ -638,6 +651,18 @@ export function PotStudio() {
     rim.position.set(0, 4, -5);
     scene.add(rim);
 
+    // Long softboxes produce the broad, readable highlight bands visible on
+    // the real coated vessel, without changing the established scene exposure.
+    RectAreaLightUniformsLib.init();
+    const frontSoftbox = new THREE.RectAreaLight(0xffffff, 4.2, 2.4, 0.28);
+    frontSoftbox.position.set(-1.7, 1.45, 3.6);
+    frontSoftbox.lookAt(0, 0.05, 0);
+    scene.add(frontSoftbox);
+    const sideSoftbox = new THREE.RectAreaLight(0xffffff, 3.2, 1.5, 0.22);
+    sideSoftbox.position.set(3.2, 0.85, 1.5);
+    sideSoftbox.lookAt(0, 0, 0);
+    scene.add(sideSoftbox);
+
     const floor = new THREE.Mesh(
       new THREE.CircleGeometry(7, 96),
       new THREE.MeshStandardMaterial({ color: 0xbeb7a9, roughness: 0.92 })
@@ -702,10 +727,10 @@ export function PotStudio() {
           printMaterial.toneMapped = false;
           const fixtureMaterial = new THREE.MeshPhysicalMaterial({
             color: 0xffffff,
-            roughness: 0.34,
+            roughness: FINISH_SURFACE.gloss.roughness,
             metalness: 0,
-            clearcoat: 0.18,
-            clearcoatRoughness: 0.3,
+            clearcoat: FINISH_SURFACE.gloss.clearcoat,
+            clearcoatRoughness: FINISH_SURFACE.gloss.clearcoatRoughness,
             side: THREE.DoubleSide,
           });
           let bodyFound = false;
@@ -713,7 +738,10 @@ export function PotStudio() {
           model.traverse((child) => {
             if (!(child instanceof THREE.Mesh)) return;
             child.castShadow = true;
-            child.receiveShadow = true;
+            // The dense 1.6L production mesh produces visible self-shadow
+            // banding at normal viewing distances. Keep its floor shadow, but
+            // let the studio lights describe a clean, continuous enamel skin.
+            child.receiveShadow = isTwoLiter;
             const isPrintSurface = child.name === "BODY_PRINT_365_99x183";
             if (isPrintSurface) {
               child.material = bodyMaterial;
@@ -836,8 +864,12 @@ export function PotStudio() {
     updateFixturePartUniforms(fixturePartUniformsRef.current, new THREE.Color(bodyColor).getHex(), lidColor);
     fixtureMaterialsRef.current.forEach((material) => {
       material.color.set(0xffffff);
+      material.roughness = FINISH_SURFACE[finish].roughness;
+      material.clearcoat = FINISH_SURFACE[finish].clearcoat;
+      material.clearcoatRoughness = FINISH_SURFACE[finish].clearcoatRoughness;
+      material.needsUpdate = true;
     });
-  }, [bodyColor, lidColor, ready]);
+  }, [bodyColor, lidColor, finish, ready]);
 
   const changeCapacity = (nextCapacity: "1.6" | "2.0") => {
     if (nextCapacity === capacity) return;

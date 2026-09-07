@@ -1,48 +1,38 @@
-**Evidence**
+# Design QA — 1.6L / 365.99 × 183 mm surface finish
 
-- Source visual truth: `qa/source-selected-hero.png`
-- Browser-rendered implementation: `http://127.0.0.1:4173/`
-- Verified viewport: 1390 × 697 CSS px, device scale factor 1
-- State: Chinese desktop storefront, top of page, static product curtain
+## Evidence
 
-**Findings**
+- Source visual truth: `C:\Users\33865\Documents\xwechat_files\wxid_pha984yzf9or22_2365\temp\RWTemp\2026-09\9e20f478899dc29eb19741386f9343c8\374aad74ad3f91cce4a3fc5488c003fd.jpg`
+- Source pixels: 1412 × 1883.
+- Implementation: `http://localhost:5173/studio/`, 1.6L selected, blank body, warm backdrop, gloss selected, default body and fixture colours.
+- Browser-rendered implementation screenshot evidence: Codex in-app browser tab 4, captured at a 1268 × 713 viewport after the model reached the ready state.
+- Combined comparison evidence: temporary same-origin comparison view placed the real-product photo and the live WebGL canvas side by side at the same browser viewport. The comparison helper and copied reference were not retained in the production build.
+- Density normalization: both sides were fitted into equal CSS comparison panels; no pixel-level shape comparison was used because the source is a close showroom crop and the implementation is a full-product studio view.
 
-- No actionable P0/P1/P2 issue remains in the corrected version.
-- The erroneous foreground duplicate and the large rectangular motion tracks were removed.
-- The selected hero remains the fixed visual truth. Rear curtain positions now show distinct real catalogue products without animated overlays.
+## Findings
 
-**Required Fidelity Surfaces**
+- P0/P1/P2: none remaining.
+- P3: The real photo contains stronger fluorescent-strip reflections than the neutral studio preview. This is an expected lighting-environment difference; the implementation now expresses the same material hierarchy without copying the showroom surroundings.
 
-- Fonts and typography: passed; source typography remains unchanged.
-- Spacing and layout rhythm: passed; the selected composition and central-product scale remain intact.
-- Colors and visual tokens: passed; warm ivory, beige, red, and black remain consistent.
-- Image quality and asset fidelity: passed; existing catalogue thumbnails use `object-fit: contain` and `mix-blend-mode: multiply` to merge their white backgrounds into the rear panels.
-- Copy and content: passed; headline, navigation, CTA, and language labels remain unchanged.
+## Required fidelity surfaces
 
-**Interaction Verification**
+- Fonts and typography: no typography change was in scope; existing studio typography and hierarchy remain unchanged.
+- Spacing and layout rhythm: no layout change was in scope; the 3D viewer and controls remain aligned and usable at the checked viewport.
+- Colors and visual tokens: original body colour `#F8F5E8`, fixture colour `#F3F1E9`, backdrop, and exposure are preserved.
+- Image/material quality: 1.6L self-shadow banding is removed; the body uses a high-gloss coated response with broad studio highlights; lid, spout, and handle retain a softer matte response; floor shadow remains.
+- Copy/content: capacity remains 1.6L and dimensions remain 365.99 × 183 mm. Existing control labels are unchanged.
 
-- Animated rear catalogue slots were removed completely.
-- The curtain uses unique static products with no repeated pattern and no floating thumbnail boxes.
-- Both inactive carousel arrow circles were removed from the static hero artwork.
-- Broken images: 0.
-- Horizontal overflow: false.
-- Browser warnings/errors: 0.
-- Existing admin function tests: 5 passed, 0 failed.
-- Production build: passed.
+## Comparison history
 
-**Comparison History**
+1. Initial implementation showed mesh-like moiré/self-shadow bands across the vessel and fixtures. Fixed by disabling self-shadow reception only on the 1.6L production mesh while retaining cast shadow onto the floor.
+2. The real-product reference clarified that the vessel and fixtures use different finishes. Fixed by increasing the body's gloss/clearcoat response, overriding the shared-mesh fixture regions to a soft matte finish, and adding broad studio softboxes.
+3. Final browser check showed a clean continuous vessel surface, preserved original colour, matte fixtures, working controls, and no visible self-shadow bands. No actionable P0/P1/P2 issues remained.
 
-- P1: large moving layers crossed the central product and produced a visible half-product seam.
-- Failed intermediate fix: a separate foreground product was misaligned and created two large central products; the broad right track also appeared as a white rectangle.
-- Final fix: removed the foreground duplicate, broad tracks, and all animated rear-panel overlays; rebuilt the static curtain with unique catalogue products.
-- Post-fix evidence: exactly one central product is visible; no layer crosses it; each rear product pattern is different.
+## Interaction and runtime checks
 
-**Focused Region Comparison**
-
-- Reviewed the central-pot edges, lid and handle, every rear curtain position, and both former arrow locations. No foreground duplication, repeated rear pattern, floating rectangular overlay, or inactive arrow remains.
-
-**Follow-up Polish**
-
-- No motion setting remains for the desktop reference hero.
+- 1.6L / 365.99 × 183 mm is selected after reload.
+- Model reaches ready state and export control becomes enabled.
+- Horizontal rotation, zoom hints, finish selector, colour controls, and upload area remain present.
+- Production build completes successfully.
 
 final result: passed
