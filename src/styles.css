@@ -13,6 +13,21 @@ button,a { -webkit-tap-highlight-color:transparent; }
 a { color:inherit; }
 button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible { outline:3px solid rgba(201,8,22,.3); outline-offset:3px; }
 .site-shell { min-height:100vh; overflow-x:clip; background:linear-gradient(180deg,rgba(255,253,250,.3),rgba(255,253,250,.74) 48%,rgba(255,253,250,.42)); }
+.site-shell[dir="rtl"] { direction:rtl; text-align:right; font-family:Tahoma,"Segoe UI",Arial,sans-serif; }
+.site-shell[dir="rtl"] h1,.site-shell[dir="rtl"] h2,.site-shell[dir="rtl"] .pattern-name,.site-shell[dir="rtl"] .series-directory strong,.site-shell[dir="rtl"] .series-heading span,.site-shell[dir="rtl"] .mobile-series-head strong,.site-shell[dir="rtl"] .mobile-series-list strong,.site-shell[dir="rtl"] .contact-channel strong,.site-shell[dir="rtl"] .cart-item strong { font-family:Tahoma,"Segoe UI",Arial,sans-serif; }
+.site-shell[dir="rtl"] .hero-copy { inset:0 0 0 auto; background:linear-gradient(270deg,#fffaf3 0%,rgba(255,250,243,.98) 76%,rgba(255,250,243,0) 100%); }
+.site-shell[dir="rtl"] .hero-featured-product { left:42%; }
+.site-shell[dir="rtl"] .hero-runway { left:-6%; right:14%; border-radius:0 52% 50% 0; }
+.site-shell[dir="rtl"] .hero-runway-controls button:first-child { left:auto; right:32%; }
+.site-shell[dir="rtl"] .hero-runway-controls button:last-child { right:auto; left:2.5%; }
+.site-shell[dir="rtl"] .pattern-card { text-align:right; }
+.site-shell[dir="rtl"] .check-mark { right:auto; left:10px; }
+.site-shell[dir="rtl"] .zoom-hint { left:auto; right:10px; }
+.site-shell[dir="rtl"] .selection-cart { right:auto; left:24px; }
+.site-shell[dir="rtl"] .cart-list { padding-right:0; padding-left:2px; }
+.site-shell[dir="rtl"] .lightbox-close { right:auto; left:14px; }
+.site-shell[dir="rtl"] .zoom-meter { left:auto; right:14px; }
+.site-shell[dir="rtl"] .product-detail-link svg,.site-shell[dir="rtl"] .product-back svg,.site-shell[dir="rtl"] footer a svg,.site-shell[dir="rtl"] .steel-band a svg,.site-shell[dir="rtl"] .contact-channel>svg:last-child,.site-shell[dir="rtl"] .contact-brand-card figcaption a svg,.site-shell[dir="rtl"] .hero-actions a svg { transform:scaleX(-1); }
 .hero-reference-exact { display:none; position:relative; overflow:hidden; background:#fffaf3; container-type:inline-size; }
 .hero-reference-base { display:block; width:100%; height:auto; }
 .hero-reference-hotspot { position:absolute; z-index:4; display:block; border:0; padding:0; background:transparent; opacity:.001; cursor:pointer; }
@@ -363,6 +378,30 @@ footer a { display:inline-flex; align-items:center; gap:7px; text-decoration:non
   .contact-channel>svg:first-child { width:34px; height:34px; }
   .wecom-contact-card { padding:14px; }
   .contact-brand-card figcaption { align-items:flex-start; flex-direction:column; gap:7px; }
+}
+
+@media (max-width:800px) {
+  .site-shell[dir="rtl"] .hero-copy { inset:auto; background:#fffaf3; }
+  .site-shell[dir="rtl"] .hero-runway { left:-38%; right:-10%; border-radius:0 46% 46% 0; }
+  .site-shell[dir="rtl"] .hero-featured-product { left:7%; }
+  .site-shell[dir="rtl"] .hero-runway-controls { left:14px; right:auto; }
+  .site-shell[dir="rtl"] .mobile-series-nav { left:auto; right:14px; }
+  .site-shell[dir="rtl"] .mobile-series-panel { left:auto; right:0; }
+  .site-shell[dir="rtl"] .selection-cart.is-collapsed { left:14px; right:auto; }
+  .site-shell[dir="rtl"] .selection-cart.is-open { left:14px; right:14px; }
+  .site-shell[dir="rtl"] .series-directory a { border-left:0; border-right:1px solid #eee7df; padding:10px 12px 10px 0; }
+  .site-shell[dir="rtl"] .lightbox-info { border-right:0; }
+}
+
+@media (max-width:520px) {
+  .site-shell[dir="rtl"] .hero-runway { left:-64%; right:-22%; }
+  .site-shell[dir="rtl"] .hero-featured-product { left:2%; }
+  .language-switcher button { padding-inline:7px; }
+}
+
+@media (max-width:380px) {
+  .topbar nav { display:none; }
+  .language-switcher button { padding-inline:6px; font-size:10px; }
 }
 @media (prefers-reduced-motion:reduce) { html{scroll-behavior:auto}*,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}.hero-runway-track{transform:none!important} }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after{scroll-behavior:auto!important;transition:none!important} }

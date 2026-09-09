@@ -52,9 +52,16 @@ const capacities = [
 ];
 
 const languageOptions = [
-  { id: "zh", label: "中文" },
   { id: "en", label: "English" },
+  { id: "zh", label: "中文" },
+  { id: "ar", label: "العربية" },
 ];
+
+const localize = (language, zh, en, ar) => {
+  if (language === "zh") return zh;
+  if (language === "ar") return ar;
+  return en;
+};
 
 const quoteNumberKey = "hobby-lobby-319-quote-number";
 const quoteNumberPrefix = "XSD202607";
@@ -211,6 +218,89 @@ const copy = {
       { icon: Heart, title: "Two capacities", text: "1.6L ¥29 RMB and 2.0L ¥31 RMB, with clear catalogue pricing." },
     ],
   },
+  ar: {
+    navGallery: "كتالوج التصاميم",
+    navSteel: "ستانلس ستيل",
+    navSpecs: "الأسعار",
+    headerCta: "عرض كل التصاميم",
+    heroEyebrow: "تخصيص التصاميم · موديل 319",
+    heroTitleTop: "تصاميمك،",
+    heroTitleBottom: "كما تريد",
+    heroLead: `اختر من بين ${catalogue.length} تصميماً جاهزاً، أو أنشئ تصميماً خاصاً من صورك وألوانك وهوية علامتك التجارية.`,
+    browseAll: "استكشف التصاميم",
+    viewSpecs: "خدمة التخصيص",
+    heroNotePatterns: "عرض متحرك لمنتجات الكتالوج الحقيقية",
+    heroNoteModel: "تصاميم جاهزة · ندعم تصاميم العملاء",
+    heroCarouselLabel: "عرض متحرك لمنتجات الكتالوج الحقيقية",
+    previousPatterns: "التصاميم السابقة",
+    nextPatterns: "المزيد من التصاميم",
+    stripModel: "الموديل",
+    stripPatterns: "التصاميم",
+    stripPatternCount: `${catalogue.length} تصميماً`,
+    galleryEyebrow: "مكتبة التصاميم الكاملة",
+    galleryTitle: "تصفح حسب المجموعة",
+    galleryText: "تعرض كل بطاقة أحدث صور المنتجات. اضغط على الصورة لتكبيرها، ثم اختر السعة وعدد الكراتين.",
+    directory: "دليل المجموعات",
+    itemUnit: "منتج",
+    patternUnit: "تصميماً",
+    zoomHint: "اضغط للتكبير",
+    currentShowing: "نعرض حالياً",
+    currentSuffix: "تصميماً. اضغط على أي صورة لعرضها بحجم أكبر؛ واضغط Esc أو الخلفية للإغلاق.",
+    specsEyebrow: "موديل 319",
+    specsTitle: "الأسعار والمواصفات",
+    specOneTitle: "سعة 1.6 لتر",
+    specOneText: "موديل 319، سعر الكتالوج ¥29 RMB، عدد 24 قطعة/كرتون، CBM 0.14.",
+    specTwoTitle: "سعة 2.0 لتر",
+    specTwoText: "موديل 319، سعر الكتالوج ¥31 RMB، عدد 20 قطعة/كرتون، CBM 0.15.",
+    specThreeTitle: "فئات التصاميم",
+    specThreeText: "زهور، أشكال هندسية، فواكه، حروف، ستانلس ستيل، وألوان سادة.",
+    steelEyebrow: "مجموعة ستانلس ستيل 316",
+    steelTitle: <>هيكل ستانلس بغطاء أسود،<br />ضمن مجموعة مستقلة.</>,
+    steelText: "تم تجميع خيارات الستانلس ستيل بشكل مستقل لتسهيل عرض تصاميم الهيكل المعدني فقط.",
+    steelLink: "عرض تصاميم الستانلس فقط",
+    footerText: "Hobby Lobby Ask for More · كتالوج تصاميم موديل 319",
+    languageLabel: "اللغة",
+    modelLabel: "الموديل",
+    filterLabels: {
+      "全部花色": "كل التصاميم",
+      "白色壶身": "هيكل أبيض",
+      "316不锈钢": "ستانلس ستيل 316",
+      "混色套装": "أطقم مختلطة",
+    },
+    familyLabels: {
+      "潮流字母系列": "مجموعة الحروف العصرية",
+      "316不锈钢花卉系列": "مجموعة زهور ستانلس ستيل 316",
+      "民族几何系列": "مجموعة الزخارف الهندسية",
+      "花卉植物系列": "مجموعة الزهور والنباتات",
+      "柔彩花园系列": "مجموعة الحديقة الناعمة",
+      "水果清新系列": "مجموعة الفواكه المنعشة",
+      "中东文字系列": "مجموعة الخط العربي",
+      "素色光板系列": "مجموعة الألوان السادة",
+      "瓷韵华纹系列": "مجموعة الزخارف الخزفية",
+      "民俗繁花系列": "مجموعة الزهور التراثية",
+      "东方意境系列": "مجموعة المشاهد الشرقية",
+      "极简艺术系列": "مجموعة الفن البسيط",
+      "欢乐童趣系列": "مجموعة المرح",
+      "田园萌兔系列": "مجموعة أرانب الريف",
+      "咖啡美食系列": "مجموعة القهوة والطعام",
+      "丝路故事系列": "مجموعة حكايات طريق الحرير",
+      "混色套装系列": "مجموعة الأطقم المختلطة",
+      "阿拉伯茶饮系列": "مجموعة الضيافة العربية",
+      "斋月祝福系列": "مجموعة تهاني رمضان",
+      "花鸟雅集系列": "مجموعة الطيور والزهور",
+    },
+    bodyLabels: {
+      "白色壶身": "هيكل أبيض",
+      "316不锈钢": "ستانلس ستيل 316",
+      "混色可选": "ألوان مختلطة متاحة",
+    },
+    benefits: [
+      { icon: ShieldCheck, title: "بطانة داخلية 316", text: "يستخدم موديل 319 بطانة داخلية من ستانلس ستيل 316 للحفظ الحراري اليومي." },
+      { icon: PaintBrush, title: "خدمة تصميم مخصص", text: "اختر تصميماً جاهزاً أو خصص الصور والألوان وهوية علامتك التجارية." },
+      { icon: MagnifyingGlassPlus, title: "اضغط للتكبير", text: "اضغط على أي صورة للمعاينة الكبيرة، ثم استخدم عجلة الفأرة لمشاهدة التفاصيل." },
+      { icon: Heart, title: "سعتان", text: "1.6 لتر بسعر ¥29 RMB و2.0 لتر بسعر ¥31 RMB، بأسعار كتالوج واضحة." },
+    ],
+  },
 };
 
 function productStructuredData(product) {
@@ -244,17 +334,25 @@ function productStructuredData(product) {
 }
 
 function ProductDetail({ product }) {
-  const [language, setLanguage] = useState("zh");
+  const [language, setLanguage] = useState("en");
+  const t = copy[language];
   const category = categoryById.get(product.categoryId);
-  const name = language === "zh" ? product.nameZh : (product.nameEn || product.nameZh);
-  const description = language === "zh"
-    ? (product.descriptionZh || `${product.nameZh}花色型号319保温壶，提供1.6L和2.0L两种容量。`)
-    : (product.descriptionEn || `Model 319 thermal pot in the ${product.nameEn || product.nameZh} pattern, available in 1.6L and 2.0L.`);
-  const imageAlt = language === "zh" ? product.imageAltZh : (product.imageAltEn || product.imageAltZh);
+  const englishFamily = category?.nameEn || "Pattern Series";
+  const arabicFamily = copy.ar.familyLabels[category?.nameZh] || englishFamily;
+  const englishName = product.nameEn || `${englishFamily.replace(" Series", "")} · ${product.slug}`;
+  const isolatedSlug = `\u2066${product.slug}\u2069`;
+  const name = localize(language, product.nameZh, englishName, `${arabicFamily} · ${isolatedSlug}`);
+  const description = localize(
+    language,
+    product.descriptionZh || `${product.nameZh}花色型号319保温壶，提供1.6L和2.0L两种容量。`,
+    product.descriptionEn || `Model 319 thermal pot in the ${englishName} pattern, available in 1.6L and 2.0L.`,
+    `ترمس حراري موديل 319 من ${arabicFamily} برقم ${isolatedSlug}، متوفر بسعتي 1.6 و2.0 لتر.`,
+  );
+  const imageAlt = localize(language, product.imageAltZh, product.imageAltEn || `${englishName} Model 319 thermal pot`, `ترمس حراري موديل 319 من ${arabicFamily} برقم ${product.slug}`);
   const structuredData = productStructuredData(product);
 
   useEffect(() => {
-    document.title = `${product.slug} ${product.nameZh}保温壶 | Hobby Lobby`;
+    document.title = localize(language, `${product.slug} ${product.nameZh}保温壶 | Hobby Lobby`, `${englishName} Thermal Pot | Hobby Lobby`, `${product.slug} ترمس من ${arabicFamily} | Hobby Lobby`);
     const descriptionMeta = document.querySelector('meta[name="description"]');
     if (descriptionMeta) descriptionMeta.setAttribute("content", description);
     const canonical = document.querySelector('link[rel="canonical"]');
@@ -267,20 +365,25 @@ function ProductDetail({ product }) {
       document.head.append(jsonLd);
     }
     jsonLd.textContent = JSON.stringify(structuredData);
-  }, [description, product]);
+  }, [description, language, product]);
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+    document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
+  }, [language]);
 
   return (
-    <div className="site-shell product-page-shell" lang={language}>
+    <div className="site-shell product-page-shell" lang={language} dir={language === "ar" ? "rtl" : "ltr"}>
       <header className="topbar product-topbar">
         <a className="brand-link" href="/" aria-label="Hobby Lobby home"><img src="/assets/brand-logo.webp" alt="Hobby Lobby Ask for More" width="256" height="256" /></a>
-        <nav aria-label={language === "zh" ? "商品导航" : "Product navigation"}><a href="/#gallery">{language === "zh" ? "全部花色" : "All patterns"}</a><a href="/studio/">{language === "zh" ? "在线试样" : "Pattern studio"}</a><a href="/#specifications">{language === "zh" ? "价格规格" : "Prices"}</a></nav>
-        <div className="language-switcher" role="group" aria-label={language === "zh" ? "语言" : "Language"}>
-          {languageOptions.map((option) => <button type="button" key={option.id} className={language === option.id ? "active" : ""} onClick={() => setLanguage(option.id)}>{option.label}</button>)}
+        <nav aria-label={localize(language, "商品导航", "Product navigation", "تنقل المنتجات")}><a href="/#gallery">{localize(language, "全部花色", "All patterns", "كل التصاميم")}</a><a href="/studio/">{localize(language, "在线试样", "Pattern studio", "استوديو التصميم")}</a><a href="/#specifications">{localize(language, "价格规格", "Prices", "الأسعار")}</a></nav>
+        <div className="language-switcher" role="group" aria-label={t.languageLabel}>
+          {languageOptions.map((option) => <button type="button" key={option.id} className={language === option.id ? "active" : ""} onClick={() => setLanguage(option.id)} aria-pressed={language === option.id}>{option.label}</button>)}
         </div>
-        <a className="button button-primary header-cta" href="/#gallery">{language === "zh" ? "浏览目录" : "Browse catalogue"}</a>
+        <a className="button button-primary header-cta" href="/#gallery">{localize(language, "浏览目录", "Browse catalogue", "تصفح الكتالوج")}</a>
       </header>
       <main className="product-detail-page">
-        <nav className="product-breadcrumb" aria-label={language === "zh" ? "面包屑" : "Breadcrumb"}><a href="/">{language === "zh" ? "首页" : "Home"}</a><span>/</span><a href="/#gallery">{language === "zh" ? "花色目录" : "Patterns"}</a><span>/</span><strong>{product.slug}</strong></nav>
+        <nav className="product-breadcrumb" aria-label={localize(language, "面包屑", "Breadcrumb", "مسار التنقل")}><a href="/">{localize(language, "首页", "Home", "الرئيسية")}</a><span>/</span><a href="/#gallery">{localize(language, "花色目录", "Patterns", "التصاميم")}</a><span>/</span><strong>{product.slug}</strong></nav>
         <article className="product-detail-card">
           <figure className="product-detail-media"><img src={product.displayImage} alt={imageAlt} width="1600" height="1600" fetchPriority="high" decoding="async" /></figure>
           <div className="product-detail-copy">
@@ -289,29 +392,29 @@ function ProductDetail({ product }) {
             {language === "zh" && product.nameEn && <p className="product-name-en">{product.nameEn}</p>}
             <p className="product-description">{description}</p>
             <dl className="product-attributes">
-              <div><dt>{language === "zh" ? "系列" : "Series"}</dt><dd>{language === "zh" ? category?.nameZh : (category?.nameEn || category?.nameZh)}</dd></div>
-              <div><dt>{language === "zh" ? "壶身" : "Body"}</dt><dd>{product.bodyType}</dd></div>
-              <div><dt>{language === "zh" ? "货号" : "SKU"}</dt><dd>{product.slug}</dd></div>
+              <div><dt>{localize(language, "系列", "Series", "المجموعة")}</dt><dd>{language === "zh" ? category?.nameZh : (language === "ar" ? (t.familyLabels[category?.nameZh] || category?.nameEn || category?.nameZh) : (category?.nameEn || category?.nameZh))}</dd></div>
+              <div><dt>{localize(language, "壶身", "Body", "الهيكل")}</dt><dd>{t.bodyLabels[product.bodyType] || product.bodyType}</dd></div>
+              <div><dt>{localize(language, "货号", "SKU", "رقم الصنف")}</dt><dd>{product.slug}</dd></div>
             </dl>
-            <div className="product-offers" aria-label={language === "zh" ? "容量和价格" : "Capacities and prices"}>
-              {capacities.map((capacity) => <div key={capacity.id}><strong>{capacity.id}</strong><span>{capacity.price}</span><small>{capacity.packing} / {language === "zh" ? "箱" : "carton"}</small></div>)}
+            <div className="product-offers" aria-label={localize(language, "容量和价格", "Capacities and prices", "السعات والأسعار")}>
+              {capacities.map((capacity) => <div key={capacity.id}><strong><bdi dir="ltr">{capacity.id}</bdi></strong><span><bdi dir="ltr">{capacity.price}</bdi></span><small><bdi dir="ltr">{capacity.packing}</bdi> / {localize(language, "箱", "carton", "كرتون")}</small></div>)}
             </div>
-            <a className="button button-primary product-back" href="/#gallery"><ArrowLeft weight="bold" /> {language === "zh" ? "返回全部花色" : "Back to all patterns"}</a>
+            <a className="button button-primary product-back" href="/#gallery"><ArrowLeft weight="bold" /> {localize(language, "返回全部花色", "Back to all patterns", "العودة إلى كل التصاميم")}</a>
           </div>
         </article>
         <section className="product-index-copy">
-          <p className="eyebrow">{language === "zh" ? "型号319花色" : "Model 319 pattern"}</p>
-          <h2>{language === "zh" ? `${product.nameZh}保温壶产品图` : `${product.nameEn || product.nameZh} thermal pot image`}</h2>
-          <p>{language === "zh" ? `本页展示 ${product.slug} ${product.nameZh}花色的清晰产品图片、容量、价格和装箱信息，支持从现有花色中选款，也支持来图定制。` : `This page shows clear product imagery, capacities, pricing, and carton details for ${product.slug}. Existing patterns and custom artwork are supported.`}</p>
+          <p className="eyebrow">{localize(language, "型号319花色", "Model 319 pattern", "تصميم موديل 319")}</p>
+          <h2>{localize(language, `${product.nameZh}保温壶产品图`, `${englishName} thermal pot image`, `صورة ترمس ${isolatedSlug} من ${arabicFamily}`)}</h2>
+          <p>{localize(language, `本页展示 ${product.slug} ${product.nameZh}花色的清晰产品图片、容量、价格和装箱信息，支持从现有花色中选款，也支持来图定制。`, `This page shows clear product imagery, capacities, pricing, and carton details for ${product.slug}. Existing patterns and custom artwork are supported.`, `تعرض هذه الصفحة صور المنتج والسعات والأسعار ومعلومات التعبئة للصنف ${isolatedSlug}. يمكنك اختيار تصميم جاهز أو إرسال تصميمك الخاص.`)}</p>
         </section>
       </main>
-      <footer><img src="/assets/brand-logo.webp" alt="" width="256" height="256" loading="lazy" /><p>Hobby Lobby Ask for More · {product.slug}</p><a href="/#gallery">{language === "zh" ? "查看全部花色" : "View all patterns"} <ArrowRight weight="bold" /></a></footer>
+      <footer><img src="/assets/brand-logo.webp" alt="" width="256" height="256" loading="lazy" /><p>Hobby Lobby Ask for More · {product.slug}</p><a href="/#gallery">{localize(language, "查看全部花色", "View all patterns", "عرض كل التصاميم")} <ArrowRight weight="bold" /></a></footer>
     </div>
   );
 }
 
 function Storefront() {
-  const [language, setLanguage] = useState("zh");
+  const [language, setLanguage] = useState("en");
   const [filter, setFilter] = useState("全部花色");
   const [selectedId, setSelectedId] = useState("pattern-01");
   const [selectedCapacities, setSelectedCapacities] = useState({});
@@ -356,7 +459,11 @@ function Storefront() {
   ), [selectedCapacities, selectedQuantities]);
   const totalCartons = selectedEntries.reduce((sum, item) => sum + item.quantity, 0);
   const displayFilter = (value) => t.filterLabels[value] || value;
-  const displayFamily = (value) => language === "zh" ? value : (categoryByNameZh.get(value)?.nameEn || t.familyLabels[value] || value);
+  const displayFamily = (value) => {
+    if (language === "zh") return value;
+    if (language === "ar") return t.familyLabels[value] || categoryByNameZh.get(value)?.nameEn || value;
+    return categoryByNameZh.get(value)?.nameEn || t.familyLabels[value] || value;
+  };
   const displayBody = (value) => t.bodyLabels[value] || value;
   const displayPatternName = (pattern) => {
     if (language === "zh") return pattern.name;
@@ -386,6 +493,14 @@ function Storefront() {
   useEffect(() => {
     setZoom(1);
   }, [expandedId]);
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+    document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
+    document.title = localize(language, "319花色产品目录 | Hobby Lobby", "Model 319 Pattern Catalogue | Hobby Lobby", "كتالوج تصاميم موديل 319 | Hobby Lobby");
+    const descriptionMeta = document.querySelector('meta[name="description"]');
+    if (descriptionMeta) descriptionMeta.setAttribute("content", localize(language, "型号319保温壶花色产品目录，展示全部现有花色并支持来图定制，包含1.6L和2.0L价格。", "Model 319 thermal pot catalogue with all available patterns, custom artwork support, 1.6L and 2.0L capacities, and clear pricing.", "كتالوج ترمس موديل 319 بجميع التصاميم المتاحة مع دعم التصميم المخصص وسعتي 1.6 و2.0 لتر وأسعار واضحة."));
+  }, [language]);
 
   useEffect(() => {
     setVisibleSeriesCount(1);
@@ -488,7 +603,7 @@ function Storefront() {
 
   async function exportSelectedDocument() {
     if (!selectedEntries.length) return;
-    setExportStatus("正在生成报价表...");
+    setExportStatus(localize(language, "正在生成报价表...", "Creating quotation...", "جارٍ إنشاء عرض السعر..."));
     try {
       const lastQuoteNumber = Number.parseInt(window.localStorage.getItem(quoteNumberKey), 10);
       const nextQuoteNumber = Number.isFinite(lastQuoteNumber) && lastQuoteNumber >= quoteNumberStart ? lastQuoteNumber + 1 : quoteNumberStart;
@@ -508,17 +623,17 @@ function Storefront() {
       window.__lastHobbyLobbyExport = { fileName: link.download, itemCount: selectedEntries.length, quoteNo };
       link.click();
       link.remove();
-      setExportStatus(`Excel 已生成：${link.download}`);
+      setExportStatus(localize(language, `Excel 已生成：${link.download}`, `Excel created: ${link.download}`, `تم إنشاء ملف Excel: ${link.download}`));
       window.setTimeout(() => URL.revokeObjectURL(url), 30000);
     } catch (error) {
       console.error(error);
-      setExportStatus("生成失败，请刷新后重试");
+      setExportStatus(localize(language, "生成失败，请刷新后重试", "Could not create the file. Refresh and try again.", "تعذر إنشاء الملف. حدّث الصفحة وحاول مرة أخرى."));
     }
   }
 
   async function exportWechatPdf() {
     if (!selectedEntries.length) return;
-    setExportStatus("正在生成微信 PDF...");
+    setExportStatus(localize(language, "正在生成微信 PDF...", "Creating PDF...", "جارٍ إنشاء ملف PDF..."));
     try {
       const lastQuoteNumber = Number.parseInt(window.localStorage.getItem(quoteNumberKey), 10);
       const nextQuoteNumber = Number.isFinite(lastQuoteNumber) && lastQuoteNumber >= quoteNumberStart ? lastQuoteNumber + 1 : quoteNumberStart;
@@ -543,10 +658,10 @@ function Storefront() {
       link.remove();
       window.localStorage.setItem(quoteNumberKey, String(nextQuoteNumber));
       window.__lastHobbyLobbyPdfExport = { pageCount: pages.length, itemCount: selectedEntries.length, quoteNo, size: pdfBlob.size };
-      setExportStatus("PDF 已生成；苹果 Safari 和微信均可打开");
+      setExportStatus(localize(language, "PDF 已生成；苹果 Safari 和微信均可打开", "PDF created and ready to open in Safari, WeChat, or your browser.", "تم إنشاء ملف PDF وهو جاهز للفتح في المتصفح أو Safari أو WeChat."));
     } catch (error) {
       console.error(error);
-      setExportStatus("PDF 生成失败，请刷新后重试");
+      setExportStatus(localize(language, "PDF 生成失败，请刷新后重试", "Could not create the PDF. Refresh and try again.", "تعذر إنشاء ملف PDF. حدّث الصفحة وحاول مرة أخرى."));
     }
   }
 
@@ -568,7 +683,7 @@ function Storefront() {
   }
 
   return (
-    <div className={`site-shell ${language === "zh" ? "static-reference-active" : ""}`} lang={language}>
+    <div className={`site-shell ${language === "zh" ? "static-reference-active" : ""}`} lang={language} dir={language === "ar" ? "rtl" : "ltr"}>
       <section className="hero-reference-exact" aria-label="花色，由你定义">
         <img className="hero-reference-base" src="/assets/hero-reference-products.webp" alt="花色由你定义，型号319花色定制展示" width="1560" height="1008" loading="eager" fetchPriority="high" decoding="async" />
         <a className="hero-reference-hotspot hero-reference-gallery-nav" href="#gallery" aria-label="花色目录" />
@@ -580,8 +695,8 @@ function Storefront() {
       </section>
       <header className="topbar">
         <a className="brand-link" href="#top" aria-label="Hobby Lobby home"><img src="/assets/brand-logo.webp" alt="Hobby Lobby Ask for More" width="256" height="256" decoding="async" /></a>
-        <nav aria-label={language === "zh" ? "主导航" : "Main navigation"}>
-          <a href="#gallery">{t.navGallery}</a><a href="/studio/">{language === "zh" ? "在线试样" : "Pattern studio"}</a><a href="#details">{t.navSteel}</a><a href="#specifications">{t.navSpecs}</a>
+        <nav aria-label={localize(language, "主导航", "Main navigation", "التنقل الرئيسي")}>
+          <a href="#gallery">{t.navGallery}</a><a href="/studio/">{localize(language, "在线试样", "Pattern studio", "استوديو التصميم")}</a><a href="#details">{t.navSteel}</a><a href="#specifications">{t.navSpecs}</a>
         </nav>
         <div className="language-switcher" role="group" aria-label={t.languageLabel}>
           {languageOptions.map((option) => (
@@ -599,9 +714,9 @@ function Storefront() {
             <p className="hero-lede">{t.heroLead}</p>
             <div className="hero-actions">
               <a className="button button-primary" href="#gallery">{t.browseAll} <ArrowDown weight="bold" /></a>
-              <a className="button button-secondary" href="/studio/">{language === "zh" ? "上传图案试样" : "Try your artwork"} <ArrowRight weight="bold" /></a>
+              <a className="button button-secondary" href="/studio/">{localize(language, "上传图案试样", "Try your artwork", "جرّب تصميمك")} <ArrowRight weight="bold" /></a>
             </div>
-            <div className="hero-notes" aria-label={language === "zh" ? "产品摘要" : "Product summary"}>
+            <div className="hero-notes" aria-label={localize(language, "产品摘要", "Product summary", "ملخص المنتج")}>
               <span><PaintBrush weight="regular" /> {t.heroNotePatterns}</span>
               <span><ShieldCheck weight="regular" /> {t.heroNoteModel}</span>
             </div>
@@ -617,7 +732,7 @@ function Storefront() {
               </div>
             </div>
             <div className="hero-featured-product">
-              <img src="/assets/hero-featured-product.webp" alt={language === "zh" ? `${displayPatternName(heroFeaturedPattern)}真实产品` : `${displayPatternName(heroFeaturedPattern)} real product`} width="1100" height="1100" loading="eager" fetchPriority="high" decoding="async" />
+              <img src="/assets/hero-featured-product.webp" alt={localize(language, `${displayPatternName(heroFeaturedPattern)}真实产品`, `${displayPatternName(heroFeaturedPattern)} real product`, `منتج حقيقي بتصميم ${displayPatternName(heroFeaturedPattern)}`)} width="1100" height="1100" loading="eager" fetchPriority="high" decoding="async" />
             </div>
             <div className="hero-runway-controls">
               <button type="button" aria-label={t.previousPatterns} onClick={() => heroCarouselRef.current?.scrollBy({ left: -260, behavior: "smooth" })}><ArrowLeft weight="bold" /></button>
@@ -626,17 +741,17 @@ function Storefront() {
           </div>
         </section>
 
-        <div className="catalog-strip" aria-label={language === "zh" ? "目录摘要" : "Catalogue summary"}><span><small>{t.stripModel}</small><strong>319</strong></span><span><small>1.6L</small><strong>¥29 RMB</strong></span><span><small>2.0L</small><strong>¥31 RMB</strong></span><span><small>{t.stripPatterns}</small><strong>{t.stripPatternCount}</strong></span></div>
+        <div className="catalog-strip" aria-label={localize(language, "目录摘要", "Catalogue summary", "ملخص الكتالوج")}><span><small>{t.stripModel}</small><strong>319</strong></span><span><small>1.6L</small><strong>¥29 RMB</strong></span><span><small>2.0L</small><strong>¥31 RMB</strong></span><span><small>{t.stripPatterns}</small><strong>{t.stripPatternCount}</strong></span></div>
 
         <section className="gallery-section section" id="gallery" aria-labelledby="gallery-title">
           <div className="section-heading">
             <div><p className="eyebrow">{t.galleryEyebrow}</p><h2 id="gallery-title">{t.galleryTitle}</h2><p>{t.galleryText}</p></div>
-            <div className="finish-tabs three-tabs" role="group" aria-label={language === "zh" ? "筛选壶身" : "Filter body finish"}>
+            <div className="finish-tabs three-tabs" role="group" aria-label={localize(language, "筛选壶身", "Filter body finish", "تصفية نوع الهيكل")}>
               {filters.map((item) => <button key={item} className={filter === item ? "active" : ""} onClick={() => chooseFilter(item)} aria-pressed={filter === item}>{displayFilter(item)}</button>)}
             </div>
           </div>
           <div className="catalogue-layout">
-            <aside className="series-directory" aria-label={language === "zh" ? "花色系列目录" : "Pattern series directory"}>
+            <aside className="series-directory" aria-label={localize(language, "花色系列目录", "Pattern series directory", "دليل مجموعات التصاميم")}>
               <span>{t.directory}</span>
               {groupedPatterns.map(([series, seriesPatterns], seriesIndex) => (
                 <a href={`#series-${seriesIndex + 1}`} key={series} onClick={(event) => revealSeries(event, seriesIndex)}>
@@ -656,11 +771,11 @@ function Storefront() {
                     <article className={`pattern-card ${active ? "selected" : ""}`} id={pattern.id} key={pattern.id}>
                       <button className="pattern-image-wrap" type="button" onClick={() => openExpanded(pattern)} aria-label={`${displayPatternName(pattern)}，${displayFamily(pattern.family)}，${t.zoomHint}。`}><img src={pattern.thumb} srcSet={`${pattern.thumb} 640w, ${pattern.displayImage} 1600w`} sizes="(max-width: 700px) 46vw, (max-width: 1100px) 30vw, 240px" alt={language === "zh" ? pattern.imageAltZh : (pattern.imageAltEn || displayPatternName(pattern))} width="640" height="640" loading="lazy" decoding="async" />{active && <span className="check-mark"><Check weight="bold" /></span>}<span className="zoom-hint"><MagnifyingGlassPlus weight="bold" /> {t.zoomHint}</span></button>
                       <span className="pattern-code">MODEL 319 · {catalogueCode}</span><span className="pattern-name">{displayPatternName(pattern)}</span><span className="pattern-family">{displayBody(pattern.body)} · 1.6L ¥29 · 2.0L ¥31</span>
-                      <a className="product-detail-link" href={`/products/${pattern.slug}/`}>{language === "zh" ? "查看商品详情" : "View product details"} <ArrowRight weight="bold" /></a>
-                      <div className="capacity-picker" aria-label={`${pattern.name} 容量选择`}>
+                      <a className="product-detail-link" href={`/products/${pattern.slug}/`}>{localize(language, "查看商品详情", "View product details", "عرض تفاصيل المنتج")} <ArrowRight weight="bold" /></a>
+                      <div className="capacity-picker" aria-label={`${displayPatternName(pattern)} ${localize(language, "容量选择", "capacity selection", "اختيار السعة")}`}>
                         {capacities.map((capacity) => (
                           <button className={isCapacitySelected(pattern.id, capacity.id) ? "active" : ""} type="button" key={capacity.id} onClick={() => toggleCapacity(pattern, capacity.id)} aria-pressed={isCapacitySelected(pattern.id, capacity.id)}>
-                            <strong>{capacity.id}</strong><span>{capacity.price}</span>{isCapacitySelected(pattern.id, capacity.id) && <em>{getSelectedQuantity(pattern.id, capacity.id)} 箱</em>}
+                            <strong>{capacity.id}</strong><span>{capacity.price}</span>{isCapacitySelected(pattern.id, capacity.id) && <em>{getSelectedQuantity(pattern.id, capacity.id)} {localize(language, "箱", "cartons", "كرتون")}</em>}
                           </button>
                         ))}
                       </div>
@@ -671,7 +786,7 @@ function Storefront() {
             </section>)}
             {hasMoreSeries && <div className="series-loader" ref={seriesLoaderRef}>
               <button type="button" onClick={() => setVisibleSeriesCount((count) => Math.min(count + 1, groupedPatterns.length))}>
-                {language === "zh" ? "继续加载花色" : "Load more patterns"}
+                {localize(language, "继续加载花色", "Load more patterns", "تحميل المزيد من التصاميم")}
               </button>
             </div>}
             </div>
@@ -685,66 +800,66 @@ function Storefront() {
         </section>
 
         <section className="steel-band" id="details">
-          <img src="/assets/steel-pattern-09.webp" alt={language === "zh" ? "316不锈钢黑盖粉牡丹花色保温壶" : "316 stainless steel black-lid floral thermal pot"} width="1000" height="1000" loading="lazy" decoding="async" />
+          <img src="/assets/steel-pattern-09.webp" alt={localize(language, "316不锈钢黑盖粉牡丹花色保温壶", "316 stainless steel black-lid floral thermal pot", "ترمس حراري ستانلس ستيل 316 بغطاء أسود وتصميم زهور")} width="1000" height="1000" loading="lazy" decoding="async" />
           <div><p className="eyebrow">{t.steelEyebrow}</p><h2>{t.steelTitle}</h2><p>{t.steelText}</p><a href="#gallery" onClick={() => chooseFilter("316不锈钢")}>{t.steelLink} <ArrowRight weight="bold" /></a></div>
         </section>
 
         <section className="customization-contact section" id="customization" aria-labelledby="customization-title">
           <div className="customization-contact-head">
             <div>
-              <p className="eyebrow">{language === "zh" ? "定制服务" : "Customization Service"}</p>
-              <h2 id="customization-title">{language === "zh" ? "定制花色，欢迎联系我们" : "Custom patterns, made for your brand"}</h2>
+              <p className="eyebrow">{localize(language, "定制服务", "Customization Service", "خدمة التخصيص")}</p>
+              <h2 id="customization-title">{localize(language, "定制花色，欢迎联系我们", "Custom patterns, made for your brand", "تصاميم مخصصة لعلامتك التجارية")}</h2>
             </div>
-            <p>{language === "zh" ? "支持来图、配色及品牌定制，可通过 WhatsApp 或微信联系 Jackie Lee。" : "Send your artwork, colors, or branding requirements to Jackie Lee via WhatsApp or WeChat."}</p>
+            <p>{localize(language, "支持来图、配色及品牌定制，可通过 WhatsApp 或微信联系 Jackie Lee。", "Send your artwork, colors, or branding requirements to Jackie Lee via WhatsApp or WeChat.", "أرسل صورك أو ألوانك أو متطلبات علامتك التجارية إلى Jackie Lee عبر WhatsApp أو WeChat.")}</p>
           </div>
           <div className="customization-channels">
-            <div className="contact-channel-list" aria-label={language === "zh" ? "社交媒体联系方式" : "Social contact links"}>
+            <div className="contact-channel-list" aria-label={localize(language, "社交媒体联系方式", "Social contact links", "روابط التواصل الاجتماعي")}>
               <a className="contact-channel instagram" href="https://www.instagram.com/jackieleefirst?igsh=MXBxZG4xdWx0YjlvdQ%3D%3D&utm_source=qr" target="_blank" rel="noreferrer">
                 <InstagramLogo weight="fill" /><span><strong>Instagram</strong><small>@jackieleefirst</small></span><ArrowRight weight="bold" />
               </a>
               <a className="contact-channel whatsapp" href="https://wa.me/qr/TGGNQVOHCRPOO1" target="_blank" rel="noreferrer">
-                <WhatsappLogo weight="fill" /><span><strong>WhatsApp</strong><small>{language === "zh" ? "添加 Jackie Lee 为联系人" : "Add Jackie Lee as a contact"}</small></span><ArrowRight weight="bold" />
+                <WhatsappLogo weight="fill" /><span><strong>WhatsApp</strong><small>{localize(language, "添加 Jackie Lee 为联系人", "Add Jackie Lee as a contact", "أضف Jackie Lee إلى جهات الاتصال")}</small></span><ArrowRight weight="bold" />
               </a>
               <a className="contact-channel facebook" href="https://www.facebook.com/share/1BYzmSBqqq/?mibextid=wwXIfr" target="_blank" rel="noreferrer">
                 <FacebookLogo weight="fill" /><span><strong>Facebook</strong><small>Jackie Lee</small></span><ArrowRight weight="bold" />
               </a>
               <a className="contact-channel wecom" href="https://work.weixin.qq.com/u/vcd336fb02ace7d676?v=5.0.9.224799&bb=c3721e643c" target="_blank" rel="noreferrer">
-                <WechatLogo weight="fill" /><span><strong>{language === "zh" ? "企业微信" : "WeCom"}</strong><small>{language === "zh" ? "打开企业微信联系方式" : "Open WeCom contact"}</small></span><ArrowRight weight="bold" />
+                <WechatLogo weight="fill" /><span><strong>{localize(language, "企业微信", "WeCom", "WeCom")}</strong><small>{localize(language, "打开企业微信联系方式", "Open WeCom contact", "فتح جهة اتصال WeCom")}</small></span><ArrowRight weight="bold" />
               </a>
             </div>
             <article className="wecom-contact-card">
-              <div><WechatLogo weight="fill" /><span><strong>{language === "zh" ? "添加企业微信" : "Add on WeCom"}</strong><small>{language === "zh" ? "Jackie Lee · 国发保温瓶小家电" : "Jackie Lee · Thermal household products"}</small></span></div>
-              <a href="https://work.weixin.qq.com/u/vcd336fb02ace7d676?v=5.0.9.224799&bb=c3721e643c" target="_blank" rel="noreferrer" aria-label={language === "zh" ? "打开 Jackie Lee 企业微信联系方式" : "Open Jackie Lee WeCom contact"}>
-                <img src="/assets/jackie-lee-wecom.webp" alt={language === "zh" ? "Jackie Lee 企业微信联系人二维码" : "Jackie Lee WeCom contact QR code"} width="1206" height="2030" loading="lazy" decoding="async" />
+              <div><WechatLogo weight="fill" /><span><strong>{localize(language, "添加企业微信", "Add on WeCom", "أضف عبر WeCom")}</strong><small>{localize(language, "Jackie Lee · 国发保温瓶小家电", "Jackie Lee · Thermal household products", "Jackie Lee · منتجات منزلية حرارية")}</small></span></div>
+              <a href="https://work.weixin.qq.com/u/vcd336fb02ace7d676?v=5.0.9.224799&bb=c3721e643c" target="_blank" rel="noreferrer" aria-label={localize(language, "打开 Jackie Lee 企业微信联系方式", "Open Jackie Lee WeCom contact", "فتح جهة اتصال Jackie Lee على WeCom")}>
+                <img src="/assets/jackie-lee-wecom.webp" alt={localize(language, "Jackie Lee 企业微信联系人二维码", "Jackie Lee WeCom contact QR code", "رمز QR لجهة اتصال Jackie Lee على WeCom")} width="1206" height="2030" loading="lazy" decoding="async" />
               </a>
-              <p>{language === "zh" ? "点击图片直接打开，或使用另一台手机扫码添加。" : "Tap the image to open the contact, or scan it from another phone."}</p>
+              <p>{localize(language, "点击图片直接打开，或使用另一台手机扫码添加。", "Tap the image to open the contact, or scan it from another phone.", "اضغط على الصورة لفتح جهة الاتصال أو امسح الرمز بهاتف آخر.")}</p>
             </article>
           </div>
           <figure className="contact-brand-card">
             <div className="contact-brand-card-scroll">
-              <img src="/assets/custom-service-contact-card.webp" alt={language === "zh" ? "Hobby Lobby 联系名片，含 Jackie Lee 电话、WhatsApp、微信二维码及义乌商贸城地址" : "Hobby Lobby contact card with Jackie Lee phone, WhatsApp, WeChat QR codes, and Yiwu showroom address"} width="2172" height="724" loading="lazy" decoding="async" />
+              <img src="/assets/custom-service-contact-card.webp" alt={localize(language, "Hobby Lobby 联系名片，含 Jackie Lee 电话、WhatsApp、微信二维码及义乌商贸城地址", "Hobby Lobby contact card with Jackie Lee phone, WhatsApp, WeChat QR codes, and Yiwu showroom address", "بطاقة اتصال Hobby Lobby مع هاتف Jackie Lee وWhatsApp ورموز WeChat وعنوان معرض ييوو")} width="2172" height="724" loading="lazy" decoding="async" />
             </div>
             <figcaption>
-              <span>{language === "zh" ? "完整电话、地址与品牌资料" : "Complete phone, address, and brand details"}</span>
-              <a href="/assets/custom-service-contact-card.webp" target="_blank" rel="noreferrer">{language === "zh" ? "打开高清名片" : "Open full-size card"} <ArrowRight weight="bold" /></a>
+              <span>{localize(language, "完整电话、地址与品牌资料", "Complete phone, address, and brand details", "بيانات الهاتف والعنوان والعلامة التجارية كاملة")}</span>
+              <a href="/assets/custom-service-contact-card.webp" target="_blank" rel="noreferrer">{localize(language, "打开高清名片", "Open full-size card", "فتح البطاقة بالحجم الكامل")} <ArrowRight weight="bold" /></a>
             </figcaption>
           </figure>
         </section>
 
-        <section className="benefit-row section" aria-label={language === "zh" ? "产品卖点" : "Product benefits"}>{t.benefits.map(({ icon: Icon, title, text }) => <article key={title}><Icon weight="regular" /><h3>{title}</h3><p>{text}</p></article>)}</section>
+        <section className="benefit-row section" aria-label={localize(language, "产品卖点", "Product benefits", "مزايا المنتج")}>{t.benefits.map(({ icon: Icon, title, text }) => <article key={title}><Icon weight="regular" /><h3>{title}</h3><p>{text}</p></article>)}</section>
       </main>
 
-      <aside className={`mobile-series-nav ${seriesMenuOpen ? "is-open" : ""}`} aria-label={language === "zh" ? "系列快捷导航" : "Series quick navigation"}>
+      <aside className={`mobile-series-nav ${seriesMenuOpen ? "is-open" : ""}`} aria-label={localize(language, "系列快捷导航", "Series quick navigation", "التنقل السريع بين المجموعات")}>
         {seriesMenuOpen && (
           <div className="mobile-series-panel" id="mobile-series-panel">
             <div className="mobile-series-head">
               <div>
-                <span>{language === "zh" ? "快速跳转" : "Quick jump"}</span>
-                <strong>{language === "zh" ? "选择系列" : "Choose a series"}</strong>
+                <span>{localize(language, "快速跳转", "Quick jump", "انتقال سريع")}</span>
+                <strong>{localize(language, "选择系列", "Choose a series", "اختر مجموعة")}</strong>
               </div>
-              <button type="button" onClick={() => setSeriesMenuOpen(false)} aria-label={language === "zh" ? "关闭系列导航" : "Close series navigation"}><X weight="bold" /></button>
+              <button type="button" onClick={() => setSeriesMenuOpen(false)} aria-label={localize(language, "关闭系列导航", "Close series navigation", "إغلاق قائمة المجموعات")}><X weight="bold" /></button>
             </div>
-            <nav className="mobile-series-list" aria-label={language === "zh" ? "产品系列" : "Product series"}>
+            <nav className="mobile-series-list" aria-label={localize(language, "产品系列", "Product series", "مجموعات المنتجات")}>
               {groupedPatterns.map(([series, seriesPatterns], seriesIndex) => (
                 <a href={`#series-${seriesIndex + 1}`} key={series} onClick={(event) => revealSeries(event, seriesIndex)}>
                   <strong>{displayFamily(series)}</strong>
@@ -765,28 +880,28 @@ function Storefront() {
           aria-controls="mobile-series-panel"
         >
           <SquaresFour weight="fill" />
-          <span>{language === "zh" ? "系列" : "Series"}</span>
+          <span>{localize(language, "系列", "Series", "المجموعات")}</span>
           <strong>{groupedPatterns.length}</strong>
         </button>
       </aside>
 
-      <aside className={`selection-cart ${cartOpen ? "is-open" : "is-collapsed"}`} aria-label="已选花色">
+      <aside className={`selection-cart ${cartOpen ? "is-open" : "is-collapsed"}`} aria-label={localize(language, "已选花色", "Selected patterns", "التصاميم المختارة")}>
         {!cartOpen ? (
-          <button className="cart-fab" type="button" onClick={() => { setCartOpen(true); setSeriesMenuOpen(false); }} aria-expanded="false" aria-label={`展开购物车，当前共 ${totalCartons} 箱`}>
+          <button className="cart-fab" type="button" onClick={() => { setCartOpen(true); setSeriesMenuOpen(false); }} aria-expanded="false" aria-label={localize(language, `展开购物车，当前共 ${totalCartons} 箱`, `Open cart, ${totalCartons} cartons selected`, `فتح السلة، تم اختيار ${totalCartons} كرتون`)}>
             <ShoppingCart weight="bold" />
-            <span>购物车</span>
+            <span>{localize(language, "购物车", "Cart", "السلة")}</span>
             <strong aria-live="polite">{totalCartons}</strong>
           </button>
         ) : <>
           <div className="selection-cart-head">
-            <span><ShoppingCart weight="bold" /> 已选花色</span>
+            <span><ShoppingCart weight="bold" /> {localize(language, "已选花色", "Selected patterns", "التصاميم المختارة")}</span>
             <div className="cart-head-actions">
               <strong aria-live="polite">{totalCartons}</strong>
-              <button className="cart-collapse" type="button" onClick={() => setCartOpen(false)} aria-expanded="true" aria-label="收起购物车"><X weight="bold" /></button>
+              <button className="cart-collapse" type="button" onClick={() => setCartOpen(false)} aria-expanded="true" aria-label={localize(language, "收起购物车", "Close cart", "إغلاق السلة")}><X weight="bold" /></button>
             </div>
           </div>
           {selectedEntries.length === 0 ? (
-            <p className="cart-empty">点击花色卡片里的容量按钮，这里会自动汇总客户选择的花色和容量。</p>
+            <p className="cart-empty">{localize(language, "点击花色卡片里的容量按钮，这里会自动汇总客户选择的花色和容量。", "Choose a capacity on any pattern card and your selected patterns and capacities will appear here.", "اختر السعة من بطاقة أي تصميم وستظهر التصاميم والسعات المختارة هنا.")}</p>
           ) : (
             <>
               <div className="cart-list">
@@ -794,23 +909,23 @@ function Storefront() {
                   <div className="cart-item" key={`${pattern.id}-${capacity.id}`}>
                     <img src={pattern.thumb} alt="" width="640" height="640" loading="lazy" decoding="async" />
                     <div>
-                      <strong>{pattern.name}</strong>
+                      <strong>{displayPatternName(pattern)}</strong>
                       <small>319-{String(pattern.no).padStart(2, "0")} · {capacity.id} · {capacity.price} · {capacity.packing}</small>
                       <div className="qty-control">
-                        <span>箱数</span>
-                        <button type="button" onClick={(event) => { event.stopPropagation(); updateQuantity(pattern.id, capacity.id, quantity - 1); }} aria-label={`${pattern.name} ${capacity.id} 减少一箱`}>−</button>
-                        <input value={quantity} inputMode="numeric" min="1" max="999" onChange={(event) => updateQuantity(pattern.id, capacity.id, event.target.value)} aria-label={`${pattern.name} ${capacity.id} 箱数`} />
-                        <button type="button" onClick={(event) => { event.stopPropagation(); updateQuantity(pattern.id, capacity.id, quantity + 1); }} aria-label={`${pattern.name} ${capacity.id} 增加一箱`}>+</button>
+                        <span>{localize(language, "箱数", "Cartons", "الكراتين")}</span>
+                        <button type="button" onClick={(event) => { event.stopPropagation(); updateQuantity(pattern.id, capacity.id, quantity - 1); }} aria-label={localize(language, `${pattern.name} ${capacity.id} 减少一箱`, `Decrease ${displayPatternName(pattern)} ${capacity.id} by one carton`, `تقليل ${displayPatternName(pattern)} ${capacity.id} كرتوناً واحداً`)}>−</button>
+                        <input value={quantity} inputMode="numeric" min="1" max="999" onChange={(event) => updateQuantity(pattern.id, capacity.id, event.target.value)} aria-label={`${displayPatternName(pattern)} ${capacity.id} ${localize(language, "箱数", "carton quantity", "عدد الكراتين")}`} />
+                        <button type="button" onClick={(event) => { event.stopPropagation(); updateQuantity(pattern.id, capacity.id, quantity + 1); }} aria-label={localize(language, `${pattern.name} ${capacity.id} 增加一箱`, `Increase ${displayPatternName(pattern)} ${capacity.id} by one carton`, `زيادة ${displayPatternName(pattern)} ${capacity.id} كرتوناً واحداً`)}>+</button>
                       </div>
                     </div>
-                    <button className="cart-remove" type="button" onClick={() => removeSelectedCapacity(pattern.id, capacity.id)} aria-label={`移出 ${pattern.name} ${capacity.id}`}><Trash weight="bold" /></button>
+                    <button className="cart-remove" type="button" onClick={() => removeSelectedCapacity(pattern.id, capacity.id)} aria-label={`${localize(language, "移出", "Remove", "إزالة")} ${displayPatternName(pattern)} ${capacity.id}`}><Trash weight="bold" /></button>
                   </div>
                 ))}
               </div>
               <div className="cart-actions">
-                <button className="cart-export" type="button" onClick={exportWechatPdf}><DownloadSimple weight="bold" /> PDF 报价表</button>
-                <button className="cart-export cart-export-secondary" type="button" onClick={exportSelectedDocument}><DownloadSimple weight="bold" /> Excel 报价表</button>
-                <button className="cart-clear" type="button" onClick={() => { setSelectedCapacities({}); setSelectedQuantities({}); setExportStatus(""); }}>清空选款</button>
+                <button className="cart-export" type="button" onClick={exportWechatPdf}><DownloadSimple weight="bold" /> {localize(language, "PDF 报价表", "PDF quotation", "عرض سعر PDF")}</button>
+                <button className="cart-export cart-export-secondary" type="button" onClick={exportSelectedDocument}><DownloadSimple weight="bold" /> {localize(language, "Excel 报价表", "Excel quotation", "عرض سعر Excel")}</button>
+                <button className="cart-clear" type="button" onClick={() => { setSelectedCapacities({}); setSelectedQuantities({}); setExportStatus(""); }}>{localize(language, "清空选款", "Clear selection", "مسح الاختيارات")}</button>
               </div>
               {exportStatus && <p className="export-status">{exportStatus}</p>}
             </>
@@ -818,19 +933,19 @@ function Storefront() {
         </>}
       </aside>
 
-      <footer><img src="/assets/brand-logo.webp" alt="" width="256" height="256" loading="lazy" decoding="async" /><p>{t.footerText}</p><a href="#top">{language === "zh" ? "回到顶部" : "Back to top"} <ArrowRight weight="bold" /></a></footer>
+      <footer><img src="/assets/brand-logo.webp" alt="" width="256" height="256" loading="lazy" decoding="async" /><p>{t.footerText}</p><a href="#top">{localize(language, "回到顶部", "Back to top", "العودة إلى الأعلى")} <ArrowRight weight="bold" /></a></footer>
 
       {expanded && <div className="lightbox-backdrop" role="presentation" onClick={closeExpanded}>
-        <div className="lightbox-panel" role="dialog" aria-modal="true" aria-label={`${displayPatternName(expanded)} 大图`} onClick={(event) => event.stopPropagation()} onWheel={zoomLightbox}>
-          <button className="lightbox-close" type="button" onClick={closeExpanded} aria-label="关闭大图"><X weight="bold" /></button>
-          <span className="zoom-meter">{Math.round(zoom * 100)}% · {language === "zh" ? "滚轮缩放" : "Wheel to zoom"}</span>
-          <div className="lightbox-image"><img src={expanded.displayImage} srcSet={`${expanded.thumb} 720w, ${expanded.displayImage} 1600w`} sizes="(max-width: 700px) 96vw, 80vw" alt={`${displayPatternName(expanded)} 大图`} decoding="async" fetchPriority="high" style={{ transform: `scale(${zoom})` }} /></div>
+        <div className="lightbox-panel" role="dialog" aria-modal="true" aria-label={`${displayPatternName(expanded)} ${localize(language, "大图", "large image", "صورة كبيرة")}`} onClick={(event) => event.stopPropagation()} onWheel={zoomLightbox}>
+          <button className="lightbox-close" type="button" onClick={closeExpanded} aria-label={localize(language, "关闭大图", "Close large image", "إغلاق الصورة الكبيرة")}><X weight="bold" /></button>
+          <span className="zoom-meter">{Math.round(zoom * 100)}% · {localize(language, "滚轮缩放", "Wheel to zoom", "استخدم العجلة للتكبير")}</span>
+          <div className="lightbox-image"><img src={expanded.displayImage} srcSet={`${expanded.thumb} 720w, ${expanded.displayImage} 1600w`} sizes="(max-width: 700px) 96vw, 80vw" alt={`${displayPatternName(expanded)} ${localize(language, "大图", "large image", "صورة كبيرة")}`} decoding="async" fetchPriority="high" style={{ transform: `scale(${zoom})` }} /></div>
           <div className="lightbox-info">
             <div className="lightbox-pack">
-              <span>PRICE / PACKING</span>
+              <span>{localize(language, "价格 / 装箱", "PRICE / PACKING", "السعر / التعبئة")}</span>
               {capacities.map((capacity) => (
                 <button className={`pack-option ${isCapacitySelected(expanded.id, capacity.id) ? "active" : ""}`} type="button" key={capacity.id} onClick={() => toggleCapacity(expanded, capacity.id)} aria-pressed={isCapacitySelected(expanded.id, capacity.id)}>
-                  <strong>{capacity.id}</strong><small>{capacity.price} · {capacity.packing}{isCapacitySelected(expanded.id, capacity.id) ? ` · ${getSelectedQuantity(expanded.id, capacity.id)} 箱` : ""}</small>
+                  <strong>{capacity.id}</strong><small>{capacity.price} · {capacity.packing}{isCapacitySelected(expanded.id, capacity.id) ? ` · ${getSelectedQuantity(expanded.id, capacity.id)} ${localize(language, "箱", "cartons", "كرتون")}` : ""}</small>
                 </button>
               ))}
             </div>
@@ -844,14 +959,14 @@ function Storefront() {
       </div>}
 
       {quotePreview && <div className="quote-preview-backdrop" role="presentation" onClick={closeQuotePreview}>
-        <div className="quote-preview-panel" role="dialog" aria-modal="true" aria-label="PDF 报价单预览" onClick={(event) => event.stopPropagation()}>
+        <div className="quote-preview-panel" role="dialog" aria-modal="true" aria-label={localize(language, "PDF 报价单预览", "PDF quotation preview", "معاينة عرض السعر PDF")} onClick={(event) => event.stopPropagation()}>
           <div className="quote-preview-head">
-            <div><strong>PDF 报价单</strong><small>适用于苹果 Safari、微信和电脑，照片已嵌入文件</small></div>
-            <button className="quote-preview-close" type="button" onClick={closeQuotePreview} aria-label="关闭 PDF 预览"><X weight="bold" /></button>
+            <div><strong>{localize(language, "PDF 报价单", "PDF quotation", "عرض سعر PDF")}</strong><small>{localize(language, "适用于苹果 Safari、微信和电脑，照片已嵌入文件", "Works in Safari, WeChat, and desktop browsers; product images are embedded.", "يعمل في Safari وWeChat ومتصفحات الكمبيوتر؛ صور المنتجات مضمنة.")}</small></div>
+            <button className="quote-preview-close" type="button" onClick={closeQuotePreview} aria-label={localize(language, "关闭 PDF 预览", "Close PDF preview", "إغلاق معاينة PDF")}><X weight="bold" /></button>
           </div>
-          <a className="quote-preview-tip" href={quotePreview.pdfUrl} download={quotePreview.fileName} target="_blank" rel="noopener">没有自动下载？点这里再次打开 / 下载 PDF</a>
+          <a className="quote-preview-tip" href={quotePreview.pdfUrl} download={quotePreview.fileName} target="_blank" rel="noopener">{localize(language, "没有自动下载？点这里再次打开 / 下载 PDF", "No automatic download? Click here to open or download the PDF again.", "لم يبدأ التنزيل تلقائياً؟ اضغط هنا لفتح ملف PDF أو تنزيله مرة أخرى.")}</a>
           <div className="quote-preview-pages">
-            {quotePreview.pages.map((page, index) => <img key={index} src={page.dataUri} alt={`报价单第 ${index + 1} 页`} width={page.width} height={page.height} />)}
+            {quotePreview.pages.map((page, index) => <img key={index} src={page.dataUri} alt={localize(language, `报价单第 ${index + 1} 页`, `Quotation page ${index + 1}`, `صفحة عرض السعر ${index + 1}`)} width={page.width} height={page.height} />)}
           </div>
         </div>
       </div>}
