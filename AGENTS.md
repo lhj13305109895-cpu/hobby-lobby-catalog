@@ -10,8 +10,6 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 
 ## Durable Product Decisions
 
-- English is the default storefront language. Keep Chinese available and provide Arabic as a complete selectable storefront language with right-to-left layout, including product detail pages, the selection cart, and mobile series navigation.
-
 - The 28 images added on 2026-08-13 are numbered 319-151 through 319-178. Every image showing multiple pots is retained as one `混色套装系列` / `Mixed Set Series` entry; single-pot images use `316不锈钢花卉系列` or the new `田园萌兔系列` / `Cottage Rabbit Series`.
 
 - The selected visual target is Product Design ideation option 1: a warm editorial brand showcase with ivory surfaces, charcoal serif headings, and restrained Hobby Lobby red accents.
@@ -59,3 +57,4 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 - Multi-pot square exports must make the full row large and readable: fit 2, 3, or 4 complete silhouettes to almost the full canvas width with only a small safe margin, while remaining centered and uncropped. Do not reuse the single-pot camera distance or leave a large empty white field around the set.
 - For `318 1.2L` multi-pot groups, calculate center spacing from about 116% of the scaled product height instead of the GLB's oversized authored width bounds. Keep visible white space between every complete silhouette: handles, spouts, and bodies must neither touch nor overlap. Preserve matching front angles and aligned bases.
 - Keep multi-pot overview exports as a clean, single horizontal row and fit them tightly to the square width. Since four complete pots cannot also fill the square height without overlap, provide an `导出当前壶高清图` action for the selected slot; it exports that pot alone, large and centered, for legible artwork inspection.
+- On desktop, the left 3D viewer is a fixed full-height workspace panel: it must stay visible from the top of the viewport and never inherit the right control panel's long document height. Only the right control panel scrolls; retain ordinary stacked page scrolling on narrow/mobile screens.

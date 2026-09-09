@@ -52,9 +52,9 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .ghost-button { border: 1px solid #bdbbb4; color: var(--ink); background: transparent; }
 .ghost-button:hover, .secondary-button:hover { border-color: #777a72; background: #fff; }
 
-.workspace { flex: 1; min-height: calc(100vh - 88px); display: grid; grid-template-columns: minmax(0, 1fr) 390px; }
-.viewer-panel { min-width: 0; display: flex; flex-direction: column; background: #d9d2c5; }
-.viewport { position: relative; flex: 1; min-height: 610px; overflow: hidden; }
+.workspace { position: fixed; inset: 88px 0 0; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 390px; overflow: hidden; }
+.viewer-panel { min-width: 0; min-height: 0; height: 100%; display: flex; flex-direction: column; overflow: hidden; background: #d9d2c5; }
+.viewport { position: relative; flex: 1; min-height: 0; overflow: hidden; }
 .viewport-studio-clean { background: #f8f8f6; }
 .viewport canvas { position: relative; z-index: 1; width: 100%; height: 100%; display: block; cursor: grab; }
 .viewport canvas:active { cursor: grabbing; }
@@ -86,7 +86,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .backdrop-picker button { width: 24px; height: 24px; border: 1px solid rgba(45,47,42,.2); border-radius: 50%; box-shadow: inset 0 0 0 3px transparent; }
 .backdrop-picker button.active { box-shadow: inset 0 0 0 3px #f8f7f2; outline: 1px solid #55584f; }
 
-.control-panel { min-width: 0; overflow-y: auto; background: var(--panel); border-left: 1px solid var(--line); }
+.control-panel { min-width: 0; min-height: 0; height: 100%; overflow-y: auto; overscroll-behavior: contain; background: var(--panel); border-left: 1px solid var(--line); }
 .control-section { padding: 25px 26px 24px; border-bottom: 1px solid var(--line); }
 .section-title { display: flex; align-items: center; gap: 10px; margin-bottom: 17px; }
 .section-title span { font: 600 10px monospace; color: var(--accent); letter-spacing: .1em; }
@@ -161,10 +161,10 @@ input[type="range"] { width: 100%; height: 3px; accent-color: var(--accent); }
 .panel-footer p { margin: 12px 0 0; text-align: center; color: #8a8b85; font-size: 10px; }
 
 @media (max-width: 920px) {
-  .workspace { grid-template-columns: 1fr; }
+  .workspace { position: static; min-height: calc(100vh - 88px); grid-template-columns: 1fr; overflow: visible; }
   .viewer-panel { min-height: 62vh; }
   .viewport { min-height: 500px; }
-  .control-panel { border-left: 0; border-top: 1px solid var(--line); }
+  .control-panel { height: auto; overflow: visible; border-left: 0; border-top: 1px solid var(--line); }
 }
 
 @media (max-width: 620px) {

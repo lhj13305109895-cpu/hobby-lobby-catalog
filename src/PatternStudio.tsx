@@ -886,11 +886,11 @@ export function PotStudio() {
     else if (isNewPot) camera.position.copy(NEW_POT_CAMERA_POSITION);
     else if (isOneTwoLiter) camera.position.copy(POT_12_CAMERA_POSITION);
     else if (isTwoLiter) camera.position.set(3.2, 1.35, 4.8);
-    else camera.position.set(5.38, 2.15, 8.06);
+    else camera.position.set(3.65, 1.22, 5.47);
     if (pairMode !== "none") controls.target.copy(PAIR_CAMERA_TARGET);
     else if (isNewPot) controls.target.copy(NEW_POT_CAMERA_TARGET);
     else if (isOneTwoLiter) controls.target.copy(POT_12_CAMERA_TARGET);
-    else controls.target.set(0, 0.15, 0);
+    else controls.target.set(0, -0.05, 0);
     if (groupCount > 1 && modelRef.current) {
       const displayBox = new THREE.Box3().setFromObject(modelRef.current);
       const visualCenter = displayBox.getCenter(new THREE.Vector3());
@@ -917,7 +917,7 @@ export function PotStudio() {
     else if (isNewPot) camera.position.copy(NEW_POT_CAMERA_POSITION);
     else if (isOneTwoLiter) camera.position.copy(POT_12_CAMERA_POSITION);
     else if (isTwoLiter) camera.position.set(3.2, 1.35, 4.8);
-    else camera.position.set(5.38, 2.15, 8.06);
+    else camera.position.set(3.65, 1.22, 5.47);
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, alpha: true });
@@ -955,7 +955,7 @@ export function PotStudio() {
     if (pairMode !== "none") controls.target.copy(PAIR_CAMERA_TARGET);
     else if (isNewPot) controls.target.copy(NEW_POT_CAMERA_TARGET);
     else if (isOneTwoLiter) controls.target.copy(POT_12_CAMERA_TARGET);
-    else controls.target.set(0, 0.15, 0);
+    else controls.target.set(0, -0.05, 0);
     controlsRef.current = controls;
 
     // Use neutral, symmetrical studio lights so uploaded artwork keeps the
