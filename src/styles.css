@@ -28,24 +28,6 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible 
 .site-shell[dir="rtl"] .lightbox-close { right:auto; left:14px; }
 .site-shell[dir="rtl"] .zoom-meter { left:auto; right:14px; }
 .site-shell[dir="rtl"] .product-detail-link svg,.site-shell[dir="rtl"] .product-back svg,.site-shell[dir="rtl"] footer a svg,.site-shell[dir="rtl"] .steel-band a svg,.site-shell[dir="rtl"] .contact-channel>svg:last-child,.site-shell[dir="rtl"] .contact-brand-card figcaption a svg,.site-shell[dir="rtl"] .hero-actions a svg { transform:scaleX(-1); }
-.hero-reference-exact { display:none; position:relative; overflow:hidden; background:#fffaf3; container-type:inline-size; }
-.hero-reference-base { display:block; width:100%; height:auto; }
-.hero-reference-hotspot { position:absolute; z-index:4; display:block; border:0; padding:0; background:transparent; opacity:.001; cursor:pointer; }
-.hero-reference-gallery-nav { left:14%; top:2%; width:10%; height:8%; }
-.hero-reference-custom-nav { left:24%; top:2%; width:10%; height:8%; }
-.hero-reference-gallery-cta { left:5%; top:66%; width:16%; height:8%; }
-.hero-reference-custom-cta { left:21%; top:66%; width:13%; height:8%; }
-.hero-reference-studio-entry { position:absolute; z-index:6; left:38%; top:1%; width:10%; height:8%; display:flex; align-items:center; justify-content:center; color:var(--ink); background:transparent; font-size:clamp(14px,1.4vw,20px); font-weight:500; text-decoration:none; white-space:nowrap; }
-.hero-reference-studio-entry:hover { color:var(--red); }
-.hero-reference-english { right:2.5%; top:2%; width:8%; height:7%; }
-@media (min-width:801px) {
-  .static-reference-active .hero-reference-exact { display:block; }
-  .static-reference-active > .topbar { display:none; }
-  .static-reference-active main > .hero { display:none; }
-}
-@media (min-width:801px) and (min-aspect-ratio:8/5) {
-  .static-reference-active .hero-reference-exact { width:min(100%,calc(100svh * 1.54883)); margin-inline:auto; }
-}
 .topbar { height:88px; padding:0 clamp(24px,4vw,68px); display:grid; grid-template-columns:120px 1fr auto auto; align-items:center; gap:22px; background:rgba(255,253,250,.96); border-bottom:1px solid rgba(222,215,207,.55); position:sticky; top:0; z-index:50; }
 .brand-link { display:inline-flex; width:68px; height:68px; }
 .brand-link img { width:100%; height:100%; object-fit:contain; }

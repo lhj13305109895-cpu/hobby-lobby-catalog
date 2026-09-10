@@ -683,20 +683,14 @@ function Storefront() {
   }
 
   return (
-    <div className={`site-shell ${language === "zh" ? "static-reference-active" : ""}`} lang={language} dir={language === "ar" ? "rtl" : "ltr"}>
-      <section className="hero-reference-exact" aria-label="花色，由你定义">
-        <img className="hero-reference-base" src="/assets/hero-reference-products.webp" alt="花色由你定义，型号319花色定制展示" width="1560" height="1008" loading="eager" fetchPriority="high" decoding="async" />
-        <a className="hero-reference-hotspot hero-reference-gallery-nav" href="#gallery" aria-label="花色目录" />
-        <a className="hero-reference-hotspot hero-reference-custom-nav" href="#customization" aria-label="定制服务" />
-        <a className="hero-reference-hotspot hero-reference-gallery-cta" href="#gallery" aria-label="探索花色" />
-        <a className="hero-reference-hotspot hero-reference-custom-cta" href="#customization" aria-label="了解定制" />
-        <a className="hero-reference-studio-entry" href="/studio/">在线试样</a>
-        <button className="hero-reference-hotspot hero-reference-english" type="button" onClick={() => setLanguage("en")} aria-label="English" />
-      </section>
+    <div className="site-shell" lang={language} dir={language === "ar" ? "rtl" : "ltr"}>
       <header className="topbar">
         <a className="brand-link" href="#top" aria-label="Hobby Lobby home"><img src="/assets/brand-logo.webp" alt="Hobby Lobby Ask for More" width="256" height="256" decoding="async" /></a>
         <nav aria-label={localize(language, "主导航", "Main navigation", "التنقل الرئيسي")}>
-          <a href="#gallery">{t.navGallery}</a><a href="/studio/">{localize(language, "在线试样", "Pattern studio", "استوديو التصميم")}</a><a href="#details">{t.navSteel}</a><a href="#specifications">{t.navSpecs}</a>
+          <a href="#gallery">{t.navGallery}</a>
+          <a href="#customization">{localize(language, "定制服务", "Customization", "خدمة التخصيص")}</a>
+          <a href="#customization">{localize(language, "关于我们", "About Us", "من نحن")}</a>
+          <a href="/studio/">{localize(language, "在线试样", "Pattern Studio", "استوديو التصميم")}</a>
         </nav>
         <div className="language-switcher" role="group" aria-label={t.languageLabel}>
           {languageOptions.map((option) => (
@@ -714,7 +708,7 @@ function Storefront() {
             <p className="hero-lede">{t.heroLead}</p>
             <div className="hero-actions">
               <a className="button button-primary" href="#gallery">{t.browseAll} <ArrowDown weight="bold" /></a>
-              <a className="button button-secondary" href="/studio/">{localize(language, "上传图案试样", "Try your artwork", "جرّب تصميمك")} <ArrowRight weight="bold" /></a>
+              <a className="button button-secondary" href="#customization">{t.viewSpecs} <ArrowRight weight="bold" /></a>
             </div>
             <div className="hero-notes" aria-label={localize(language, "产品摘要", "Product summary", "ملخص المنتج")}>
               <span><PaintBrush weight="regular" /> {t.heroNotePatterns}</span>
