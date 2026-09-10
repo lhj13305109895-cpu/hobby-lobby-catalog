@@ -6,11 +6,36 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
+import { getDocument, GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf.mjs";
+import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
 import "./pattern-studio-source.css";
 
 type Finish = "matte" | "satin" | "gloss";
 type Capacity = "1.6" | "2.0" | "145" | "1.2";
 type PairMode = "none" | "319" | "318";
+
+GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+
+async function renderPdfArtwork(file: File): Promise<File> {
+  // AI files saved with Illustrator's “Create PDF Compatible File” option
+  // contain a PDF preview. It is rendered locally: no artwork is uploaded.
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const pdf = await getDocument({ data: bytes }).promise;
+  const page = await pdf.getPage(1);
+  const baseViewport = page.getViewport({ scale: 1 });
+  const scale = Math.min(3, Math.max(1, 2400 / Math.max(baseViewport.width, baseViewport.height)));
+  const viewport = page.getViewport({ scale });
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.ceil(viewport.width);
+  canvas.height = Math.ceil(viewport.height);
+  const context = canvas.getContext("2d", { alpha: true });
+  if (!context) throw new Error("无法创建图案预览画布");
+  await page.render({ canvasContext: context, viewport }).promise;
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+  pdf.destroy();
+  if (!blob) throw new Error("无法生成图案预览");
+  return new File([blob], `${file.name.replace(/\.(ai|pdf)$/i, "")}.png`, { type: "image/png" });
+}
 
 type TextureSettings = {
   scaleX: number;
@@ -77,7 +102,8 @@ const NEW_POT_LOCKED_POLAR_ANGLE = Math.atan2(
   Math.hypot(NEW_POT_CAMERA_POSITION.x - NEW_POT_CAMERA_TARGET.x, NEW_POT_CAMERA_POSITION.z - NEW_POT_CAMERA_TARGET.z),
   NEW_POT_CAMERA_POSITION.y - NEW_POT_CAMERA_TARGET.y,
 );
-const DEFAULT_BODY_COLOR = "#eee8d9";
+const DEFAULT_BODY_COLOR = "#fff5db";
+const DEFAULT_LID_COLOR = "#fff6d7";
 const FINISH_SURFACE: Record<Finish, { roughness: number; clearcoat: number; clearcoatRoughness: number }> = {
   // A fine, molded matte finish: soft enough to avoid the white-model look,
   // while retaining broad highlights that describe the curved vessel.
@@ -85,6 +111,10 @@ const FINISH_SURFACE: Record<Finish, { roughness: number; clearcoat: number; cle
   satin: { roughness: 0.42, clearcoat: 0.08, clearcoatRoughness: 0.5 },
   gloss: { roughness: 0.15, clearcoat: 0.68, clearcoatRoughness: 0.1 },
 };
+// The 319 lid, handle, spout and press tab are molded plastic, not enamel.
+// Keep this independent from the vessel finish for the same appearance in
+// single-pot, multi-pot and mixed-size presentations.
+const MATTE_PLASTIC_SURFACE = { roughness: 0.72, clearcoat: 0, clearcoatRoughness: 0.8 };
 
 type CapacityArtwork = {
   texture: THREE.Texture;
@@ -740,30 +770,20 @@ vec3 partSurfaceColor = mix(uPartFixtureColor, uPartBodyColor, partIsBody);
 vec4 diffuseColor = vec4(partSurfaceColor, opacity);`,
       )
       .replace(
-        "#include <normal_fragment_maps>",
-        `#include <normal_fragment_maps>
-if (partIsBody > 0.5) {
-  normal = normalize(vPartRadialViewNormal) * faceDirection;
-  nonPerturbedNormal = normal;
-}`,
-      )
-      .replace(
         "#include <lights_physical_fragment>",
         `#include <lights_physical_fragment>
 // The product combines a cream matte vessel with slightly drier white matte
 // plastic fixtures, even though both regions share this source mesh.
 if (partIsBody < 0.5) {
-  material.roughness = max(material.roughness, ${isTwoLiter ? "0.56" : "0.62"});
+  material.roughness = max(material.roughness, 0.72);
 #ifdef USE_CLEARCOAT
-  material.clearcoat = ${isTwoLiter ? "0.035" : "0.012"};
-  material.clearcoatRoughness = ${isTwoLiter ? "0.58" : "0.76"};
+  material.clearcoat = 0.0;
+  material.clearcoatRoughness = 0.8;
 #endif
 }`,
       );
   };
-  material.customProgramCacheKey = () => isTwoLiter
-    ? "fixture-part-real-product-finish-v3"
-    : "fixture-part-real-product-matte-v4";
+  material.customProgramCacheKey = () => "fixture-part-real-product-matte-v6";
   material.needsUpdate = true;
   return uniforms;
 }
@@ -872,9 +892,9 @@ export function PotStudio() {
     "1.2": Array.from({ length: 4 }, () => ({ ...INITIAL_SETTINGS })),
     "145": Array.from({ length: 4 }, () => ({ ...INITIAL_SETTINGS })),
   });
-  const [finish, setFinish] = useState<Finish>(capacity === "2.0" ? "gloss" : "matte");
-  const [bodyColor, setBodyColor] = useState(capacity === "2.0" ? "#f8f5e8" : DEFAULT_BODY_COLOR);
-  const [lidColor, setLidColor] = useState(capacity === "2.0" ? "#f3f1e9" : "#f7f6f2");
+  const [finish, setFinish] = useState<Finish>(capacity === "1.6" || capacity === "2.0" ? "gloss" : "matte");
+  const [bodyColor, setBodyColor] = useState(DEFAULT_BODY_COLOR);
+  const [lidColor, setLidColor] = useState(DEFAULT_LID_COLOR);
   const [isDragging, setIsDragging] = useState(false);
   const [draggingPotIndex, setDraggingPotIndex] = useState<number | null>(null);
 
@@ -882,6 +902,13 @@ export function PotStudio() {
     const camera = cameraRef.current;
     const controls = controlsRef.current;
     if (!camera || !controls) return;
+    const resetPolarAngle = pairMode !== "none"
+      ? PAIR_LOCKED_POLAR_ANGLE
+      : isNewPot
+        ? NEW_POT_LOCKED_POLAR_ANGLE
+        : isOneTwoLiter ? POT_12_LOCKED_POLAR_ANGLE : LOCKED_POLAR_ANGLE;
+    controls.minPolarAngle = resetPolarAngle;
+    controls.maxPolarAngle = resetPolarAngle;
     if (pairMode !== "none") camera.position.copy(PAIR_CAMERA_POSITION);
     else if (isNewPot) camera.position.copy(NEW_POT_CAMERA_POSITION);
     else if (isOneTwoLiter) camera.position.copy(POT_12_CAMERA_POSITION);
@@ -891,7 +918,7 @@ export function PotStudio() {
     else if (isNewPot) controls.target.copy(NEW_POT_CAMERA_TARGET);
     else if (isOneTwoLiter) controls.target.copy(POT_12_CAMERA_TARGET);
     else controls.target.set(0, -0.05, 0);
-    if (groupCount > 1 && modelRef.current) {
+    if ((pairMode !== "none" || groupCount > 1) && modelRef.current) {
       const displayBox = new THREE.Box3().setFromObject(modelRef.current);
       const visualCenter = displayBox.getCenter(new THREE.Vector3());
       if (pairMode !== "none") visualCenter.y -= 0.28;
@@ -899,11 +926,36 @@ export function PotStudio() {
       controls.target.set(visualCenter.x, visualCenter.y, visualCenter.z);
       camera.position.y += centerShift;
       const viewDirection = camera.position.clone().sub(controls.target).normalize();
-      const fittedDistance = cameraDistanceToFitBox(camera, displayBox, visualCenter, viewDirection, 0.88);
+      const fittedDistance = cameraDistanceToFitBox(camera, displayBox, visualCenter, viewDirection, pairMode !== "none" ? 0.64 : 0.88);
       camera.position.copy(visualCenter).addScaledVector(viewDirection, fittedDistance);
     }
     controls.update();
   }, [isTwoLiter, isOneTwoLiter, isNewPot, groupCount, pairMode]);
+
+  const showFrontView = useCallback(() => {
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    if (!camera || !controls) return;
+    const distance = camera.position.distanceTo(controls.target);
+    const frontPolarAngle = pairMode !== "none"
+      ? PAIR_LOCKED_POLAR_ANGLE
+      : isNewPot
+        ? NEW_POT_LOCKED_POLAR_ANGLE
+        : isOneTwoLiter ? POT_12_LOCKED_POLAR_ANGLE : LOCKED_POLAR_ANGLE;
+    const horizontalDistance = Math.sin(frontPolarAngle) * distance;
+    const verticalOffset = Math.cos(frontPolarAngle) * distance;
+    controls.minPolarAngle = frontPolarAngle;
+    controls.maxPolarAngle = frontPolarAngle;
+    camera.up.set(0, 1, 0);
+    camera.position.set(
+      controls.target.x,
+      controls.target.y + verticalOffset,
+      controls.target.z + horizontalDistance,
+    );
+    camera.lookAt(controls.target);
+    camera.updateProjectionMatrix();
+    controls.update();
+  }, [pairMode, isNewPot, isOneTwoLiter]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -951,7 +1003,7 @@ export function PotStudio() {
     controls.minPolarAngle = lockedPolarAngle;
     controls.maxPolarAngle = lockedPolarAngle;
     controls.minDistance = 2.2;
-    controls.maxDistance = groupCount > 1 ? 30 : isTwoLiter ? 9 : 11.5;
+    controls.maxDistance = pairMode !== "none" || groupCount > 1 ? 30 : isTwoLiter ? 9 : 11.5;
     if (pairMode !== "none") controls.target.copy(PAIR_CAMERA_TARGET);
     else if (isNewPot) controls.target.copy(NEW_POT_CAMERA_TARGET);
     else if (isOneTwoLiter) controls.target.copy(POT_12_CAMERA_TARGET);
@@ -1000,20 +1052,24 @@ export function PotStudio() {
 
     let disposed = false;
     let dracoLoader: { dispose: () => void } | null = null;
-    const loadMixedPair = async () => {
+    const loadMixedPair = async (single319Kind?: "1.6" | "2.0") => {
       const { DRACOLoader } = await import("three/examples/jsm/loaders/DRACOLoader.js");
       if (disposed) return;
       dracoLoader = new DRACOLoader();
       dracoLoader.setDecoderPath("/");
       const loader = new GLTFLoader();
       loader.setDRACOLoader(dracoLoader);
-      const pairCapacities: [Capacity, Capacity] = pairMode === "319" ? ["1.6", "2.0"] : ["1.2", "145"];
+      const uses319PairRecipe = pairMode === "319" || Boolean(single319Kind);
+      const pairCapacities: Capacity[] = single319Kind
+        ? [single319Kind]
+        : pairMode === "319" ? ["1.6", "2.0"] : ["1.2", "145"];
       const modelPath = (kind: Capacity) => kind === "1.2" ? "/pot-454.glb" : kind === "145" ? "/pot-145.glb" : "/pot.glb";
       try {
         const gltfs = await Promise.all(pairCapacities.map((kind) => loader.loadAsync(modelPath(kind))));
         if (disposed) return;
         const allBodyMaterials: THREE.MeshPhysicalMaterial[] = [];
         const allFixtureMaterials: THREE.MeshPhysicalMaterial[] = [];
+        const allFixturePartUniforms: FixturePartUniforms[] = [];
         const allPrintMaterials: THREE.MeshBasicMaterial[] = [];
         const allPrintSurfaces: THREE.Mesh[] = [];
 
@@ -1035,16 +1091,23 @@ export function PotStudio() {
           model.position.y += -1.16 - alignedBox.min.y;
           model.updateMatrixWorld(true);
 
-          const surface = pairIsTwoLiter ? FINISH_SURFACE.gloss : FINISH_SURFACE.matte;
+          const surface = uses319PairRecipe ? FINISH_SURFACE.gloss : pairIsTwoLiter ? FINISH_SURFACE.gloss : FINISH_SURFACE.matte;
+          // 319 pair and single products deliberately start from the same
+          // glossy shared-shell material. The common part shader below turns
+          // only the plastic fixtures matte in both render paths.
+          const fixtureSurface = surface;
           const bodyMaterial = new THREE.MeshPhysicalMaterial({
             color: bodyColor, roughness: surface.roughness, metalness: 0, clearcoat: surface.clearcoat,
             clearcoatRoughness: surface.clearcoatRoughness, ior: 1.46, specularIntensity: 0.42,
             envMapIntensity: 0.55, side: THREE.DoubleSide,
+            polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
           });
           const fixtureMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0xffffff, roughness: surface.roughness, metalness: 0, clearcoat: surface.clearcoat,
-            clearcoatRoughness: surface.clearcoatRoughness, ior: 1.46, specularIntensity: 0.36,
-            envMapIntensity: 0.42, side: THREE.DoubleSide,
+            color: 0xffffff, roughness: fixtureSurface.roughness, metalness: 0, clearcoat: fixtureSurface.clearcoat,
+            clearcoatRoughness: fixtureSurface.clearcoatRoughness, ior: 1.46,
+            specularIntensity: uses319PairRecipe ? 0.42 : 0.36,
+            envMapIntensity: uses319PairRecipe ? 0.55 : 0.42,
+            side: THREE.DoubleSide,
           });
           const artwork = capacityArtworksRef.current[kind]?.[0];
           const printMaterial = new THREE.MeshBasicMaterial({
@@ -1073,6 +1136,16 @@ export function PotStudio() {
               child.material = fixtureMaterial;
             }
           });
+          if (uses319PairRecipe && printSource) {
+            const fixturePartUniforms = configureFixturePartMaterial(
+              fixtureMaterial,
+              printSource.geometry as THREE.BufferGeometry,
+              new THREE.Color(bodyColor).getHex(),
+              lidColor,
+              pairIsTwoLiter,
+            );
+            allFixturePartUniforms.push(fixturePartUniforms);
+          }
           let overlay: THREE.Mesh | null = null;
           if (printSource) {
             overlay = printSource.clone(false) as THREE.Mesh;
@@ -1118,6 +1191,21 @@ export function PotStudio() {
         };
 
         const smallRoot = makePairProduct(gltfs[0], pairCapacities[0]);
+        if (single319Kind) {
+          const displayGroup = new THREE.Group();
+          displayGroup.name = "POT_GROUP";
+          smallRoot.name = "POT_SLOT_0";
+          displayGroup.add(smallRoot);
+          modelMaterialsRef.current = allBodyMaterials;
+          fixtureMaterialsRef.current = allFixtureMaterials;
+          fixturePartUniformsRef.current = allFixturePartUniforms;
+          printMaterialsRef.current = allPrintMaterials;
+          printSurfacesRef.current = allPrintSurfaces;
+          modelRef.current = displayGroup;
+          scene.add(displayGroup);
+          setReady(true);
+          return;
+        }
         const largeRoot = makePairProduct(gltfs[1], pairCapacities[1]);
         largeRoot.scale.setScalar(pairMode === "319" ? 1.18 : 1.22);
         const alignBase = (root: THREE.Object3D) => {
@@ -1144,12 +1232,12 @@ export function PotStudio() {
         framingCenter.y -= 0.28;
         controls.target.copy(framingCenter);
         const viewDirection = camera.position.clone().sub(controls.target).normalize();
-        const distance = cameraDistanceToFitBox(camera, displayBox, framingCenter, viewDirection, 0.72);
+        const distance = cameraDistanceToFitBox(camera, displayBox, framingCenter, viewDirection, 0.6);
         camera.position.copy(framingCenter).addScaledVector(viewDirection, distance);
         controls.update();
         modelMaterialsRef.current = allBodyMaterials;
         fixtureMaterialsRef.current = allFixtureMaterials;
-        fixturePartUniformsRef.current = [];
+        fixturePartUniformsRef.current = allFixturePartUniforms;
         printMaterialsRef.current = allPrintMaterials;
         printSurfacesRef.current = allPrintSurfaces;
         modelRef.current = displayGroup;
@@ -1192,7 +1280,7 @@ export function PotStudio() {
           }
 
           const materials: THREE.MeshPhysicalMaterial[] = [];
-          const initialSurface = isTwoLiter ? FINISH_SURFACE.gloss : FINISH_SURFACE.matte;
+          const initialSurface = isStandaloneModel ? FINISH_SURFACE.matte : FINISH_SURFACE.gloss;
           const bodyMaterial = new THREE.MeshPhysicalMaterial({
             color: bodyColor,
             roughness: initialSurface.roughness,
@@ -1226,13 +1314,19 @@ export function PotStudio() {
           printMaterial.toneMapped = false;
           const fixtureMaterial = new THREE.MeshPhysicalMaterial({
             color: 0xffffff,
+            // This source mesh contains both the vessel shell and the plastic
+            // parts. Start with the vessel's gloss; the shader below makes
+            // only the fixture region matte.
             roughness: initialSurface.roughness,
             metalness: 0,
             clearcoat: initialSurface.clearcoat,
             clearcoatRoughness: initialSurface.clearcoatRoughness,
             ior: 1.46,
-            specularIntensity: 0.36,
-            envMapIntensity: 0.42,
+            // The shared 319 shell contains part of the vessel body. Match the
+            // dedicated body mesh exactly so the shoulder and straight wall do
+            // not split into visibly different finishes.
+            specularIntensity: 0.42,
+            envMapIntensity: 0.55,
             side: THREE.DoubleSide,
           });
           let bodyFound = isStandaloneModel;
@@ -1427,7 +1521,8 @@ export function PotStudio() {
         }
       );
     };
-    if (pairMode === "none") void loadModel();
+    if (pairMode === "none" && groupCount === 1 && (capacity === "1.6" || capacity === "2.0")) void loadMixedPair(capacity);
+    else if (pairMode === "none") void loadModel();
     else void loadMixedPair();
 
     const resize = () => {
@@ -1483,8 +1578,11 @@ export function PotStudio() {
   }, [settings]);
 
   useEffect(() => {
-    const surface = isTwoLiter && finish === "matte"
-      ? { roughness: 0.72, clearcoat: 0, clearcoatRoughness: 0.8 }
+    // 319 vessels use the same soft-gloss enamel in every presentation. This
+    // is intentionally independent from the UI's historical finish state so a
+    // previously selected "matte" option cannot flatten a single-pot preview.
+    const surface = (capacity === "1.6" || capacity === "2.0")
+      ? FINISH_SURFACE.gloss
       : FINISH_SURFACE[finish];
     modelMaterialsRef.current.forEach((material) => {
       material.color.set(bodyColor);
@@ -1493,21 +1591,23 @@ export function PotStudio() {
       material.clearcoatRoughness = surface.clearcoatRoughness;
       material.needsUpdate = true;
     });
-  }, [finish, bodyColor, isTwoLiter, ready]);
+  }, [finish, bodyColor, capacity, ready]);
 
   useEffect(() => {
     updateFixturePartUniforms(fixturePartUniformsRef.current, new THREE.Color(bodyColor).getHex(), lidColor);
+    const fixtureSurface = fixturePartUniformsRef.current.length
+      ? FINISH_SURFACE.gloss
+      : (capacity === "1.6" || capacity === "2.0")
+        ? MATTE_PLASTIC_SURFACE
+        : FINISH_SURFACE[finish];
     fixtureMaterialsRef.current.forEach((material) => {
       material.color.set(0xffffff);
-      const surface = isTwoLiter && finish === "matte"
-        ? { roughness: 0.72, clearcoat: 0, clearcoatRoughness: 0.8 }
-        : FINISH_SURFACE[finish];
-      material.roughness = surface.roughness;
-      material.clearcoat = surface.clearcoat;
-      material.clearcoatRoughness = surface.clearcoatRoughness;
+      material.roughness = fixtureSurface.roughness;
+      material.clearcoat = fixtureSurface.clearcoat;
+      material.clearcoatRoughness = fixtureSurface.clearcoatRoughness;
       material.needsUpdate = true;
     });
-  }, [bodyColor, lidColor, finish, isTwoLiter, ready]);
+  }, [bodyColor, lidColor, finish, capacity, ready]);
 
   const changeCapacity = (nextCapacity: Capacity, force = false) => {
     if (!force && pairMode === "319" && nextCapacity !== "1.6" && nextCapacity !== "2.0") return;
@@ -1533,9 +1633,9 @@ export function PotStudio() {
     setProgress(0);
     setLoadError(false);
     setReady(false);
-    setFinish(nextCapacity === "2.0" ? "gloss" : "matte");
-    setBodyColor(nextCapacity === "2.0" ? "#f8f5e8" : DEFAULT_BODY_COLOR);
-    setLidColor(nextCapacity === "2.0" ? "#f3f1e9" : "#f7f6f2");
+    setFinish(nextCapacity === "1.6" || nextCapacity === "2.0" ? "gloss" : "matte");
+    setBodyColor(DEFAULT_BODY_COLOR);
+    setLidColor(DEFAULT_LID_COLOR);
     setCapacity(nextCapacity);
   };
 
@@ -1583,15 +1683,37 @@ export function PotStudio() {
     setNewPotPrintHeightMm(nextHeight);
   };
 
-  const applyFile = useCallback((file?: File, requestedPotIndex = activePotIndex) => {
+  const applyFile = useCallback(async (
+    file?: File,
+    requestedPotIndex = activePotIndex,
+    requestedCapacity: Capacity = capacity,
+  ) => {
     if (!file) return;
     setTextureError("");
-    if (!file.type.startsWith("image/")) {
-      setTextureError("文件格式不支持，请上传 JPG、PNG 或 WEBP 图片。");
+    const isPdfLike = file.type === "application/pdf" || /\.(ai|pdf)$/i.test(file.name);
+    let artworkFile = file;
+    if (isPdfLike) {
+      setTextureError("正在将 AI/PDF 转为预览图…");
+      try {
+        artworkFile = await renderPdfArtwork(file);
+        setTextureError("");
+      } catch {
+        setTextureError("无法读取此 AI 文件。请在 Illustrator 保存时勾选“创建 PDF 兼容文件”，或导出 PNG / SVG 后上传。");
+        return;
+      }
+    }
+    if (!artworkFile.type.startsWith("image/")) {
+      setTextureError("文件格式不支持，请上传 AI（PDF 兼容）、PDF、JPG、PNG、WEBP 或 SVG 图案。");
       return;
     }
-    const targetCapacity = capacity;
+    const targetCapacity = requestedCapacity;
     const targetPotIndex = requestedPotIndex;
+    const targetIsStandalone = targetCapacity === "145" || targetCapacity === "1.2";
+    const targetDisplayIndex = pairMode === "319"
+      ? (targetCapacity === "2.0" ? 1 : 0)
+      : pairMode === "318"
+        ? (targetCapacity === "145" ? 1 : 0)
+        : targetPotIndex;
     const targetSettings = targetPotIndex === activePotIndex
       ? settings
       : settingsByCapacityRef.current[targetCapacity][targetPotIndex];
@@ -1599,7 +1721,7 @@ export function PotStudio() {
     objectUrlsRef.current[targetCapacity] = targetUrls;
     const previousUrl = targetUrls[targetPotIndex];
     if (previousUrl) URL.revokeObjectURL(previousUrl);
-    const url = URL.createObjectURL(file);
+    const url = URL.createObjectURL(artworkFile);
     targetUrls[targetPotIndex] = url;
     const loader = new THREE.TextureLoader();
     loader.load(url, (texture) => {
@@ -1609,7 +1731,7 @@ export function PotStudio() {
       texture.colorSpace = THREE.SRGBColorSpace;
       // Existing Blender-authored UVs use glTF orientation; the new pot uses
       // runtime cylindrical UVs and therefore needs the normal image flip.
-      texture.flipY = isStandaloneModel;
+      texture.flipY = targetIsStandalone;
       texture.anisotropy = rendererRef.current?.capabilities.getMaxAnisotropy() ?? 1;
       texture.wrapS = THREE.RepeatWrapping;
       texture.wrapT = THREE.RepeatWrapping;
@@ -1620,9 +1742,6 @@ export function PotStudio() {
       const image = texture.image as { width?: number; height?: number };
       const aspectRatio = image.width && image.height ? image.width / image.height : null;
       targetArtworks[targetPotIndex] = { texture, preview: url, name: file.name, aspectRatio };
-      if (activeCapacityRef.current !== targetCapacity || activePotIndexRef.current !== targetPotIndex) return;
-      uploadedTextureRef.current = texture;
-      uploadedAspectRatioRef.current = aspectRatio;
       if (targetCapacity === "145" && image.width && image.height) {
         const inferredHeight = THREE.MathUtils.clamp(
           Math.round(NEW_POT_WRAP_WIDTH_MM * image.height / image.width),
@@ -1630,20 +1749,25 @@ export function PotStudio() {
           NEW_POT_WRAP_HEIGHT_MM,
         );
         newPotPrintHeightsRef.current[targetCapacity][targetPotIndex] = inferredHeight;
-        setNewPotPrintHeightMm(inferredHeight);
+        if (activeCapacityRef.current === targetCapacity && activePotIndexRef.current === targetPotIndex) {
+          setNewPotPrintHeightMm(inferredHeight);
+        }
       }
-      const activeMaterial = printMaterialsRef.current[targetPotIndex];
+      const activeMaterial = printMaterialsRef.current[targetDisplayIndex];
       if (activeMaterial) {
         activeMaterial.map = texture;
         activeMaterial.color.set(0xffffff);
         activeMaterial.needsUpdate = true;
       }
-      const activeSurface = printSurfacesRef.current[targetPotIndex];
+      const activeSurface = printSurfacesRef.current[targetDisplayIndex];
       if (activeSurface) activeSurface.visible = true;
+      if (activeCapacityRef.current !== targetCapacity || activePotIndexRef.current !== targetPotIndex) return;
+      uploadedTextureRef.current = texture;
+      uploadedAspectRatioRef.current = aspectRatio;
       setTextureName(file.name);
       setTexturePreview(url);
     }, undefined, () => setTextureError("图案读取失败，请重新导出图片后再试。"));
-  }, [settings, isStandaloneModel, capacity, activePotIndex]);
+  }, [settings, capacity, activePotIndex, pairMode]);
 
   useEffect(() => {
     const texture = uploadedTextureRef.current;
@@ -1652,15 +1776,37 @@ export function PotStudio() {
     texture.needsUpdate = true;
   }, [isStandaloneModel, isNewPot]);
 
+  const applyFiles = (files?: FileList | File[]) => {
+    const selectedFiles = Array.from(files ?? []);
+    if (!selectedFiles.length) return;
+    if (selectedFiles.length === 1) {
+      void applyFile(selectedFiles[0]);
+      return;
+    }
+    if (pairMode === "319") {
+      void applyFile(selectedFiles[0], 0, "1.6");
+      if (selectedFiles[1]) void applyFile(selectedFiles[1], 0, "2.0");
+      return;
+    }
+    if (pairMode === "318") {
+      void applyFile(selectedFiles[0], 0, "1.2");
+      if (selectedFiles[1]) void applyFile(selectedFiles[1], 0, "145");
+      return;
+    }
+    const nextCount = Math.min(4, Math.max(groupCount, selectedFiles.length));
+    selectedFiles.slice(0, nextCount).forEach((file, index) => void applyFile(file, index));
+    if (nextCount !== groupCount) setGroupCount(nextCount);
+  };
+
   const onFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    void applyFile(event.target.files?.[0]);
+    applyFiles(event.target.files ?? undefined);
     event.target.value = "";
   };
 
   const onDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setIsDragging(false);
-    void applyFile(event.dataTransfer.files?.[0]);
+    applyFiles(event.dataTransfer.files);
   };
 
   useEffect(() => {
@@ -1717,11 +1863,46 @@ export function PotStudio() {
     if (!(sceneRoot instanceof THREE.Scene)) return;
 
     const outputCanvas = document.createElement("canvas");
-    const exportSize = 1600;
+    const exportSize = 3200;
     outputCanvas.width = exportSize;
     outputCanvas.height = exportSize;
     const context = outputCanvas.getContext("2d");
     if (!context) return;
+
+    const downloadOutput = () => {
+      outputCanvas.toBlob((blob) => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `壶身图案预览-${displayLabel}${singlePot ? `-第${activePotIndex + 1}只-高清` : pairMode !== "none" ? "-一大一小" : groupCount > 1 ? `-组合${groupCount}只` : ""}-${Date.now()}.png`;
+        link.click();
+        URL.revokeObjectURL(url);
+      }, "image/png");
+    };
+
+    if (!singlePot) {
+      // Render the exact same square camera view at print-ready resolution.
+      // Camera position/target/zoom stay untouched, so composition is identical
+      // to the visible canvas without merely enlarging its screen pixels.
+      const currentSize = renderer.getSize(new THREE.Vector2());
+      const currentPixelRatio = renderer.getPixelRatio();
+      const currentAspect = camera.aspect;
+      renderer.setPixelRatio(1);
+      renderer.setSize(exportSize, exportSize, false);
+      camera.aspect = 1;
+      camera.updateProjectionMatrix();
+      renderer.render(sceneRoot, camera);
+      const sourceCanvas = renderer.domElement;
+      context.drawImage(sourceCanvas, 0, 0, exportSize, exportSize);
+      camera.aspect = currentAspect;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(currentPixelRatio);
+      renderer.setSize(currentSize.x, currentSize.y, false);
+      controls.update();
+      downloadOutput();
+      return;
+    }
 
     const previousSize = renderer.getSize(new THREE.Vector2());
     const previousPixelRatio = renderer.getPixelRatio();
@@ -1734,36 +1915,41 @@ export function PotStudio() {
     const viewDirection = camera.position.clone().sub(controls.target).normalize();
 
     renderer.setPixelRatio(1);
-    renderer.setSize(exportSize, exportSize, false);
     sceneRoot.background = new THREE.Color(0xf8f8f6);
     if (studioFloor) studioFloor.visible = false;
-    camera.aspect = 1;
-    // Keep the user's current rotation while applying a consistent centered
-    // catalogue crop with balanced white space for both capacities.
-    const selectedPot = singlePot && pairMode === "none" && groupCount > 1
-      ? model.getObjectByName(`POT_SLOT_${activePotIndex}`)
-      : null;
-    const exportObject = selectedPot ?? model;
-    const exportTarget = new THREE.Box3().setFromObject(exportObject).getCenter(new THREE.Vector3());
-    // Multi-pot exports fit the actual combined silhouette rather than using
-    // a one-size camera distance. This makes every set fill the square width
-    // while preserving a small safe margin around spouts and handles.
-    const exportDistance = singlePot
-      ? cameraDistanceToFitObject(camera, exportObject, exportTarget, viewDirection, 0.72)
-      : groupCount === 1
-      ? 6.25
-      : cameraDistanceToFitObject(
-        camera,
-        exportObject,
-        exportTarget,
-        viewDirection,
-        0.96,
+    if (!singlePot) {
+      // Preserve the current on-screen camera exactly. Render at the viewport's
+      // aspect ratio, then center that unchanged view on the square canvas.
+      const viewportAspect = Math.max(previousSize.x, 1) / Math.max(previousSize.y, 1);
+      const renderWidth = viewportAspect >= 1 ? exportSize : Math.round(exportSize * viewportAspect);
+      const renderHeight = viewportAspect >= 1 ? Math.round(exportSize / viewportAspect) : exportSize;
+      renderer.setSize(renderWidth, renderHeight, false);
+      camera.aspect = previousAspect;
+      camera.updateProjectionMatrix();
+      renderer.render(sceneRoot, camera);
+      context.drawImage(
+        renderer.domElement,
+        Math.round((exportSize - renderWidth) / 2),
+        Math.round((exportSize - renderHeight) / 2),
+        renderWidth,
+        renderHeight,
       );
-    camera.position.copy(exportTarget).addScaledVector(viewDirection, exportDistance);
-    camera.lookAt(exportTarget);
-    camera.updateProjectionMatrix();
-    renderer.render(sceneRoot, camera);
-    context.drawImage(renderer.domElement, 0, 0, exportSize, exportSize);
+    } else {
+      // The dedicated single-pot HD action still fits the selected item.
+      renderer.setSize(exportSize, exportSize, false);
+      camera.aspect = 1;
+      const selectedPot = pairMode === "none" && groupCount > 1
+        ? model.getObjectByName(`POT_SLOT_${activePotIndex}`)
+        : null;
+      const exportObject = selectedPot ?? model;
+      const exportTarget = new THREE.Box3().setFromObject(exportObject).getCenter(new THREE.Vector3());
+      const exportDistance = cameraDistanceToFitObject(camera, exportObject, exportTarget, viewDirection, 0.72);
+      camera.position.copy(exportTarget).addScaledVector(viewDirection, exportDistance);
+      camera.lookAt(exportTarget);
+      camera.updateProjectionMatrix();
+      renderer.render(sceneRoot, camera);
+      context.drawImage(renderer.domElement, 0, 0, exportSize, exportSize);
+    }
 
     sceneRoot.background = previousBackground;
     if (studioFloor && previousFloorVisibility !== undefined) {
@@ -1777,15 +1963,7 @@ export function PotStudio() {
     renderer.setSize(previousSize.x, previousSize.y, false);
     controls.update();
 
-    outputCanvas.toBlob((blob) => {
-      if (!blob) return;
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `壶身图案预览-${displayLabel}${singlePot ? `-第${activePotIndex + 1}只-高清` : pairMode !== "none" ? "-一大一小" : groupCount > 1 ? `-组合${groupCount}只` : ""}-${Date.now()}.png`;
-      link.click();
-      URL.revokeObjectURL(url);
-    }, "image/png");
+    downloadOutput();
   };
 
   const downloadTemplate = () => {
@@ -1843,7 +2021,7 @@ export function PotStudio() {
         <div className="top-actions">
           <a className="studio-back-link" href="/">返回花色目录</a>
           <button className="ghost-button" onClick={downloadTemplate}>下载展开图模板</button>
-          <button className="primary-button" onClick={exportImage} disabled={!ready}>导出当前视图</button>
+          <button className="primary-button" onClick={() => exportImage(false)} disabled={!ready}>导出当前视图</button>
         </div>
       </header>
 
@@ -1862,11 +2040,12 @@ export function PotStudio() {
             <div className="viewer-hints">
               <span>拖动左右旋转</span><span>滚轮缩放</span>
             </div>
+            <button className="front-view" onClick={showFrontView} aria-label="切换到正面视图">正面视图</button>
             <button className="reset-view" onClick={resetView} aria-label="重置模型视角">↺ 重置视角</button>
           </div>
           <div className="viewer-footer">
             <div><b>MODEL</b><span>壶体 GLB · UV 已识别</span></div>
-            <span className="studio-export-note">1600 × 1600 · 白底居中导出</span>
+            <span className="studio-export-note">3200 × 3200 · 当前画面高清导出</span>
           </div>
         </div>
 
@@ -1962,9 +2141,9 @@ export function PotStudio() {
               {texturePreview ? (
                 <img src={texturePreview} alt="已上传的展开图预览" />
               ) : (
-                <><b>＋</b><strong>点击、拖入或 Ctrl+V 粘贴图案</strong><span>JPG / PNG / WEBP</span></>
+                <><b>＋</b><strong>点击、拖入或 Ctrl+V 粘贴图案</strong><span>可一次拖入 1–4 张 · AI / PDF / JPG / PNG / WEBP / SVG</span></>
               )}
-              <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={onFileChange} />
+              <input ref={fileInputRef} type="file" multiple accept="image/png,image/jpeg,image/webp,image/svg+xml,application/pdf,.ai" onChange={onFileChange} />
             </div>
             <div className="dimension-strip">
               <div><small>展开宽度</small><strong>{wrapWidthMm} <em>mm</em></strong></div>
@@ -2016,7 +2195,7 @@ export function PotStudio() {
             </div>
             <div className="product-color-presets" aria-label="壶身常用颜色">
               {[
-                ["#eee8d9", "奶油白"],
+                [DEFAULT_BODY_COLOR, "奶油白"],
                 ["#ffffff", "纯白"],
                 ["#efe2c7", "奶油色"],
                 ["#dbe5dc", "浅绿色"],
@@ -2046,7 +2225,7 @@ export function PotStudio() {
               </div>
               <div className="product-color-presets" aria-label="盖子常用颜色">
                 {[
-                  ["#f7f6f2", "哑光白"],
+                  [DEFAULT_LID_COLOR, "奶油白"],
                   ["#e3d8c6", "米杏"],
                   ["#d8ded8", "雾灰"],
                   ["#b9c2ad", "浅绿"],

@@ -52,9 +52,9 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .ghost-button { border: 1px solid #bdbbb4; color: var(--ink); background: transparent; }
 .ghost-button:hover, .secondary-button:hover { border-color: #777a72; background: #fff; }
 
-.workspace { position: fixed; inset: 88px 0 0; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 390px; overflow: hidden; }
-.viewer-panel { min-width: 0; min-height: 0; height: 100%; display: flex; flex-direction: column; overflow: hidden; background: #d9d2c5; }
-.viewport { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+.workspace { position: static; min-height: calc(100vh - 88px); display: grid; grid-template-columns: minmax(0, 1fr) 390px; align-items: start; overflow: visible; }
+.viewer-panel { position: sticky; top: 0; min-width: 0; width: min(100%, calc(100vh - 154px)); height: auto; align-self: start; justify-self: center; display: flex; flex-direction: column; overflow: hidden; background: #d9d2c5; }
+.viewport { position: relative; flex: none; width: 100%; aspect-ratio: 1 / 1; min-height: 0; overflow: hidden; }
 .viewport-studio-clean { background: #f8f8f6; }
 .viewport canvas { position: relative; z-index: 1; width: 100%; height: 100%; display: block; cursor: grab; }
 .viewport canvas:active { cursor: grabbing; }
@@ -74,8 +74,10 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 
 .viewer-hints { position: absolute; left: 24px; bottom: 20px; z-index: 2; display: flex; gap: 9px; }
 .viewer-hints span { padding: 7px 10px; border-radius: 4px; background: rgba(41,43,38,.74); color: #f3f1eb; font-size: 11px; backdrop-filter: blur(6px); }
-.reset-view { position: absolute; right: 22px; top: 20px; z-index: 2; height: 36px; padding: 0 12px; border: 1px solid rgba(56,58,52,.24); border-radius: 5px; background: rgba(247,245,239,.72); color: #3a3d36; font-size: 12px; backdrop-filter: blur(6px); }
-.reset-view:hover { background: #f9f8f4; }
+.reset-view, .front-view { position: absolute; top: 20px; z-index: 2; height: 36px; padding: 0 12px; border: 1px solid rgba(56,58,52,.24); border-radius: 5px; background: rgba(247,245,239,.72); color: #3a3d36; font-size: 12px; backdrop-filter: blur(6px); }
+.reset-view { right: 22px; }
+.front-view { right: 122px; }
+.reset-view:hover, .front-view:hover { background: #f9f8f4; }
 
 .viewer-footer { height: 66px; display: flex; align-items: center; padding: 0 24px; border-top: 1px solid rgba(54,56,50,.15); background: #cecabf; }
 .viewer-footer > div:first-child { display: flex; align-items: baseline; gap: 12px; }
@@ -86,7 +88,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .backdrop-picker button { width: 24px; height: 24px; border: 1px solid rgba(45,47,42,.2); border-radius: 50%; box-shadow: inset 0 0 0 3px transparent; }
 .backdrop-picker button.active { box-shadow: inset 0 0 0 3px #f8f7f2; outline: 1px solid #55584f; }
 
-.control-panel { min-width: 0; min-height: 0; height: 100%; overflow-y: auto; overscroll-behavior: contain; background: var(--panel); border-left: 1px solid var(--line); }
+.control-panel { min-width: 0; min-height: 0; height: auto; overflow: visible; background: var(--panel); border-left: 1px solid var(--line); }
 .control-section { padding: 25px 26px 24px; border-bottom: 1px solid var(--line); }
 .section-title { display: flex; align-items: center; gap: 10px; margin-bottom: 17px; }
 .section-title span { font: 600 10px monospace; color: var(--accent); letter-spacing: .1em; }
@@ -162,8 +164,8 @@ input[type="range"] { width: 100%; height: 3px; accent-color: var(--accent); }
 
 @media (max-width: 920px) {
   .workspace { position: static; min-height: calc(100vh - 88px); grid-template-columns: 1fr; overflow: visible; }
-  .viewer-panel { min-height: 62vh; }
-  .viewport { min-height: 500px; }
+  .viewer-panel { position: static; width: min(100%, calc(100vh - 154px)); min-height: 0; }
+  .viewport { min-height: 0; }
   .control-panel { height: auto; overflow: visible; border-left: 0; border-top: 1px solid var(--line); }
 }
 
