@@ -530,6 +530,17 @@ function Storefront() {
     }));
   }
 
+  function jumpToCustomization(event) {
+    event.preventDefault();
+    setVisibleSeriesCount(groupedPatterns.length);
+    setSeriesMenuOpen(false);
+    setCartOpen(false);
+    window.history.pushState(null, "", "#customization");
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+      document.getElementById("customization")?.scrollIntoView({ behavior: "auto", block: "start" });
+    }));
+  }
+
   function chooseFilter(nextFilter) {
     setFilter(nextFilter);
     setSeriesMenuOpen(false);
@@ -688,8 +699,8 @@ function Storefront() {
         <a className="brand-link" href="#top" aria-label="Hobby Lobby home"><img src="/assets/brand-logo.webp" alt="Hobby Lobby Ask for More" width="256" height="256" decoding="async" /></a>
         <nav aria-label={localize(language, "主导航", "Main navigation", "التنقل الرئيسي")}>
           <a href="#gallery">{t.navGallery}</a>
-          <a href="#customization">{localize(language, "定制服务", "Customization", "خدمة التخصيص")}</a>
-          <a href="#customization">{localize(language, "关于我们", "About Us", "من نحن")}</a>
+          <a href="#customization" onClick={jumpToCustomization}>{localize(language, "定制服务", "Customization", "خدمة التخصيص")}</a>
+          <a href="#customization" onClick={jumpToCustomization}>{localize(language, "关于我们", "About Us", "من نحن")}</a>
           <a href="/studio/">{localize(language, "在线试样", "Pattern Studio", "استوديو التصميم")}</a>
         </nav>
         <div className="language-switcher" role="group" aria-label={t.languageLabel}>
@@ -708,7 +719,7 @@ function Storefront() {
             <p className="hero-lede">{t.heroLead}</p>
             <div className="hero-actions">
               <a className="button button-primary" href="#gallery">{t.browseAll} <ArrowDown weight="bold" /></a>
-              <a className="button button-secondary" href="#customization">{t.viewSpecs} <ArrowRight weight="bold" /></a>
+              <a className="button button-secondary" href="#customization" onClick={jumpToCustomization}>{t.viewSpecs} <ArrowRight weight="bold" /></a>
             </div>
             <div className="hero-notes" aria-label={localize(language, "产品摘要", "Product summary", "ملخص المنتج")}>
               <span><PaintBrush weight="regular" /> {t.heroNotePatterns}</span>
