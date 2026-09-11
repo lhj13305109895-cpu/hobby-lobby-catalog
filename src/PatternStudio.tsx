@@ -89,7 +89,10 @@ const POT_12_RADIUS_PROFILE: Array<[number, number]> = [
 ];
 // The visible joint at the upper edge of the raised ring is the single split:
 // lid above, body and artwork below.
-const SEAM_RING_HEIGHT_RATIO = 0;
+// Keep the narrow collar below the lid visually continuous with the vessel.
+// The duplicate artwork-carrier surface is hidden separately to prevent the
+// dark overlap line that previously appeared around this boundary.
+const SEAM_RING_HEIGHT_RATIO = 0.012;
 const PRINTABLE_BODY_TOP_RATIO = 1 - SEAM_RING_HEIGHT_RATIO;
 // Extend the carrier slightly past the physical joint, then clip it back to a
 // perfectly horizontal plane. The source mesh has an uneven open top edge, so
@@ -369,7 +372,11 @@ function createConformingBodyPrintGeometry(
   return geometry;
 }
 
-function clipPrintMaterialToHeight(material: THREE.MeshBasicMaterial, printBottom: number, printTop: number) {
+function clipPrintMaterialToHeight(
+  material: THREE.MeshBasicMaterial | THREE.MeshPhysicalMaterial,
+  printBottom: number,
+  printTop: number,
+) {
   material.onBeforeCompile = (shader) => {
     shader.uniforms.printBottom = { value: printBottom };
     shader.uniforms.printTop = { value: printTop };
@@ -700,6 +707,85 @@ type FixturePartUniforms = {
   fixtureRadius: { value: number };
 };
 
+function createFixtureSeamCover(
+  printGeometry: THREE.BufferGeometry,
+  fixtureColor: string,
+) {
+  printGeometry.computeBoundingBox();
+  const printBox = printGeometry.boundingBox;
+  if (!printBox) return null;
+
+  const centerX = (printBox.min.x + printBox.max.x) / 2;
+  const centerZ = (printBox.min.z + printBox.max.z) / 2;
+  const printHeight = printBox.max.y - printBox.min.y;
+  const seamY = printBox.max.y - printHeight * SEAM_RING_HEIGHT_RATIO;
+  const coverHeight = 0.0022;
+  const geometry = createSeamClippedPrintGeometry(printGeometry);
+  const position = geometry.getAttribute("position");
+  for (let vertex = 0; vertex < position.count; vertex++) {
+    position.setX(vertex, centerX + (position.getX(vertex) - centerX) * 1.003);
+    position.setZ(vertex, centerZ + (position.getZ(vertex) - centerZ) * 1.003);
+  }
+  position.needsUpdate = true;
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  const material = new THREE.MeshBasicMaterial({
+    color: fixtureColor,
+    side: THREE.DoubleSide,
+    polygonOffset: true,
+    polygonOffsetFactor: -6,
+    polygonOffsetUnits: -6,
+  });
+  material.userData.directFixtureColor = true;
+  clipPrintMaterialToHeight(material, seamY - coverHeight, seamY);
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.name = "FIXTURE_SEAM_COVER";
+  // Straddle the joint by less than one source-mesh millimetre, enough to hide
+  // the damaged lip without creating a visible collar below the lid.
+  mesh.position.y = coverHeight * 0.45;
+  mesh.renderOrder = 3;
+  mesh.castShadow = false;
+  mesh.receiveShadow = false;
+  return { mesh, material };
+}
+
+function createBodySeamCover(
+  printGeometry: THREE.BufferGeometry,
+  bodyMaterial: THREE.MeshPhysicalMaterial,
+  renderOrder = 3,
+) {
+  printGeometry.computeBoundingBox();
+  const printBox = printGeometry.boundingBox;
+  if (!printBox) return null;
+
+  const centerX = (printBox.min.x + printBox.max.x) / 2;
+  const centerZ = (printBox.min.z + printBox.max.z) / 2;
+  const printHeight = printBox.max.y - printBox.min.y;
+  const seamY = printBox.max.y - printHeight * SEAM_RING_HEIGHT_RATIO;
+  const coverHeight = 0.002;
+  const geometry = createSeamClippedPrintGeometry(printGeometry);
+  const position = geometry.getAttribute("position");
+  for (let vertex = 0; vertex < position.count; vertex++) {
+    position.setX(vertex, centerX + (position.getX(vertex) - centerX) * 1.01);
+    position.setZ(vertex, centerZ + (position.getZ(vertex) - centerZ) * 1.01);
+  }
+  position.needsUpdate = true;
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  bodyMaterial.polygonOffset = true;
+  bodyMaterial.polygonOffsetFactor = -8;
+  bodyMaterial.polygonOffsetUnits = -8;
+  bodyMaterial.depthWrite = false;
+  clipPrintMaterialToHeight(bodyMaterial, seamY - coverHeight, seamY);
+  const mesh = new THREE.Mesh(geometry, bodyMaterial);
+  mesh.name = "BODY_SEAM_COVER";
+  mesh.position.y = coverHeight * 0.9;
+  mesh.renderOrder = renderOrder;
+  mesh.castShadow = false;
+  mesh.receiveShadow = false;
+  return mesh;
+}
+
 function configureFixturePartMaterial(
   material: THREE.MeshPhysicalMaterial,
   printGeometry: THREE.BufferGeometry,
@@ -715,14 +801,19 @@ function configureFixturePartMaterial(
   const centerY = (printBox.min.z + printBox.max.z) / 2;
   const bodyRadius = Math.max(printBox.max.x - printBox.min.x, printBox.max.z - printBox.min.z) / 2;
   const printHeight = printBox.max.y - printBox.min.y;
+  // Both 319 sizes share the same physical lid/body joint. Keeping the same
+  // ratio prevents the 2L version from acquiring an artificial dark collar.
+  const seamRingRatio = SEAM_RING_HEIGHT_RATIO;
   const uniforms: FixturePartUniforms = {
     bodyColor: { value: new THREE.Color(bodyColorHex) },
     fixtureColor: { value: new THREE.Color(fixtureColorHex) },
     // The UV shell reaches the upper lip of the raised seam ring. The actual
     // lid/body joint is the lower lip, so include the whole ring with the lid.
-    bodyTopHeight: { value: printBox.max.y - printHeight * SEAM_RING_HEIGHT_RATIO },
+    bodyTopHeight: { value: printBox.max.y - printHeight * seamRingRatio },
     bodyCenter: { value: new THREE.Vector2(centerX, centerY) },
-    fixtureRadius: { value: bodyRadius * 1.12 },
+    // The straight body mask deliberately stops before the handle root. The
+    // shader briefly widens it only at the seam to catch the flared shoulder.
+    fixtureRadius: { value: bodyRadius * 1.35 },
   };
 
   material.onBeforeCompile = (shader) => {
@@ -765,13 +856,56 @@ uniform float uPartFixtureRadius;`,
         "vec4 diffuseColor = vec4( diffuse, opacity );",
         `float partHeight = -vPartLocalPosition.z;
 float partRadius = length(vPartLocalPosition.xy - uPartBodyCenter);
-float partIsBody = (partHeight < uPartBodyTopHeight && partRadius <= uPartFixtureRadius) ? 1.0 : 0.0;
+// Keep the colour split geometrically exact. A smoothstep here blends the
+// contrasting lid/body colours across the source mesh's irregular seam
+// triangles and shows up as pale speckles when the lid is dark.
+float partHeightMask = 1.0 - step(uPartBodyTopHeight, partHeight);
+float partNearSeam = step(uPartBodyTopHeight - 0.0025, partHeight);
+// The handle lives on the positive-X side. Widen the shoulder mask around the
+// rest of the circular seam, but stop before the handle root so its underside
+// can never inherit the vessel colour.
+float partAwayFromHandle = 1.0 - step(
+  uPartFixtureRadius * 0.88,
+  vPartLocalPosition.x - uPartBodyCenter.x
+);
+float partAllowedRadius = mix(
+  uPartFixtureRadius,
+  uPartFixtureRadius * 1.185,
+  partNearSeam * partAwayFromHandle
+);
+float partRadiusMask = 1.0 - step(partAllowedRadius, partRadius);
+float partIsBody = partHeightMask * partRadiusMask;
 vec3 partSurfaceColor = mix(uPartFixtureColor, uPartBodyColor, partIsBody);
 vec4 diffuseColor = vec4(partSurfaceColor, opacity);`,
       )
       .replace(
+        "#include <normal_fragment_begin>",
+        `#include <normal_fragment_begin>
+// The source GLB has a narrow row of noisy normals along the mould seam.
+// Blend only the cylindrical seam back to its true radial normal so dark
+// lids do not develop a dotted silver highlight; leave the handle untouched.
+float partSeamNormalBlend = 1.0 - smoothstep(
+  0.0004,
+  0.004,
+  abs(partHeight - uPartBodyTopHeight)
+);
+float partSeamIsCylinder = 1.0 - step(uPartFixtureRadius * 0.95, partRadius);
+normal = normalize(mix(
+  normal,
+  vPartRadialViewNormal,
+  partSeamNormalBlend * partSeamIsCylinder
+));`,
+      )
+      .replace(
         "#include <lights_physical_fragment>",
         `#include <lights_physical_fragment>
+float partLidSeam = step(uPartBodyTopHeight, partHeight)
+  * (1.0 - smoothstep(uPartBodyTopHeight, uPartBodyTopHeight + 0.004, partHeight))
+  * partSeamIsCylinder;
+material.roughness = mix(material.roughness, 1.0, partLidSeam);
+material.specularColor = mix(material.specularColor, vec3(0.0), partLidSeam);
+material.specularColorBlended = mix(material.specularColorBlended, vec3(0.0), partLidSeam);
+material.specularF90 = mix(material.specularF90, 0.0, partLidSeam);
 // The product combines a cream matte vessel with slightly drier white matte
 // plastic fixtures, even though both regions share this source mesh.
 if (partIsBody < 0.5) {
@@ -783,7 +917,7 @@ if (partIsBody < 0.5) {
 }`,
       );
   };
-  material.customProgramCacheKey = () => "fixture-part-real-product-matte-v6";
+  material.customProgramCacheKey = () => "fixture-part-real-product-matte-v14-clean-seam-specular";
   material.needsUpdate = true;
   return uniforms;
 }
@@ -866,7 +1000,7 @@ export function PotStudio() {
   const modelMaterialsRef = useRef<THREE.MeshPhysicalMaterial[]>([]);
   const printMaterialsRef = useRef<THREE.MeshBasicMaterial[]>([]);
   const printSurfacesRef = useRef<THREE.Mesh[]>([]);
-  const fixtureMaterialsRef = useRef<THREE.MeshPhysicalMaterial[]>([]);
+  const fixtureMaterialsRef = useRef<Array<THREE.MeshPhysicalMaterial | THREE.MeshBasicMaterial>>([]);
   const fixturePartUniformsRef = useRef<FixturePartUniforms[]>([]);
   const uploadedTextureRef = useRef<THREE.Texture | null>(null);
   const uploadedAspectRatioRef = useRef<number | null>(null);
@@ -1068,7 +1202,7 @@ export function PotStudio() {
         const gltfs = await Promise.all(pairCapacities.map((kind) => loader.loadAsync(modelPath(kind))));
         if (disposed) return;
         const allBodyMaterials: THREE.MeshPhysicalMaterial[] = [];
-        const allFixtureMaterials: THREE.MeshPhysicalMaterial[] = [];
+        const allFixtureMaterials: Array<THREE.MeshPhysicalMaterial | THREE.MeshBasicMaterial> = [];
         const allFixturePartUniforms: FixturePartUniforms[] = [];
         const allPrintMaterials: THREE.MeshBasicMaterial[] = [];
         const allPrintSurfaces: THREE.Mesh[] = [];
@@ -1136,15 +1270,24 @@ export function PotStudio() {
               child.material = fixtureMaterial;
             }
           });
+          let fixturePartUniforms: FixturePartUniforms | null = null;
           if (uses319PairRecipe && printSource) {
-            const fixturePartUniforms = configureFixturePartMaterial(
+            fixturePartUniforms = configureFixturePartMaterial(
               fixtureMaterial,
               printSource.geometry as THREE.BufferGeometry,
               new THREE.Color(bodyColor).getHex(),
               lidColor,
               pairIsTwoLiter,
             );
-            allFixturePartUniforms.push(fixturePartUniforms);
+            if (fixturePartUniforms) allFixturePartUniforms.push(fixturePartUniforms);
+            // Both 319 capacities use the exact same lid/body boundary recipe.
+            // Only the vessel height differs on the 2L model.
+            const bodySeamCover = createBodySeamCover(
+              printSource.geometry as THREE.BufferGeometry,
+              bodyMaterial,
+              1,
+            );
+            if (bodySeamCover) model.add(bodySeamCover);
           }
           let overlay: THREE.Mesh | null = null;
           if (printSource) {
@@ -1155,6 +1298,10 @@ export function PotStudio() {
             overlay.renderOrder = 2;
             overlay.visible = Boolean(artwork);
             printSource.parent?.add(overlay);
+            // POT_ORIGINAL_500K already contains the complete vessel shell.
+            // BODY_PRINT is only an artwork carrier; rendering both surfaces
+            // produces a dark, flickering overlap line around the upper seam.
+            printSource.visible = false;
           } else if (pairIsNewPot && firstSurface) {
             const bodyBandBottom = -1.11;
             const bodyBandHeight = 2.55 * (NEW_POT_WRAP_HEIGHT_MM / NEW_POT_OVERALL_HEIGHT_MM);
@@ -1365,6 +1512,15 @@ export function PotStudio() {
             lidColor,
             isTwoLiter,
           );
+          const seamCover = null;
+          const bodySeamCover = !isStandaloneModel && printSources[0]
+            ? createBodySeamCover(
+              printSources[0].geometry as THREE.BufferGeometry,
+              bodyMaterial,
+              1,
+            )
+            : null;
+          if (bodySeamCover) model.add(bodySeamCover);
           let printSurfaces = printSources.map((source) => {
             const overlay = source.clone(false) as THREE.Mesh;
             overlay.name = "BODY_PRINT_TRANSPARENT_OVERLAY";
@@ -1506,7 +1662,9 @@ export function PotStudio() {
           modelMaterialsRef.current = materials;
           printMaterialsRef.current = groupedPrintMaterials;
           printSurfacesRef.current = groupedPrintSurfaces;
-          fixtureMaterialsRef.current = isStandaloneModel ? [] : [fixtureMaterial];
+          fixtureMaterialsRef.current = isStandaloneModel
+            ? []
+            : [fixtureMaterial, ...(seamCover ? [seamCover.material] : [])];
           fixturePartUniformsRef.current = fixturePartUniforms ? [fixturePartUniforms] : [];
           modelRef.current = displayGroup;
           scene.add(displayGroup);
@@ -1601,10 +1759,12 @@ export function PotStudio() {
         ? MATTE_PLASTIC_SURFACE
         : FINISH_SURFACE[finish];
     fixtureMaterialsRef.current.forEach((material) => {
-      material.color.set(0xffffff);
-      material.roughness = fixtureSurface.roughness;
-      material.clearcoat = fixtureSurface.clearcoat;
-      material.clearcoatRoughness = fixtureSurface.clearcoatRoughness;
+      material.color.set(material.userData.directFixtureColor ? lidColor : 0xffffff);
+      if (material instanceof THREE.MeshPhysicalMaterial) {
+        material.roughness = fixtureSurface.roughness;
+        material.clearcoat = fixtureSurface.clearcoat;
+        material.clearcoatRoughness = fixtureSurface.clearcoatRoughness;
+      }
       material.needsUpdate = true;
     });
   }, [bodyColor, lidColor, finish, capacity, ready]);
