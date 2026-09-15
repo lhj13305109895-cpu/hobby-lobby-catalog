@@ -98,6 +98,13 @@ const PRINTABLE_BODY_TOP_RATIO = 1 - SEAM_RING_HEIGHT_RATIO;
 // perfectly horizontal plane. The source mesh has an uneven open top edge, so
 // stopping at its authored boundary exposes a jagged row around the shoulder.
 const PRINT_SURFACE_TOP_EXTENSION_RATIO = 0.04;
+// A sub-millimetre overlap prevents the renderer's edge antialiasing from
+// exposing a bright hairline between the artwork and the dark lid.
+const PRINT_SURFACE_SEAM_OVERLAP = 0.0012;
+// The 319 source silhouette reads a fraction of a degree left-heavy even when
+// its geometric centre is vertical. A tiny X-by-Y shear corrects that optical
+// lean while keeping every horizontal lid/body seam perfectly level.
+const POT_319_OPTICAL_SHEAR_X_BY_Y = 0.0045;
 const LOCKED_POLAR_ANGLE = Math.atan2(Math.hypot(3.2, 4.8), 1.35 - 0.15);
 const NEW_POT_CAMERA_POSITION = new THREE.Vector3(0, 1.35, 9.15);
 const NEW_POT_CAMERA_TARGET = new THREE.Vector3(0, 0.08, 0);
@@ -125,6 +132,48 @@ type CapacityArtwork = {
   name: string;
   aspectRatio: number | null;
 };
+
+function maximumPrintHeightForCapacity(capacity: Capacity) {
+  if (capacity === "2.0") return TWO_LITER_WRAP_HEIGHT_MM;
+  if (capacity === "1.6") return STANDARD_WRAP_HEIGHT_MM;
+  if (capacity === "1.2") return POT_12_WRAP_HEIGHT_MM;
+  return NEW_POT_WRAP_HEIGHT_MM;
+}
+
+function inferArtworkPrintHeight(capacity: Capacity, width: number, height: number) {
+  const printWidth = capacity === "145" ? NEW_POT_WRAP_WIDTH_MM : WRAP_WIDTH_MM;
+  const maximumHeight = maximumPrintHeightForCapacity(capacity);
+  return THREE.MathUtils.clamp(
+    Math.round((printWidth * height / width) * 10) / 10,
+    1,
+    maximumHeight,
+  );
+}
+
+function formatMillimetres(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+function applyArtworkTextureTransform(texture: THREE.Texture, settings: TextureSettings) {
+  const image = texture.image as { width?: number } | undefined;
+  // Sample a few pixels inside each horizontal edge, then stretch that inner
+  // range across the same 365.99 mm circumference. This behaves like print
+  // bleed: the physical width is unchanged, but transparent/white edge pixels
+  // cannot open into a vertical line at the 0°/360° join.
+  const horizontalInset = image?.width
+    ? Math.min(0.01, 3 / image.width)
+    : 0;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(
+    settings.scaleX * (1 - horizontalInset * 2),
+    settings.scaleY,
+  );
+  texture.offset.set(settings.offsetX, settings.offsetY);
+  texture.center.set(0.5, 0.5);
+  texture.rotation = THREE.MathUtils.degToRad(settings.rotation);
+  texture.needsUpdate = true;
+}
 
 function pot12RadiusAt(y: number) {
   for (let index = 0; index < POT_12_RADIUS_PROFILE.length - 1; index += 1) {
@@ -174,7 +223,10 @@ function createPot12PrintGeometry() {
   return geometry;
 }
 
-function createSeamClippedPrintGeometry(source: THREE.BufferGeometry) {
+function createSeamClippedPrintGeometry(
+  source: THREE.BufferGeometry,
+  artworkHeightRatio = 1,
+) {
   const position = source.getAttribute("position");
   const sourceUv = source.getAttribute("uv");
   const sourceNormal = source.getAttribute("normal");
@@ -187,6 +239,8 @@ function createSeamClippedPrintGeometry(source: THREE.BufferGeometry) {
     maxY = Math.max(maxY, position.getY(vertex));
   }
   const height = Math.max(maxY - minY, Number.EPSILON);
+  const visibleTopHeightRatio = PRINTABLE_BODY_TOP_RATIO
+    * THREE.MathUtils.clamp(artworkHeightRatio, Number.EPSILON, 1);
   let topUvTotal = 0;
   let topUvCount = 0;
   let bottomUvTotal = 0;
@@ -226,14 +280,14 @@ function createSeamClippedPrintGeometry(source: THREE.BufferGeometry) {
     };
   };
   const intersect = (from: PrintVertex, to: PrintVertex): PrintVertex => {
-    const amount = (PRINTABLE_BODY_TOP_RATIO - from.heightRatio)
+    const amount = (visibleTopHeightRatio - from.heightRatio)
       / (to.heightRatio - from.heightRatio);
     return {
       position: from.position.clone().lerp(to.position, amount),
       normal: from.normal.clone().lerp(to.normal, amount).normalize(),
       u: THREE.MathUtils.lerp(from.u, to.u, amount),
       v: THREE.MathUtils.lerp(from.v, to.v, amount),
-      heightRatio: PRINTABLE_BODY_TOP_RATIO,
+      heightRatio: visibleTopHeightRatio,
     };
   };
   const clipTriangle = (triangle: PrintVertex[]) => {
@@ -241,8 +295,8 @@ function createSeamClippedPrintGeometry(source: THREE.BufferGeometry) {
     for (let index = 0; index < triangle.length; index++) {
       const from = triangle[index];
       const to = triangle[(index + 1) % triangle.length];
-      const fromInside = from.heightRatio <= PRINTABLE_BODY_TOP_RATIO;
-      const toInside = to.heightRatio <= PRINTABLE_BODY_TOP_RATIO;
+      const fromInside = from.heightRatio <= visibleTopHeightRatio;
+      const toInside = to.heightRatio <= visibleTopHeightRatio;
       if (toInside) {
         if (!fromInside) clipped.push(intersect(from, to));
         clipped.push(to);
@@ -264,7 +318,7 @@ function createSeamClippedPrintGeometry(source: THREE.BufferGeometry) {
     );
     outputNormals.push(vertex.normal.x, vertex.normal.y, vertex.normal.z);
     const remappedHeight = THREE.MathUtils.clamp(
-      vertex.heightRatio / PRINTABLE_BODY_TOP_RATIO,
+      vertex.heightRatio / visibleTopHeightRatio,
       0,
       1,
     );
@@ -460,6 +514,20 @@ function cameraDistanceToFitObject(
   return distance;
 }
 
+function addStraightened319Model(parent: THREE.Group, model: THREE.Object3D) {
+  const correction = new THREE.Group();
+  correction.name = "POT_319_OPTICAL_STRAIGHTENING";
+  correction.matrixAutoUpdate = false;
+  correction.matrix.set(
+    1, POT_319_OPTICAL_SHEAR_X_BY_Y, 0, 0,
+    0, 1, 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 1,
+  );
+  correction.add(model);
+  parent.add(correction);
+}
+
 function extendBodyToTwoLiterLegacy(model: THREE.Object3D) {
   let printSurface: THREE.Mesh | null = null;
   model.traverse((child) => {
@@ -609,6 +677,14 @@ function extendBodyToTwoLiter(model: THREE.Object3D) {
   const printHeight = bodyTopHeight - printBottomHeight;
   const heightScale = TWO_LITER_WRAP_HEIGHT_MM / STANDARD_WRAP_HEIGHT_MM;
   const extraHeight = printHeight * (heightScale - 1);
+  // The two capacities share the exact same shoulder, neck and lid tooling.
+  // Preserve that authored top section and put all added 2L height into the
+  // straight lower wall; stretching the shoulder was corrupting its seam.
+  const preservedTopHeight = printHeight * 0.18;
+  const preservedTopStartHeight = bodyTopHeight - preservedTopHeight;
+  const printLowerScale = (
+    preservedTopStartHeight + extraHeight - printBottomHeight
+  ) / (preservedTopStartHeight - printBottomHeight);
   const centerX = (printBox.min.x + printBox.max.x) / 2;
   const centerY = (printBox.min.z + printBox.max.z) / 2;
   const bodyRadius = Math.max(printBox.max.x - printBox.min.x, printBox.max.z - printBox.min.z) / 2;
@@ -617,7 +693,9 @@ function extendBodyToTwoLiter(model: THREE.Object3D) {
   const printPosition = printGeometry.getAttribute("position");
   for (let index = 0; index < printPosition.count; index++) {
     const height = printPosition.getY(index);
-    const extendedHeight = printBottomHeight + (height - printBottomHeight) * heightScale;
+    const extendedHeight = height >= preservedTopStartHeight
+      ? height + extraHeight
+      : printBottomHeight + (height - printBottomHeight) * printLowerScale;
     printPosition.setY(index, extendedHeight);
   }
   printPosition.needsUpdate = true;
@@ -628,8 +706,12 @@ function extendBodyToTwoLiter(model: THREE.Object3D) {
   fixtureMeshes.forEach((mesh) => {
     const geometry = mesh.geometry as THREE.BufferGeometry;
     const position = geometry.getAttribute("position");
+    const normal = geometry.getAttribute("normal");
     const meshIndex = geometry.getIndex();
     if (!position || !meshIndex) return;
+    const fixtureLowerScale = (
+      preservedTopStartHeight + extraHeight - bodyBottomHeight
+    ) / (preservedTopStartHeight - bodyBottomHeight);
 
     const parent = new Int32Array(position.count);
     const rank = new Uint8Array(position.count);
@@ -687,13 +769,26 @@ function extendBodyToTwoLiter(model: THREE.Object3D) {
 
     for (let vertex = 0; vertex < position.count; vertex++) {
       const height = -position.getZ(vertex);
-      const extendedHeight = modeByRoot.get(findRoot(vertex)) === "shift"
+      const mode = modeByRoot.get(findRoot(vertex));
+      const preserveAuthoredTop = height >= preservedTopStartHeight;
+      const extendedHeight = mode === "shift" || preserveAuthoredTop
         ? height + extraHeight
-        : bodyBottomHeight + (height - bodyBottomHeight) * heightScale;
+        : bodyBottomHeight + (height - bodyBottomHeight) * fixtureLowerScale;
       position.setZ(vertex, -extendedHeight);
+      // Shifted fixture components keep their authored normals. Only the
+      // stretched vessel component needs the inverse-scale normal transform;
+      // recomputing every normal was what created the dotted 2L seam.
+      if (normal && mode === "scale" && !preserveAuthoredTop) {
+        const nx = normal.getX(vertex);
+        const ny = normal.getY(vertex);
+        const nz = normal.getZ(vertex) / fixtureLowerScale;
+        const length = Math.hypot(nx, ny, nz) || 1;
+        normal.setXYZ(vertex, nx / length, ny / length, nz / length);
+      }
     }
     position.needsUpdate = true;
-    geometry.computeVertexNormals();
+    if (normal) normal.needsUpdate = true;
+    else geometry.computeVertexNormals();
     geometry.computeBoundingBox();
     geometry.computeBoundingSphere();
   });
@@ -856,10 +951,16 @@ uniform float uPartFixtureRadius;`,
         "vec4 diffuseColor = vec4( diffuse, opacity );",
         `float partHeight = -vPartLocalPosition.z;
 float partRadius = length(vPartLocalPosition.xy - uPartBodyCenter);
-// Keep the colour split geometrically exact. A smoothstep here blends the
-// contrasting lid/body colours across the source mesh's irregular seam
-// triangles and shows up as pale speckles when the lid is dark.
-float partHeightMask = 1.0 - step(uPartBodyTopHeight, partHeight);
+// The 2L conversion now preserves this authored top section, so a one-pixel
+// derivative transition can smooth the colour boundary without exposing the
+// old stretched-shoulder speckles.
+float partHeightDerivative = fwidth(partHeight);
+float partHeightAntialias = max(partHeightDerivative * 1.15, 0.00008);
+float partHeightMask = 1.0 - smoothstep(
+  uPartBodyTopHeight - partHeightAntialias * 2.0,
+  uPartBodyTopHeight,
+  partHeight
+);
 float partNearSeam = step(uPartBodyTopHeight - 0.0025, partHeight);
 // The handle lives on the positive-X side. Widen the shoulder mask around the
 // rest of the circular seam, but stop before the handle root so its underside
@@ -884,12 +985,15 @@ vec4 diffuseColor = vec4(partSurfaceColor, opacity);`,
 // The source GLB has a narrow row of noisy normals along the mould seam.
 // Blend only the cylindrical seam back to its true radial normal so dark
 // lids do not develop a dotted silver highlight; leave the handle untouched.
+// Cover at least a few screen pixels. At a distant camera position the whole
+// noisy normal row can otherwise collapse into one shimmering dotted line.
+float partSeamFilterWidth = max(fwidth(partHeight) * 4.0, 0.012);
 float partSeamNormalBlend = 1.0 - smoothstep(
-  0.0004,
-  0.004,
+  0.0,
+  partSeamFilterWidth,
   abs(partHeight - uPartBodyTopHeight)
 );
-float partSeamIsCylinder = 1.0 - step(uPartFixtureRadius * 0.95, partRadius);
+float partSeamIsCylinder = partAwayFromHandle;
 normal = normalize(mix(
   normal,
   vPartRadialViewNormal,
@@ -900,7 +1004,11 @@ normal = normalize(mix(
         "#include <lights_physical_fragment>",
         `#include <lights_physical_fragment>
 float partLidSeam = step(uPartBodyTopHeight, partHeight)
-  * (1.0 - smoothstep(uPartBodyTopHeight, uPartBodyTopHeight + 0.004, partHeight))
+  * (1.0 - smoothstep(
+      uPartBodyTopHeight,
+      uPartBodyTopHeight + partSeamFilterWidth,
+      partHeight
+    ))
   * partSeamIsCylinder;
 material.roughness = mix(material.roughness, 1.0, partLidSeam);
 material.specularColor = mix(material.specularColor, vec3(0.0), partLidSeam);
@@ -917,7 +1025,7 @@ if (partIsBody < 0.5) {
 }`,
       );
   };
-  material.customProgramCacheKey = () => "fixture-part-real-product-matte-v14-clean-seam-specular";
+  material.customProgramCacheKey = () => "fixture-part-real-product-matte-v20-preserved-shoulder-aa";
   material.needsUpdate = true;
   return uniforms;
 }
@@ -978,7 +1086,10 @@ export function PotStudio() {
   const isNewPot = capacity === "145";
   const isOneTwoLiter = capacity === "1.2";
   const isStandaloneModel = isNewPot || isOneTwoLiter;
-  const [newPotPrintHeightMm, setNewPotPrintHeightMm] = useState(NEW_POT_WRAP_HEIGHT_MM);
+  const [newPotPrintHeightMm, setNewPotPrintHeightMm] = useState(
+    maximumPrintHeightForCapacity(capacity),
+  );
+  const [artworkGeometryRevision, setArtworkGeometryRevision] = useState(0);
   const newPotPrintHeightsRef = useRef<Record<Capacity, number[]>>({
     "1.6": Array(4).fill(STANDARD_WRAP_HEIGHT_MM),
     "2.0": Array(4).fill(TWO_LITER_WRAP_HEIGHT_MM),
@@ -1280,21 +1391,19 @@ export function PotStudio() {
               pairIsTwoLiter,
             );
             if (fixturePartUniforms) allFixturePartUniforms.push(fixturePartUniforms);
-            // Both 319 capacities use the exact same lid/body boundary recipe.
-            // Only the vessel height differs on the 2L model.
-            const bodySeamCover = createBodySeamCover(
-              printSource.geometry as THREE.BufferGeometry,
-              bodyMaterial,
-              1,
-            );
-            if (bodySeamCover) model.add(bodySeamCover);
           }
           let overlay: THREE.Mesh | null = null;
           if (printSource) {
             overlay = printSource.clone(false) as THREE.Mesh;
             overlay.name = "BODY_PRINT_MIXED_PAIR_OVERLAY";
-            overlay.geometry = createSeamClippedPrintGeometry(printSource.geometry as THREE.BufferGeometry);
+            const maximumPrintHeight = maximumPrintHeightForCapacity(kind);
+            const artworkHeight = newPotPrintHeightsRef.current[kind][0];
+            overlay.geometry = createSeamClippedPrintGeometry(
+              printSource.geometry as THREE.BufferGeometry,
+              artworkHeight / maximumPrintHeight,
+            );
             overlay.material = printMaterial;
+            overlay.position.y += PRINT_SURFACE_SEAM_OVERLAP;
             overlay.renderOrder = 2;
             overlay.visible = Boolean(artwork);
             printSource.parent?.add(overlay);
@@ -1324,7 +1433,8 @@ export function PotStudio() {
             model.add(overlay);
           }
           const root = new THREE.Group();
-          root.add(model);
+          if (pairIsStandalone) root.add(model);
+          else addStraightened319Model(root, model);
           if (pairIsNewPot && overlay) {
             model.remove(overlay);
             root.add(overlay);
@@ -1513,19 +1623,19 @@ export function PotStudio() {
             isTwoLiter,
           );
           const seamCover = null;
-          const bodySeamCover = !isStandaloneModel && printSources[0]
-            ? createBodySeamCover(
-              printSources[0].geometry as THREE.BufferGeometry,
-              bodyMaterial,
-              1,
-            )
-            : null;
-          if (bodySeamCover) model.add(bodySeamCover);
+          const artworkHeightRatio = isStandaloneModel
+            ? 1
+            : newPotPrintHeightsRef.current[capacity][0]
+              / maximumPrintHeightForCapacity(capacity);
           let printSurfaces = printSources.map((source) => {
             const overlay = source.clone(false) as THREE.Mesh;
             overlay.name = "BODY_PRINT_TRANSPARENT_OVERLAY";
-            overlay.geometry = createSeamClippedPrintGeometry(source.geometry as THREE.BufferGeometry);
+            overlay.geometry = createSeamClippedPrintGeometry(
+              source.geometry as THREE.BufferGeometry,
+              artworkHeightRatio,
+            );
             overlay.material = printMaterial;
+            overlay.position.y += PRINT_SURFACE_SEAM_OVERLAP;
             overlay.castShadow = false;
             overlay.receiveShadow = false;
             overlay.renderOrder = 2;
@@ -1586,7 +1696,8 @@ export function PotStudio() {
           }
           const productRoot = new THREE.Group();
           productRoot.name = "PRODUCT_ROOT";
-          productRoot.add(model);
+          if (isStandaloneModel) productRoot.add(model);
+          else addStraightened319Model(productRoot, model);
           if (isNewPot && printSurfaces[0]) productRoot.add(printSurfaces[0]);
           // This GLB's authored front points away from the handle/spout sales
           // angle. Rotate each product itself so group members remain in one
@@ -1615,6 +1726,13 @@ export function PotStudio() {
               if (child instanceof THREE.Mesh && child.name.includes("_OVERLAY")) slotSurface = child;
             });
             if (slotSurface) {
+              if (!isStandaloneModel && slot > 0 && printSources[0]) {
+                slotSurface.geometry = createSeamClippedPrintGeometry(
+                  printSources[0].geometry as THREE.BufferGeometry,
+                  newPotPrintHeightsRef.current[capacity][slot]
+                    / maximumPrintHeightForCapacity(capacity),
+                );
+              }
               if (isNewPot && slot > 0) {
                 const bodyBandBottom = -1.11;
                 const bodyBandHeight = 2.55 * (NEW_POT_WRAP_HEIGHT_MM / NEW_POT_OVERALL_HEIGHT_MM);
@@ -1721,18 +1839,12 @@ export function PotStudio() {
         if (object instanceof THREE.Mesh) object.geometry.dispose();
       });
     };
-  }, [capacity, newPotPrintHeightMm, groupCount, pairMode]);
+  }, [capacity, newPotPrintHeightMm, artworkGeometryRevision, groupCount, pairMode]);
 
   useEffect(() => {
     const texture = uploadedTextureRef.current;
     if (!texture) return;
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(settings.scaleX, settings.scaleY);
-    texture.offset.set(settings.offsetX, settings.offsetY);
-    texture.center.set(0.5, 0.5);
-    texture.rotation = THREE.MathUtils.degToRad(settings.rotation);
-    texture.needsUpdate = true;
+    applyArtworkTextureTransform(texture, settings);
   }, [settings]);
 
   useEffect(() => {
@@ -1893,24 +2005,21 @@ export function PotStudio() {
       // runtime cylindrical UVs and therefore needs the normal image flip.
       texture.flipY = targetIsStandalone;
       texture.anisotropy = rendererRef.current?.capabilities.getMaxAnisotropy() ?? 1;
-      texture.wrapS = THREE.RepeatWrapping;
-      texture.wrapT = THREE.RepeatWrapping;
-      texture.repeat.set(targetSettings.scaleX, targetSettings.scaleY);
-      texture.offset.set(targetSettings.offsetX, targetSettings.offsetY);
-      texture.center.set(0.5, 0.5);
-      texture.rotation = THREE.MathUtils.degToRad(targetSettings.rotation);
+      applyArtworkTextureTransform(texture, targetSettings);
       const image = texture.image as { width?: number; height?: number };
       const aspectRatio = image.width && image.height ? image.width / image.height : null;
       targetArtworks[targetPotIndex] = { texture, preview: url, name: file.name, aspectRatio };
-      if (targetCapacity === "145" && image.width && image.height) {
-        const inferredHeight = THREE.MathUtils.clamp(
-          Math.round(NEW_POT_WRAP_WIDTH_MM * image.height / image.width),
-          1,
-          NEW_POT_WRAP_HEIGHT_MM,
+      if (targetCapacity !== "1.2" && image.width && image.height) {
+        const inferredHeight = inferArtworkPrintHeight(
+          targetCapacity,
+          image.width,
+          image.height,
         );
         newPotPrintHeightsRef.current[targetCapacity][targetPotIndex] = inferredHeight;
         if (activeCapacityRef.current === targetCapacity && activePotIndexRef.current === targetPotIndex) {
           setNewPotPrintHeightMm(inferredHeight);
+        } else {
+          setArtworkGeometryRevision((revision) => revision + 1);
         }
       }
       const activeMaterial = printMaterialsRef.current[targetDisplayIndex];
@@ -2005,8 +2114,9 @@ export function PotStudio() {
     setTextureName("");
     setTexturePreview("");
     setTextureError("");
-    newPotPrintHeightsRef.current[capacity][activePotIndex] = NEW_POT_WRAP_HEIGHT_MM;
-    setNewPotPrintHeightMm(NEW_POT_WRAP_HEIGHT_MM);
+    const resetPrintHeight = maximumPrintHeightForCapacity(capacity);
+    newPotPrintHeightsRef.current[capacity][activePotIndex] = resetPrintHeight;
+    setNewPotPrintHeightMm(resetPrintHeight);
     settingsByCapacityRef.current[capacity][activePotIndex] = { ...INITIAL_SETTINGS };
     setSettings(INITIAL_SETTINGS);
   };
@@ -2309,14 +2419,23 @@ export function PotStudio() {
               <div><small>展开宽度</small><strong>{wrapWidthMm} <em>mm</em></strong></div>
               <i>×</i>
               <div>
-                <small>{isNewPot ? "图案实际高度" : "展开高度"}</small>
+                <small>{isNewPot || ((capacity === "1.6" || capacity === "2.0") && textureName) ? "图案实际高度" : "展开高度"}</small>
                 {isNewPot ? (
                   <strong className="dimension-input"><input type="number" min="1" max={NEW_POT_WRAP_HEIGHT_MM} step="0.1" value={newPotPrintHeightMm} onChange={(event) => changeNewPotPrintHeight(Number(event.target.value))} /><em>mm</em></strong>
-                ) : <strong>{wrapHeightMm} <em>mm</em></strong>}
+                ) : <strong>{formatMillimetres(
+                  (capacity === "1.6" || capacity === "2.0") && textureName
+                    ? newPotPrintHeightMm
+                    : wrapHeightMm,
+                )} <em>mm</em></strong>}
               </div>
             </div>
             {isNewPot && <p className="dimension-note">壶身 Φ145 × 171 mm · 最大打印高度 145 mm · 当前图案 {newPotPrintHeightMm} mm</p>}
             {isOneTwoLiter && <p className="dimension-note">壶身高度 108 mm · 印刷高度 91 mm · 顶部留白 17 mm</p>}
+            {(capacity === "1.6" || capacity === "2.0") && textureName && (
+              <p className="dimension-note">
+                最大印刷高度 {wrapHeightMm} mm · 当前图案 {formatMillimetres(newPotPrintHeightMm)} mm · 顶部留白 {formatMillimetres(Math.max(0, wrapHeightMm - newPotPrintHeightMm))} mm
+              </p>
+            )}
             {textureName && <p className="file-name" title={textureName}>已上样 · {textureName}</p>}
             {textureError && <p className="file-name" role="alert">{textureError}</p>}
           </section>
