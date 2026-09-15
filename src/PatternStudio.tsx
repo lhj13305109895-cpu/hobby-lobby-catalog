@@ -94,13 +94,9 @@ const POT_12_RADIUS_PROFILE: Array<[number, number]> = [
 // dark overlap line that previously appeared around this boundary.
 const SEAM_RING_HEIGHT_RATIO = 0.012;
 const PRINTABLE_BODY_TOP_RATIO = 1 - SEAM_RING_HEIGHT_RATIO;
-// Extend the carrier slightly past the physical joint, then clip it back to a
-// perfectly horizontal plane. The source mesh has an uneven open top edge, so
-// stopping at its authored boundary exposes a jagged row around the shoulder.
-const PRINT_SURFACE_TOP_EXTENSION_RATIO = 0.04;
-// A sub-millimetre overlap prevents the renderer's edge antialiasing from
-// exposing a bright hairline between the artwork and the dark lid.
-const PRINT_SURFACE_SEAM_OVERLAP = 0.0012;
+// Keep the artwork carrier coincident with the vessel. Geometric stretching or
+// vertical offsets are visible as a loose flap when the pot turns side-on;
+// material polygon offset handles depth separation without changing silhouette.
 // The 319 source silhouette reads a fraction of a degree left-heavy even when
 // its geometric centre is vertical. A tiny X-by-Y shear corrects that optical
 // lean while keeping every horizontal lid/body seam perfectly level.
@@ -196,10 +192,12 @@ function createPot12PrintGeometry() {
   for (let row = 0; row <= heightSegments; row += 1) {
     const v = row / heightSegments;
     const y = THREE.MathUtils.lerp(POT_12_PRINT_BOTTOM, POT_12_PRINT_TOP, v);
-    const shoulderBlend = THREE.MathUtils.smoothstep(y, 0.49, 0.552);
-    const shoulderOffset = THREE.MathUtils.lerp(0.0065, 0.003, shoulderBlend);
-    const edgeTuck = THREE.MathUtils.smoothstep(y, 0.552, POT_12_BODY_TOP);
-    const radius = pot12RadiusAt(y) + THREE.MathUtils.lerp(shoulderOffset, -0.006, edgeTuck);
+    // Keep a small clearance over the straight body so the shell cannot mask
+    // the print, then tuck the last part of the carrier just inside the upper
+    // shoulder. A tiny alpha feather below hides the transition cleanly.
+    const shoulderBlend = THREE.MathUtils.smoothstep(y, 0.4, POT_12_PRINT_TOP);
+    const radius = pot12RadiusAt(y)
+      + THREE.MathUtils.lerp(0.004, -0.001, shoulderBlend);
     for (let column = 0; column <= radialSegments; column += 1) {
       const u = column / radialSegments;
       const angle = Math.PI + u * Math.PI * 2;
@@ -266,17 +264,16 @@ function createSeamClippedPrintGeometry(
   };
   const readVertex = (vertex: number): PrintVertex => {
     const sourceHeightRatio = (position.getY(vertex) - minY) / height;
-    const extendedHeightRatio = sourceHeightRatio * (1 + PRINT_SURFACE_TOP_EXTENSION_RATIO);
     return {
       position: new THREE.Vector3(
         position.getX(vertex),
-        minY + extendedHeightRatio * height,
+        position.getY(vertex),
         position.getZ(vertex),
       ),
       normal: new THREE.Vector3(sourceNormal.getX(vertex), sourceNormal.getY(vertex), sourceNormal.getZ(vertex)),
       u: sourceUv.getX(vertex),
       v: sourceUv.getY(vertex),
-      heightRatio: extendedHeightRatio,
+      heightRatio: sourceHeightRatio,
     };
   };
   const intersect = (from: PrintVertex, to: PrintVertex): PrintVertex => {
@@ -377,9 +374,19 @@ function createConformingBodyPrintGeometry(
   for (let vertex = 0; vertex < position.count; vertex++) {
     worldPosition.fromBufferAttribute(position, vertex).applyMatrix4(source.matrixWorld);
     worldNormal.fromBufferAttribute(normal, vertex).applyMatrix3(normalMatrix).normalize();
-    // Lift the copied surface a fraction above the enamel to avoid z-fighting
-    // while keeping it matched to every shoulder and body curve.
-    worldPosition.addScaledVector(worldNormal, 0.004);
+    // A conforming shell still needs a tiny real clearance on this model to
+    // stay in front of its irregular enamel surface. Fade that clearance to
+    // almost zero through the top shoulder, where any offset is visible in
+    // silhouette as a lifted decal edge.
+    const shoulderTuck = THREE.MathUtils.smoothstep(
+      worldPosition.y,
+      printTop - printHeight * 0.2,
+      printTop,
+    );
+    worldPosition.addScaledVector(
+      worldNormal,
+      THREE.MathUtils.lerp(0.0038, 0.0012, shoulderTuck),
+    );
     outputPositions.set([worldPosition.x, worldPosition.y, worldPosition.z], vertex * 3);
     outputNormals.set([worldNormal.x, worldNormal.y, worldNormal.z], vertex * 3);
     const angle = Math.atan2(worldPosition.z - axisZ, worldPosition.x - axisX);
@@ -448,6 +455,55 @@ function clipPrintMaterialToHeight(
       );
   };
   material.customProgramCacheKey = () => `new-pot-print-height-${printBottom}-${printTop}`;
+}
+
+function softenPrintAtUpperSilhouette(
+  material: THREE.MeshBasicMaterial,
+  geometry: THREE.BufferGeometry,
+  featherUpperEdge = false,
+) {
+  geometry.computeBoundingBox();
+  const box = geometry.boundingBox;
+  if (!box) return;
+  const printHeight = Math.max(box.max.y - box.min.y, Number.EPSILON);
+  const fadeBottom = box.max.y - printHeight * 0.28;
+  const fadeTop = box.max.y;
+  const edgeFeatherBottom = fadeTop - printHeight * 0.012;
+  const previousOnBeforeCompile = material.onBeforeCompile.bind(material);
+  const previousCacheKey = material.customProgramCacheKey.bind(material);
+  material.onBeforeCompile = (shader, renderer) => {
+    previousOnBeforeCompile(shader, renderer);
+    shader.uniforms.printFadeBottom = { value: fadeBottom };
+    shader.uniforms.printFadeTop = { value: fadeTop };
+    shader.uniforms.printEdgeFeatherBottom = { value: edgeFeatherBottom };
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        "#include <common>",
+        "#include <common>\nvarying vec3 vPrintViewNormal;\nvarying float vPrintLocalY;",
+      )
+      .replace(
+        "#include <begin_vertex>",
+        "#include <begin_vertex>\nvPrintViewNormal = normalize(normalMatrix * normal);\nvPrintLocalY = position.y;",
+      );
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        "#include <common>",
+        "#include <common>\nvarying vec3 vPrintViewNormal;\nvarying float vPrintLocalY;\nuniform float printFadeBottom;\nuniform float printFadeTop;\nuniform float printEdgeFeatherBottom;",
+      )
+      .replace(
+        "#include <alphatest_fragment>",
+        `float upperShoulder = smoothstep(printFadeBottom, printFadeTop, vPrintLocalY);
+float edgeFacing = abs(normalize(vPrintViewNormal).z);
+float silhouetteCoverage = smoothstep(0.025, 0.11, edgeFacing);
+float upperEdgeCoverage = ${featherUpperEdge
+  ? "1.0 - smoothstep(printEdgeFeatherBottom, printFadeTop, vPrintLocalY)"
+  : "1.0"};
+diffuseColor.a *= mix(1.0, silhouetteCoverage, upperShoulder) * upperEdgeCoverage;
+#include <alphatest_fragment>`,
+      );
+  };
+  material.customProgramCacheKey = () => `${previousCacheKey()}-upper-silhouette-${fadeBottom}-${fadeTop}-${featherUpperEdge}`;
+  material.needsUpdate = true;
 }
 
 function cameraDistanceToFitBox(
@@ -1403,7 +1459,6 @@ export function PotStudio() {
               artworkHeight / maximumPrintHeight,
             );
             overlay.material = printMaterial;
-            overlay.position.y += PRINT_SURFACE_SEAM_OVERLAP;
             overlay.renderOrder = 2;
             overlay.visible = Boolean(artwork);
             printSource.parent?.add(overlay);
@@ -1431,6 +1486,13 @@ export function PotStudio() {
             overlay.renderOrder = 2;
             overlay.visible = Boolean(artwork);
             model.add(overlay);
+          }
+          if (overlay) {
+            softenPrintAtUpperSilhouette(
+              printMaterial,
+              overlay.geometry as THREE.BufferGeometry,
+              pairIsOneTwoLiter,
+            );
           }
           const root = new THREE.Group();
           if (pairIsStandalone) root.add(model);
@@ -1635,7 +1697,6 @@ export function PotStudio() {
               artworkHeightRatio,
             );
             overlay.material = printMaterial;
-            overlay.position.y += PRINT_SURFACE_SEAM_OVERLAP;
             overlay.castShadow = false;
             overlay.receiveShadow = false;
             overlay.renderOrder = 2;
@@ -1693,6 +1754,13 @@ export function PotStudio() {
             model.add(overlay);
             printSurfaces = [overlay];
             materials.push(bodyMaterial);
+          }
+          if (printSurfaces[0]) {
+            softenPrintAtUpperSilhouette(
+              printMaterial,
+              printSurfaces[0].geometry as THREE.BufferGeometry,
+              isOneTwoLiter,
+            );
           }
           const productRoot = new THREE.Group();
           productRoot.name = "PRODUCT_ROOT";
