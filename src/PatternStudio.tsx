@@ -192,12 +192,10 @@ function createPot12PrintGeometry() {
   for (let row = 0; row <= heightSegments; row += 1) {
     const v = row / heightSegments;
     const y = THREE.MathUtils.lerp(POT_12_PRINT_BOTTOM, POT_12_PRINT_TOP, v);
-    // Keep a small clearance over the straight body so the shell cannot mask
-    // the print, then tuck the last part of the carrier just inside the upper
-    // shoulder. A tiny alpha feather below hides the transition cleanly.
-    const shoulderBlend = THREE.MathUtils.smoothstep(y, 0.4, POT_12_PRINT_TOP);
-    const radius = pot12RadiusAt(y)
-      + THREE.MathUtils.lerp(0.004, -0.001, shoulderBlend);
+    // Keep the full carrier a stable, tiny distance outside the enamel. The
+    // former top-row inward tuck intersected the production shoulder and made
+    // its upper edge inherit the source mesh's broken triangle contour.
+    const radius = pot12RadiusAt(y) + 0.0015;
     for (let column = 0; column <= radialSegments; column += 1) {
       const u = column / radialSegments;
       const angle = Math.PI + u * Math.PI * 2;
@@ -218,6 +216,168 @@ function createPot12PrintGeometry() {
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
   geometry.computeBoundingSphere();
+  return geometry;
+}
+
+function createConformingPot12PrintGeometry(source: THREE.Mesh, model: THREE.Object3D) {
+  const sourceGeometry = source.geometry as THREE.BufferGeometry;
+  const workingGeometry = sourceGeometry.index ? sourceGeometry.toNonIndexed() : sourceGeometry.clone();
+  const position = workingGeometry.getAttribute("position");
+  const normal = workingGeometry.getAttribute("normal");
+  if (!position || !normal) return sourceGeometry.clone();
+
+  // Convert the production mesh into the model-local space used by the
+  // calibrated 454.27 × 91 mm band. This retains the real asymmetric shoulder
+  // instead of intersecting it with a mathematically perfect cylinder.
+  const toModel = model.matrixWorld.clone().invert().multiply(source.matrixWorld);
+  const normalMatrix = new THREE.Matrix3().getNormalMatrix(toModel);
+  const printHeight = POT_12_PRINT_TOP - POT_12_PRINT_BOTTOM;
+  const outputPositions: number[] = [];
+  const outputNormals: number[] = [];
+  const outputUvs: number[] = [];
+  const localPosition = new THREE.Vector3();
+  const localNormal = new THREE.Vector3();
+
+  for (let triangle = 0; triangle + 2 < position.count; triangle += 3) {
+    const trianglePositions: THREE.Vector3[] = [];
+    const triangleNormals: THREE.Vector3[] = [];
+    let minY = Number.POSITIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+    let centerY = 0;
+    let centerRadius = 0;
+
+    for (let corner = 0; corner < 3; corner += 1) {
+      const vertex = triangle + corner;
+      const vertexPosition = localPosition
+        .fromBufferAttribute(position, vertex)
+        .applyMatrix4(toModel)
+        .clone();
+      const vertexNormal = localNormal
+        .fromBufferAttribute(normal, vertex)
+        .applyMatrix3(normalMatrix)
+        .normalize()
+        .clone();
+      const surfaceRadius = Math.hypot(
+        vertexPosition.x,
+        vertexPosition.z - POT_12_CENTER_Z,
+      );
+      // Keep the copied artwork surface just outside the enamel in the radial
+      // direction. Preserve Y exactly so every triangle meets one continuous
+      // 91 mm top plane rather than inheriting a faceted normal offset.
+      if (surfaceRadius > Number.EPSILON) {
+        const radialClearance = 0.006;
+        vertexPosition.x += vertexPosition.x / surfaceRadius * radialClearance;
+        vertexPosition.z += (vertexPosition.z - POT_12_CENTER_Z) / surfaceRadius * radialClearance;
+      }
+      const radius = surfaceRadius + 0.006;
+      trianglePositions.push(vertexPosition);
+      triangleNormals.push(vertexNormal);
+      minY = Math.min(minY, vertexPosition.y);
+      maxY = Math.max(maxY, vertexPosition.y);
+      centerY += vertexPosition.y / 3;
+      centerRadius += radius / 3;
+    }
+
+    if (maxY < POT_12_PRINT_BOTTOM || minY > POT_12_PRINT_TOP) continue;
+    // Reject lid, spout, and handle triangles from the single-mesh GLB. The
+    // printable body stays close to its measured radial profile. Do not reject
+    // by normal direction: the production surface turns sharply where the
+    // handle joins the shoulder, and that test punched small white holes in
+    // an otherwise valid section of the body.
+    if (centerRadius > pot12RadiusAt(centerY) + 0.022) continue;
+
+    for (let corner = 0; corner < 3; corner += 1) {
+      const vertexPosition = trianglePositions[corner];
+      const vertexNormal = triangleNormals[corner];
+      const angle = Math.atan2(
+        vertexPosition.z - POT_12_CENTER_Z,
+        vertexPosition.x,
+      );
+      outputPositions.push(vertexPosition.x, vertexPosition.y, vertexPosition.z);
+      outputNormals.push(vertexNormal.x, vertexNormal.y, vertexNormal.z);
+      outputUvs.push(
+        0.5 - angle / (Math.PI * 2),
+        THREE.MathUtils.clamp(
+          (vertexPosition.y - POT_12_PRINT_BOTTOM) / printHeight,
+          0.005,
+          0.98,
+        ),
+      );
+    }
+
+    const last = outputUvs.length - 6;
+    const u0 = outputUvs[last];
+    const u1 = outputUvs[last + 2];
+    const u2 = outputUvs[last + 4];
+    if (Math.max(u0, u1, u2) - Math.min(u0, u1, u2) > 0.5) {
+      if (u0 < 0.5) outputUvs[last] += 1;
+      if (u1 < 0.5) outputUvs[last + 2] += 1;
+      if (u2 < 0.5) outputUvs[last + 4] += 1;
+    }
+  }
+
+  // The production shoulder is boolean-open and topologically discontinuous
+  // around the handle and spout roots. Cover only the final narrow shoulder
+  // band with a continuous calibrated ring; the other 84 mm still follows the
+  // real mesh, while this ring gives the 91 mm print one clean upper contour.
+  const bridgeAngleStart = -Math.PI;
+  const bridgeAngleEnd = Math.PI;
+  const bridgeBottom = 0.455;
+  const bridgeRows = 12;
+  const bridgeColumns = 256;
+  const bridgeVertex = (row: number, column: number) => {
+    const heightRatio = row / bridgeRows;
+    const y = THREE.MathUtils.lerp(bridgeBottom, POT_12_PRINT_TOP, heightRatio);
+    const angle = THREE.MathUtils.lerp(
+      bridgeAngleStart,
+      bridgeAngleEnd,
+      column / bridgeColumns,
+    );
+    const radius = pot12RadiusAt(y) + 0.006;
+    return {
+      position: new THREE.Vector3(
+        Math.cos(angle) * radius,
+        y,
+        POT_12_CENTER_Z + Math.sin(angle) * radius,
+      ),
+      normal: new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle)),
+      uv: new THREE.Vector2(
+        0.5 - angle / (Math.PI * 2),
+        THREE.MathUtils.clamp(
+          (y - POT_12_PRINT_BOTTOM) / printHeight,
+          0.005,
+          0.98,
+        ),
+      ),
+    };
+  };
+  const emitBridgeVertex = (vertex: ReturnType<typeof bridgeVertex>) => {
+    outputPositions.push(vertex.position.x, vertex.position.y, vertex.position.z);
+    outputNormals.push(vertex.normal.x, vertex.normal.y, vertex.normal.z);
+    outputUvs.push(vertex.uv.x, vertex.uv.y);
+  };
+  for (let row = 0; row < bridgeRows; row += 1) {
+    for (let column = 0; column < bridgeColumns; column += 1) {
+      const a = bridgeVertex(row, column);
+      const b = bridgeVertex(row + 1, column);
+      const c = bridgeVertex(row, column + 1);
+      const d = bridgeVertex(row + 1, column + 1);
+      emitBridgeVertex(a);
+      emitBridgeVertex(b);
+      emitBridgeVertex(c);
+      emitBridgeVertex(b);
+      emitBridgeVertex(d);
+      emitBridgeVertex(c);
+    }
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(outputPositions, 3));
+  geometry.setAttribute("normal", new THREE.Float32BufferAttribute(outputNormals, 3));
+  geometry.setAttribute("uv", new THREE.Float32BufferAttribute(outputUvs, 2));
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  workingGeometry.dispose();
   return geometry;
 }
 
@@ -468,7 +628,11 @@ function softenPrintAtUpperSilhouette(
   const printHeight = Math.max(box.max.y - box.min.y, Number.EPSILON);
   const fadeBottom = box.max.y - printHeight * 0.28;
   const fadeTop = box.max.y;
-  const edgeFeatherBottom = fadeTop - printHeight * 0.012;
+  // The 318 1.2L carrier crosses the real shoulder at oblique views. A very
+  // thin soft blend prevents alternating depth samples from drawing a jagged
+  // yellow/white boundary beneath the handle.
+  const edgeFeatherBottom = fadeTop - printHeight * (featherUpperEdge ? 0.024 : 0.012);
+  const silhouetteFadeEnd = featherUpperEdge ? 0.28 : 0.11;
   const previousOnBeforeCompile = material.onBeforeCompile.bind(material);
   const previousCacheKey = material.customProgramCacheKey.bind(material);
   material.onBeforeCompile = (shader, renderer) => {
@@ -476,6 +640,7 @@ function softenPrintAtUpperSilhouette(
     shader.uniforms.printFadeBottom = { value: fadeBottom };
     shader.uniforms.printFadeTop = { value: fadeTop };
     shader.uniforms.printEdgeFeatherBottom = { value: edgeFeatherBottom };
+    shader.uniforms.printSilhouetteFadeEnd = { value: silhouetteFadeEnd };
     shader.vertexShader = shader.vertexShader
       .replace(
         "#include <common>",
@@ -488,13 +653,13 @@ function softenPrintAtUpperSilhouette(
     shader.fragmentShader = shader.fragmentShader
       .replace(
         "#include <common>",
-        "#include <common>\nvarying vec3 vPrintViewNormal;\nvarying float vPrintLocalY;\nuniform float printFadeBottom;\nuniform float printFadeTop;\nuniform float printEdgeFeatherBottom;",
+        "#include <common>\nvarying vec3 vPrintViewNormal;\nvarying float vPrintLocalY;\nuniform float printFadeBottom;\nuniform float printFadeTop;\nuniform float printEdgeFeatherBottom;\nuniform float printSilhouetteFadeEnd;",
       )
       .replace(
         "#include <alphatest_fragment>",
         `float upperShoulder = smoothstep(printFadeBottom, printFadeTop, vPrintLocalY);
 float edgeFacing = abs(normalize(vPrintViewNormal).z);
-float silhouetteCoverage = smoothstep(0.025, 0.11, edgeFacing);
+float silhouetteCoverage = smoothstep(0.025, printSilhouetteFadeEnd, edgeFacing);
 float upperEdgeCoverage = ${featherUpperEdge
   ? "1.0 - smoothstep(printEdgeFeatherBottom, printFadeTop, vPrintLocalY)"
   : "1.0"};
@@ -502,7 +667,7 @@ diffuseColor.a *= mix(1.0, silhouetteCoverage, upperShoulder) * upperEdgeCoverag
 #include <alphatest_fragment>`,
       );
   };
-  material.customProgramCacheKey = () => `${previousCacheKey()}-upper-silhouette-${fadeBottom}-${fadeTop}-${featherUpperEdge}`;
+  material.customProgramCacheKey = () => `${previousCacheKey()}-upper-silhouette-${fadeBottom}-${fadeTop}-${edgeFeatherBottom}-${silhouetteFadeEnd}`;
   material.needsUpdate = true;
 }
 
@@ -1412,9 +1577,10 @@ export function PotStudio() {
           });
           const artwork = capacityArtworksRef.current[kind]?.[0];
           const printMaterial = new THREE.MeshBasicMaterial({
-            color: 0xffffff, map: artwork?.texture ?? null, side: pairIsOneTwoLiter ? THREE.DoubleSide : THREE.FrontSide,
+            color: 0xffffff, map: artwork?.texture ?? null, side: THREE.FrontSide,
             transparent: true, alphaTest: 0.001, depthWrite: false, polygonOffset: true,
-            polygonOffsetFactor: -4, polygonOffsetUnits: -4,
+            polygonOffsetFactor: pairIsOneTwoLiter ? -16 : -4,
+            polygonOffsetUnits: pairIsOneTwoLiter ? -16 : -4,
           });
           printMaterial.toneMapped = false;
           if (artwork) {
@@ -1480,18 +1646,22 @@ export function PotStudio() {
             overlay.renderOrder = 2;
             overlay.visible = Boolean(artwork);
             model.add(overlay);
-          } else if (pairIsOneTwoLiter) {
+          } else if (pairIsOneTwoLiter && firstSurface) {
+            clipPrintMaterialToHeight(
+              printMaterial,
+              POT_12_PRINT_BOTTOM,
+              POT_12_PRINT_TOP,
+            );
             overlay = new THREE.Mesh(createPot12PrintGeometry(), printMaterial);
             overlay.name = "BODY_PRINT_MIXED_PAIR_OVERLAY";
             overlay.renderOrder = 2;
             overlay.visible = Boolean(artwork);
             model.add(overlay);
           }
-          if (overlay) {
+          if (overlay && !pairIsOneTwoLiter) {
             softenPrintAtUpperSilhouette(
               printMaterial,
               overlay.geometry as THREE.BufferGeometry,
-              pairIsOneTwoLiter,
             );
           }
           const root = new THREE.Group();
@@ -1625,8 +1795,8 @@ export function PotStudio() {
             alphaTest: 0.001,
             depthWrite: false,
             polygonOffset: true,
-            polygonOffsetFactor: -4,
-            polygonOffsetUnits: -4,
+            polygonOffsetFactor: isOneTwoLiter ? -16 : -4,
+            polygonOffsetUnits: isOneTwoLiter ? -16 : -4,
           });
           // Artwork is colour-calibrated and intentionally independent from
           // scene lighting, so every rotation keeps the same source colours.
@@ -1744,7 +1914,11 @@ export function PotStudio() {
             printSurfaces = [overlay];
             materials.push(bodyMaterial);
           } else if (isOneTwoLiter) {
-            printMaterial.side = THREE.DoubleSide;
+            clipPrintMaterialToHeight(
+              printMaterial,
+              POT_12_PRINT_BOTTOM,
+              POT_12_PRINT_TOP,
+            );
             const overlay = new THREE.Mesh(createPot12PrintGeometry(), printMaterial);
             overlay.name = "BODY_PRINT_454_27x91_OVERLAY";
             overlay.castShadow = false;
@@ -1755,11 +1929,10 @@ export function PotStudio() {
             printSurfaces = [overlay];
             materials.push(bodyMaterial);
           }
-          if (printSurfaces[0]) {
+          if (printSurfaces[0] && !isOneTwoLiter) {
             softenPrintAtUpperSilhouette(
               printMaterial,
               printSurfaces[0].geometry as THREE.BufferGeometry,
-              isOneTwoLiter,
             );
           }
           const productRoot = new THREE.Group();
