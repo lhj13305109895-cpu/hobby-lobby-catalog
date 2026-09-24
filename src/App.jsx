@@ -810,9 +810,9 @@ function Storefront() {
             </div>
             {(model318Feature || model319Feature) && <aside className="model-spotlight" aria-label={localize(language, "壶型分类", "Model categories", "فئات الموديلات")}>
               <span>{localize(language, "壶型分类", "MODEL CATEGORIES", "فئات الموديلات")}</span>
-              {[model318Feature && { product: model318Feature, model: "318", detail: localize(language, "1.2L · ¥32", "1.2L · ¥32", "1.2 لتر · ¥32") }, model319Feature && { product: model319Feature, model: "319", detail: localize(language, "1.6L / 2.0L", "1.6L / 2.0L", "1.6 / 2.0 لتر") }].filter(Boolean).map(({ product, model, detail }) => (
+              {[model318Feature && { product: model318Feature, model: "318", image: "/assets/model-318-plain.png", detail: localize(language, "1.2L · ¥32", "1.2L · ¥32", "1.2 لتر · ¥32") }, model319Feature && { product: model319Feature, model: "319", image: "/assets/model-319-plain.png", detail: localize(language, "1.6L / 2.0L", "1.6L / 2.0L", "1.6 / 2.0 لتر") }].filter(Boolean).map(({ product, model, image, detail }) => (
                 <button type="button" key={model} onClick={() => chooseFilter(`型号${model}`)} aria-pressed={filter === `型号${model}`}>
-                  <span className="model-spotlight-image"><img src={product.displayImage} alt={language === "zh" ? product.imageAltZh : (product.imageAltEn || `Model ${model}`)} width="640" height="640" loading="lazy" decoding="async" /></span>
+                  <span className="model-spotlight-image"><img src={image} alt={language === "zh" ? product.imageAltZh : (product.imageAltEn || `Model ${model}`)} width="1600" height="1600" loading="lazy" decoding="async" /></span>
                   <strong>{localize(language, `型号 ${model}`, `Model ${model}`, `موديل ${model}`)}</strong>
                   <small>{detail}</small>
                   <b>{localize(language, "查看花色", "View patterns", "عرض التصاميم")} <ArrowRight weight="bold" /></b>

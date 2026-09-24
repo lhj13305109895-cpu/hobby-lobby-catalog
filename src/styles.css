@@ -386,9 +386,8 @@ footer a { display:inline-flex; align-items:center; gap:7px; text-decoration:non
 .model-spotlight { position:sticky; top:112px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; padding:14px; border:1px solid var(--line); border-radius:4px; background:var(--white); }
 .model-spotlight>span { grid-column:1/-1; color:var(--red); font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
 .model-spotlight button { display:grid; align-content:start; gap:8px; min-width:0; padding:0 0 10px; border:0; background:transparent; color:var(--ink); text-align:left; cursor:pointer; }
-.model-spotlight-image { display:block; aspect-ratio:.82; overflow:hidden; border:1px solid #eee5db; border-radius:3px; background:var(--paper); }
-.model-spotlight img { width:100%; height:100%; object-fit:cover; transform:scale(1.55); transition:transform .2s ease; }
-.model-spotlight button:hover img,.model-spotlight button[aria-pressed="true"] img { transform:scale(1.65); }
+.model-spotlight-image { display:block; aspect-ratio:1; border:1px solid #eee5db; border-radius:3px; background:var(--paper); }
+.model-spotlight img { width:100%; height:100%; object-fit:contain; display:block; }
 .model-spotlight strong { font-family:"Playfair Display",Georgia,serif; font-size:19px; font-weight:600; }
 .model-spotlight small { color:var(--muted); font-size:10px; font-style:normal; line-height:1.4; }
 .model-spotlight b { display:flex; align-items:center; gap:4px; margin-top:2px; color:var(--red); font-size:10px; }
