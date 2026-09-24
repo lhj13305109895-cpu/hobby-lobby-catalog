@@ -445,9 +445,9 @@ function Storefront() {
   const [expandedId, setExpandedId] = useState(null);
   const [zoom, setZoom] = useState(1);
   const [visibleSeriesCount, setVisibleSeriesCount] = useState(1);
+  const [modelSeriesScrollRequest, setModelSeriesScrollRequest] = useState(0);
   const heroCarouselRef = useRef(null);
   const seriesLoaderRef = useRef(null);
-  const pendingModelSeriesScrollRef = useRef(false);
   const t = copy[language];
   const filteredPatterns = useMemo(() => catalogue.filter((pattern) => matchesFilter(pattern, filter)), [filter]);
   const selected = useMemo(() => (
@@ -524,21 +524,27 @@ function Storefront() {
   }, [filter]);
 
   useLayoutEffect(() => {
-    if (!pendingModelSeriesScrollRef.current) return;
-    pendingModelSeriesScrollRef.current = false;
+    if (!modelSeriesScrollRequest) return;
 
-    const firstSeries = document.getElementById("series-1");
-    if (!firstSeries) return;
+    const scrollToFirstSeries = () => {
+      const firstSeries = document.getElementById("series-1");
+      if (!firstSeries) return;
 
-    // Do this after React has replaced the series list, but before the browser paints it.
-    // Temporarily opt out of the page-wide smooth-scroll rule so layout changes cannot
-    // animate the viewport down to the old loader before it settles on the new series.
-    const root = document.documentElement;
-    const previousScrollBehavior = root.style.scrollBehavior;
-    root.style.scrollBehavior = "auto";
-    window.scrollTo(0, Math.max(0, firstSeries.getBoundingClientRect().top + window.scrollY - 96));
-    root.style.scrollBehavior = previousScrollBehavior;
-  }, [filter]);
+      // Temporarily opt out of the page-wide smooth-scroll rule so layout changes
+      // cannot animate the viewport down to the old loader before it settles.
+      const root = document.documentElement;
+      const previousScrollBehavior = root.style.scrollBehavior;
+      root.style.scrollBehavior = "auto";
+      window.scrollTo(0, Math.max(0, firstSeries.getBoundingClientRect().top + window.scrollY - 96));
+      root.style.scrollBehavior = previousScrollBehavior;
+    };
+
+    // Some browsers perform focus restoration at the end of the click. Correct it
+    // once in the next frame, still without animation, after that restoration ends.
+    scrollToFirstSeries();
+    const correctionFrame = window.requestAnimationFrame(scrollToFirstSeries);
+    return () => window.cancelAnimationFrame(correctionFrame);
+  }, [filter, modelSeriesScrollRequest]);
 
   useEffect(() => {
     const loader = seriesLoaderRef.current;
@@ -575,7 +581,13 @@ function Storefront() {
   }
 
   function chooseFilter(nextFilter, { scrollToFirstSeries = false } = {}) {
-    if (scrollToFirstSeries) pendingModelSeriesScrollRef.current = true;
+    if (scrollToFirstSeries) {
+      // A model card can be moved by the filter reflow. Drop its focus and clear a
+      // stale #customization hash before the browser tries to restore that old focus.
+      document.activeElement instanceof HTMLElement && document.activeElement.blur();
+      window.history.replaceState(null, "", "#gallery");
+      setModelSeriesScrollRequest((request) => request + 1);
+    }
     setFilter(nextFilter);
     setVisibleSeriesCount(1);
     setSeriesMenuOpen(false);
@@ -831,7 +843,7 @@ function Storefront() {
             {(model318Feature || model319Feature) && <aside className="model-spotlight" aria-label={localize(language, "壶型分类", "Model categories", "فئات الموديلات")}>
               <span>{localize(language, "壶型分类", "MODEL CATEGORIES", "فئات الموديلات")}</span>
               {[model318Feature && { product: model318Feature, model: "318", image: "/assets/model-318-plain.png", detail: localize(language, "1.2L · ¥32", "1.2L · ¥32", "1.2 لتر · ¥32") }, model319Feature && { product: model319Feature, model: "319", image: "/assets/model-319-plain.png", detail: localize(language, "1.6L / 2.0L", "1.6L / 2.0L", "1.6 / 2.0 لتر") }].filter(Boolean).map(({ product, model, image, detail }) => (
-                <button type="button" key={model} onClick={() => chooseFilter(`型号${model}`, { scrollToFirstSeries: true })} aria-pressed={filter === `型号${model}`}>
+                <button type="button" key={model} onPointerDown={(event) => event.preventDefault()} onClick={() => chooseFilter(`型号${model}`, { scrollToFirstSeries: true })} aria-pressed={filter === `型号${model}`}>
                   <span className="model-spotlight-image"><img src={image} alt={language === "zh" ? product.imageAltZh : (product.imageAltEn || `Model ${model}`)} width="1600" height="1600" loading="lazy" decoding="async" /></span>
                   <strong>{localize(language, `型号 ${model}`, `Model ${model}`, `موديل ${model}`)}</strong>
                   <small>{detail}</small>
