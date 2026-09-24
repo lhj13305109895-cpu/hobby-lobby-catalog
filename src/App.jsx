@@ -45,7 +45,15 @@ const heroShowcasePatterns = catalogue
   .slice(-4);
 const heroFeaturedPattern = catalogue.find((product) => product.no === 54) || heroShowcasePatterns[0] || catalogue[0];
 
-const filters = ["全部花色", "白色壶身", "316不锈钢", "混色套装"];
+const filters = ["全部花色", "型号318", "型号319", "白色壶身", "316不锈钢", "混色套装"];
+
+const modelForFilter = (filter) => (filter === "型号318" || filter === "型号319" ? filter.replace("型号", "") : null);
+const matchesFilter = (pattern, filter) => {
+  if (filter === "全部花色") return true;
+  const model = modelForFilter(filter);
+  if (model) return pattern.model === model;
+  return pattern.body === filter || pattern.family === `${filter}系列`;
+};
 
 const capacitiesFor = (product) => modelsData[product.model]?.capacities || modelsData["319"].capacities;
 const capacitySummary = (product) => capacitiesFor(product).map((capacity) => `${capacity.id} ${capacity.price}`).join(" · ");
@@ -114,6 +122,8 @@ const copy = {
     modelLabel: "型号",
     filterLabels: {
       "全部花色": "全部花色",
+      "型号318": "型号 318",
+      "型号319": "型号 319",
       "白色壶身": "白色壶身",
       "316不锈钢": "316不锈钢",
       "混色套装": "混色套装",
@@ -188,6 +198,8 @@ const copy = {
     modelLabel: "Model",
     filterLabels: {
       "全部花色": "All Patterns",
+      "型号318": "Model 318",
+      "型号319": "Model 319",
       "白色壶身": "White Body",
       "316不锈钢": "316 Stainless Steel",
       "混色套装": "Mixed Sets",
@@ -262,6 +274,8 @@ const copy = {
     modelLabel: "الموديل",
     filterLabels: {
       "全部花色": "كل التصاميم",
+      "型号318": "موديل 318",
+      "型号319": "موديل 319",
       "白色壶身": "هيكل أبيض",
       "316不锈钢": "ستانلس ستيل 316",
       "混色套装": "أطقم مختلطة",
@@ -432,11 +446,7 @@ function Storefront() {
   const heroCarouselRef = useRef(null);
   const seriesLoaderRef = useRef(null);
   const t = copy[language];
-  const filteredPatterns = useMemo(() => (
-    filter === "全部花色"
-      ? catalogue
-      : catalogue.filter((pattern) => pattern.body === filter || pattern.family === `${filter}系列`)
-  ), [filter]);
+  const filteredPatterns = useMemo(() => catalogue.filter((pattern) => matchesFilter(pattern, filter)), [filter]);
   const selected = useMemo(() => (
     catalogue.find((pattern) => pattern.id === selectedId) || catalogue[0]
   ), [selectedId]);
@@ -547,9 +557,7 @@ function Storefront() {
   function chooseFilter(nextFilter) {
     setFilter(nextFilter);
     setSeriesMenuOpen(false);
-    const nextPattern = nextFilter === "全部花色"
-      ? catalogue[0]
-      : catalogue.find((pattern) => pattern.body === nextFilter || pattern.family === `${nextFilter}系列`);
+    const nextPattern = catalogue.find((pattern) => matchesFilter(pattern, nextFilter));
     setSelectedId(nextPattern?.id || catalogue[0].id);
   }
 
@@ -754,7 +762,7 @@ function Storefront() {
         <section className="gallery-section section" id="gallery" aria-labelledby="gallery-title">
           <div className="section-heading">
             <div><p className="eyebrow">{t.galleryEyebrow}</p><h2 id="gallery-title">{t.galleryTitle}</h2><p>{t.galleryText}</p></div>
-            <div className="finish-tabs three-tabs" role="group" aria-label={localize(language, "筛选壶身", "Filter body finish", "تصفية نوع الهيكل")}>
+            <div className="finish-tabs three-tabs" role="group" aria-label={localize(language, "筛选型号和壶身", "Filter model and body finish", "تصفية الموديل ونوع الهيكل")}>
               {filters.map((item) => <button key={item} className={filter === item ? "active" : ""} onClick={() => chooseFilter(item)} aria-pressed={filter === item}>{displayFilter(item)}</button>)}
             </div>
           </div>
