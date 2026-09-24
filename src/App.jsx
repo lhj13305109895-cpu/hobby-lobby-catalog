@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import productsData from "./data/products.json";
 import categoriesData from "./data/categories.json";
 import modelsData from "./data/models.json";
@@ -447,6 +447,7 @@ function Storefront() {
   const [visibleSeriesCount, setVisibleSeriesCount] = useState(1);
   const heroCarouselRef = useRef(null);
   const seriesLoaderRef = useRef(null);
+  const pendingModelSeriesScrollRef = useRef(false);
   const t = copy[language];
   const filteredPatterns = useMemo(() => catalogue.filter((pattern) => matchesFilter(pattern, filter)), [filter]);
   const selected = useMemo(() => (
@@ -522,6 +523,23 @@ function Storefront() {
     setSeriesMenuOpen(false);
   }, [filter]);
 
+  useLayoutEffect(() => {
+    if (!pendingModelSeriesScrollRef.current) return;
+    pendingModelSeriesScrollRef.current = false;
+
+    const firstSeries = document.getElementById("series-1");
+    if (!firstSeries) return;
+
+    // Do this after React has replaced the series list, but before the browser paints it.
+    // Temporarily opt out of the page-wide smooth-scroll rule so layout changes cannot
+    // animate the viewport down to the old loader before it settles on the new series.
+    const root = document.documentElement;
+    const previousScrollBehavior = root.style.scrollBehavior;
+    root.style.scrollBehavior = "auto";
+    window.scrollTo(0, Math.max(0, firstSeries.getBoundingClientRect().top + window.scrollY - 96));
+    root.style.scrollBehavior = previousScrollBehavior;
+  }, [filter]);
+
   useEffect(() => {
     const loader = seriesLoaderRef.current;
     if (!loader || !hasMoreSeries) return undefined;
@@ -557,16 +575,12 @@ function Storefront() {
   }
 
   function chooseFilter(nextFilter, { scrollToFirstSeries = false } = {}) {
+    if (scrollToFirstSeries) pendingModelSeriesScrollRef.current = true;
     setFilter(nextFilter);
     setVisibleSeriesCount(1);
     setSeriesMenuOpen(false);
     const nextPattern = catalogue.find((pattern) => matchesFilter(pattern, nextFilter));
     setSelectedId(nextPattern?.id || catalogue[0].id);
-    if (scrollToFirstSeries) {
-      window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
-        document.getElementById("series-1")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }));
-    }
   }
 
   function selectPattern(pattern) {

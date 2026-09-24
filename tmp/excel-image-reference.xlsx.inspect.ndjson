@@ -1,0 +1,11 @@
+{"kind":"workbook","id":"wb/4t4uim","sheets":1,"tables":1}
+{"kind":"sheet","id":"ws/hced6n","name":"Photos","index":0,"range":"A1:B3","address":"A1:B3","tables":1}
+{"kind":"table","sheet":"Photos","address":"A1:B3","rows":3,"cols":2,"values":[["Item","Photo"],["Reference",""],["End",""]]}
+{"kind":"region","sheet":"Photos","address":"A1:B3","rows":3,"cols":2,"nonEmpty":4,"blank":2,"text":4,"maxTextLength":9,"preview":[["Item","Photo"],["Reference",null],["End",null]],"previewAddress":"A1:B3","previewRows":3,"previewCols":2}
+{"kind":"computedStyle","sheet":"Photos","for":"A1","style":{"fill":{"type":3,"gradientStops":[],"pattern":{"patternType":1},"pictureEffects":[]},"font":{"size":11,"name":"Carlito"},"border":{},"wrapText":false,"horizontalAlignment":"general","styleId":0}}
+{"kind":"computedStyle","sheet":"Photos","for":"B1","style":{"fill":{"type":3,"gradientStops":[],"pattern":{"patternType":1},"pictureEffects":[]},"font":{"size":11,"name":"Carlito"},"border":{},"wrapText":false,"horizontalAlignment":"general","styleId":0}}
+{"kind":"computedStyle","sheet":"Photos","for":"A2","style":{"fill":{"type":3,"gradientStops":[],"pattern":{"patternType":1},"pictureEffects":[]},"font":{"size":11,"name":"Carlito"},"border":{},"wrapText":false,"horizontalAlignment":"general","styleId":0}}
+{"kind":"computedStyle","sheet":"Photos","for":"B2","style":{"fill":{"type":3,"gradientStops":[],"pattern":{"patternType":1},"pictureEffects":[]},"font":{"size":11,"name":"Carlito"},"border":{},"wrapText":false,"horizontalAlignment":"general","styleId":0}}
+{"kind":"computedStyle","sheet":"Photos","for":"A3","style":{"fill":{"type":3,"gradientStops":[],"pattern":{"patternType":1},"pictureEffects":[]},"font":{"size":11,"name":"Carlito"},"border":{},"wrapText":false,"horizontalAlignment":"general","styleId":0}}
+{"kind":"computedStyle","sheet":"Photos","for":"B3","style":{"fill":{"type":3,"gradientStops":[],"pattern":{"patternType":1},"pictureEffects":[]},"font":{"size":11,"name":"Carlito"},"border":{},"wrapText":false,"horizontalAlignment":"general","styleId":0}}
+{"kind":"drawing","sheet":"Photos","drawingType":"image","id":"e9086fc9-47c8-476c-8477-7af249bdbf6e","anchor":{"from":{"row":1,"col":1,"rowOffsetEmu":0,"colOffsetEmu":0,"rowOffsetPx":0,"colOffsetPx":0},"extent":{"widthEmu":1333500,"widthPx":140,"heightEmu":952500,"heightPx":100}}}
