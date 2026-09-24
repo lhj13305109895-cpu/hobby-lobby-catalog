@@ -10455,5 +10455,59 @@
     "visible": true,
     "createdAt": "2026-09-24T00:00:00.000Z",
     "updatedAt": "2026-09-24T00:00:00.000Z"
+  },
+  {
+    "productId": "pattern-318-100",
+    "slug": "318-100",
+    "nameZh": "民族几何花色 16",
+    "nameEn": "Ethnic Geometric Pattern 16",
+    "model": "318",
+    "capacities": [
+      "1.2L"
+    ],
+    "descriptionZh": "型号318 民族几何花色 16保温壶，采用民族几何系列图案，提供1.2L容量，目录价 ¥32 RMB。",
+    "descriptionEn": "Model 318 Ethnic Geometric Pattern 16 thermal pot in the Ethnic Geometric Series, available in 1.2L at ¥32 RMB.",
+    "categoryId": "ethnic-geometric",
+    "bodyType": "白色壶身",
+    "mainImage": "/assets/catalogue/318-100.webp",
+    "thumbnailImage": "/assets/catalogue/318-100-thumb.webp",
+    "originalImage": "/assets/catalogue/318-100.webp",
+    "detailImages": [],
+    "imageAltZh": "318-100 民族几何花色 16保温壶",
+    "imageAltEn": "318-100 Ethnic Geometric Pattern 16 thermal pot",
+    "sortOrder": 10990,
+    "isNew": true,
+    "featured": false,
+    "pinned": false,
+    "visible": true,
+    "createdAt": "2026-09-24T00:00:00.000Z",
+    "updatedAt": "2026-09-24T00:00:00.000Z"
+  },
+  {
+    "productId": "pattern-318-101",
+    "slug": "318-101",
+    "nameZh": "民族几何花色 17",
+    "nameEn": "Ethnic Geometric Pattern 17",
+    "model": "318",
+    "capacities": [
+      "1.2L"
+    ],
+    "descriptionZh": "型号318 民族几何花色 17保温壶，采用民族几何系列图案，提供1.2L容量，目录价 ¥32 RMB。",
+    "descriptionEn": "Model 318 Ethnic Geometric Pattern 17 thermal pot in the Ethnic Geometric Series, available in 1.2L at ¥32 RMB.",
+    "categoryId": "ethnic-geometric",
+    "bodyType": "白色壶身",
+    "mainImage": "/assets/catalogue/318-101.webp",
+    "thumbnailImage": "/assets/catalogue/318-101-thumb.webp",
+    "originalImage": "/assets/catalogue/318-101.webp",
+    "detailImages": [],
+    "imageAltZh": "318-101 民族几何花色 17保温壶",
+    "imageAltEn": "318-101 Ethnic Geometric Pattern 17 thermal pot",
+    "sortOrder": 11000,
+    "isNew": true,
+    "featured": false,
+    "pinned": false,
+    "visible": true,
+    "createdAt": "2026-09-24T00:00:00.000Z",
+    "updatedAt": "2026-09-24T00:00:00.000Z"
   }
 ]
