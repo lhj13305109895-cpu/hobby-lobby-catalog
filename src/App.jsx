@@ -47,6 +47,7 @@ const heroFeaturedPattern = catalogue.find((product) => product.no === 54) || he
 
 const filters = ["全部花色", "白色壶身", "316不锈钢", "混色套装"];
 const model318Feature = catalogue.find((product) => product.model === "318");
+const model319Feature = catalogue.find((product) => product.model === "319");
 
 const modelForFilter = (filter) => (filter === "型号318" || filter === "型号319" ? filter.replace("型号", "") : null);
 const matchesFilter = (pattern, filter) => {
@@ -807,15 +808,16 @@ function Storefront() {
               </button>
             </div>}
             </div>
-            {model318Feature && <aside className="model-spotlight" aria-label={localize(language, "型号 318 分类", "Model 318 category", "فئة موديل 318")}>
-              <span>{localize(language, "新增壶型", "NEW MODEL", "موديل جديد")}</span>
-              <button type="button" onClick={() => chooseFilter("型号318")} aria-pressed={filter === "型号318"}>
-                <img src={model318Feature.displayImage} alt={language === "zh" ? model318Feature.imageAltZh : model318Feature.imageAltEn} width="640" height="640" loading="lazy" decoding="async" />
-                <strong>{localize(language, "型号 318", "Model 318", "موديل 318")}</strong>
-                <small>{localize(language, "1.2L · ¥32 RMB", "1.2L · ¥32 RMB", "1.2 لتر · ¥32 RMB")}</small>
-                <em>{localize(language, "24 pcs/箱 · 0.13 CBM", "24 pcs/carton · 0.13 CBM", "24 قطعة/كرتون · 0.13 CBM")}</em>
-                <b>{localize(language, "查看 318 全部花色", "Browse 318 patterns", "عرض تصاميم 318")} <ArrowRight weight="bold" /></b>
-              </button>
+            {(model318Feature || model319Feature) && <aside className="model-spotlight" aria-label={localize(language, "壶型分类", "Model categories", "فئات الموديلات")}>
+              <span>{localize(language, "壶型分类", "MODEL CATEGORIES", "فئات الموديلات")}</span>
+              {[model318Feature && { product: model318Feature, model: "318", detail: localize(language, "1.2L · ¥32", "1.2L · ¥32", "1.2 لتر · ¥32") }, model319Feature && { product: model319Feature, model: "319", detail: localize(language, "1.6L / 2.0L", "1.6L / 2.0L", "1.6 / 2.0 لتر") }].filter(Boolean).map(({ product, model, detail }) => (
+                <button type="button" key={model} onClick={() => chooseFilter(`型号${model}`)} aria-pressed={filter === `型号${model}`}>
+                  <span className="model-spotlight-image"><img src={product.displayImage} alt={language === "zh" ? product.imageAltZh : (product.imageAltEn || `Model ${model}`)} width="640" height="640" loading="lazy" decoding="async" /></span>
+                  <strong>{localize(language, `型号 ${model}`, `Model ${model}`, `موديل ${model}`)}</strong>
+                  <small>{detail}</small>
+                  <b>{localize(language, "查看花色", "View patterns", "عرض التصاميم")} <ArrowRight weight="bold" /></b>
+                </button>
+              ))}
             </aside>}
           </div>
           <p className="gallery-note">{t.currentShowing} {filteredPatterns.length} {t.currentSuffix}</p>
