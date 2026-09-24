@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import productsData from "./data/products.json";
 import categoriesData from "./data/categories.json";
+import modelsData from "./data/models.json";
 import {
   ArrowDown, ArrowLeft, ArrowRight, Check, Heart,
   DownloadSimple, FacebookLogo, InstagramLogo, MagnifyingGlassPlus, PaintBrush,
@@ -46,10 +47,8 @@ const heroFeaturedPattern = catalogue.find((product) => product.no === 54) || he
 
 const filters = ["全部花色", "白色壶身", "316不锈钢", "混色套装"];
 
-const capacities = [
-  { id: "1.6L", price: "¥29 RMB", priceNumber: 29, packing: "24 pcs", pcsPerCarton: 24, cbm: 0.14 },
-  { id: "2.0L", price: "¥31 RMB", priceNumber: 31, packing: "20 pcs", pcsPerCarton: 20, cbm: 0.15 },
-];
+const capacitiesFor = (product) => modelsData[product.model]?.capacities || modelsData["319"].capacities;
+const capacitySummary = (product) => capacitiesFor(product).map((capacity) => `${capacity.id} ${capacity.price}`).join(" · ");
 
 const languageOptions = [
   { id: "en", label: "English" },
@@ -308,6 +307,8 @@ function productStructuredData(product) {
   const imageUrls = [product.mainImage, product.originalImage, ...(product.detailImages || [])]
     .filter(Boolean)
     .map((source) => new URL(source, siteOrigin).href);
+  const offers = capacitiesFor(product);
+  const prices = offers.map((offer) => offer.priceNumber);
   return {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -325,9 +326,9 @@ function productStructuredData(product) {
       "@type": "AggregateOffer",
       url: productUrl(product),
       priceCurrency: "CNY",
-      lowPrice: "29",
-      highPrice: "31",
-      offerCount: 2,
+      lowPrice: String(Math.min(...prices)),
+      highPrice: String(Math.max(...prices)),
+      offerCount: offers.length,
       availability: "https://schema.org/InStock",
     },
   };
@@ -340,15 +341,17 @@ function ProductDetail({ product }) {
   const englishFamily = category?.nameEn || "Pattern Series";
   const arabicFamily = copy.ar.familyLabels[category?.nameZh] || englishFamily;
   const englishName = product.nameEn || `${englishFamily.replace(" Series", "")} · ${product.slug}`;
+  const productCapacities = capacitiesFor(product);
+  const capacityText = productCapacities.map((capacity) => capacity.id).join(" / ");
   const isolatedSlug = `\u2066${product.slug}\u2069`;
   const name = localize(language, product.nameZh, englishName, `${arabicFamily} · ${isolatedSlug}`);
   const description = localize(
     language,
-    product.descriptionZh || `${product.nameZh}花色型号319保温壶，提供1.6L和2.0L两种容量。`,
-    product.descriptionEn || `Model 319 thermal pot in the ${englishName} pattern, available in 1.6L and 2.0L.`,
-    `ترمس حراري موديل 319 من ${arabicFamily} برقم ${isolatedSlug}، متوفر بسعتي 1.6 و2.0 لتر.`,
+    product.descriptionZh || `${product.nameZh}花色型号${product.model}保温壶，提供${capacityText}容量。`,
+    product.descriptionEn || `Model ${product.model} thermal pot in the ${englishName} pattern, available in ${capacityText}.`,
+    `ترمس حراري موديل ${product.model} من ${arabicFamily} برقم ${isolatedSlug}، متوفر بسعة ${capacityText}.`,
   );
-  const imageAlt = localize(language, product.imageAltZh, product.imageAltEn || `${englishName} Model 319 thermal pot`, `ترمس حراري موديل 319 من ${arabicFamily} برقم ${product.slug}`);
+  const imageAlt = localize(language, product.imageAltZh, product.imageAltEn || `${englishName} Model ${product.model} thermal pot`, `ترمس حراري موديل ${product.model} من ${arabicFamily} برقم ${product.slug}`);
   const structuredData = productStructuredData(product);
 
   useEffect(() => {
@@ -387,7 +390,7 @@ function ProductDetail({ product }) {
         <article className="product-detail-card">
           <figure className="product-detail-media"><img src={product.displayImage} alt={imageAlt} width="1600" height="1600" fetchPriority="high" decoding="async" /></figure>
           <div className="product-detail-copy">
-            <p className="eyebrow">MODEL 319 · {product.slug}</p>
+            <p className="eyebrow">MODEL {product.model} · {product.slug}</p>
             <h1>{name}</h1>
             {language === "zh" && product.nameEn && <p className="product-name-en">{product.nameEn}</p>}
             <p className="product-description">{description}</p>
@@ -397,13 +400,13 @@ function ProductDetail({ product }) {
               <div><dt>{localize(language, "货号", "SKU", "رقم الصنف")}</dt><dd>{product.slug}</dd></div>
             </dl>
             <div className="product-offers" aria-label={localize(language, "容量和价格", "Capacities and prices", "السعات والأسعار")}>
-              {capacities.map((capacity) => <div key={capacity.id}><strong><bdi dir="ltr">{capacity.id}</bdi></strong><span><bdi dir="ltr">{capacity.price}</bdi></span><small><bdi dir="ltr">{capacity.packing}</bdi> / {localize(language, "箱", "carton", "كرتون")}</small></div>)}
+              {productCapacities.map((capacity) => <div key={capacity.id}><strong><bdi dir="ltr">{capacity.id}</bdi></strong><span><bdi dir="ltr">{capacity.price}</bdi></span><small><bdi dir="ltr">{capacity.packing}</bdi> / {localize(language, "箱", "carton", "كرتون")}</small></div>)}
             </div>
             <a className="button button-primary product-back" href="/#gallery"><ArrowLeft weight="bold" /> {localize(language, "返回全部花色", "Back to all patterns", "العودة إلى كل التصاميم")}</a>
           </div>
         </article>
         <section className="product-index-copy">
-          <p className="eyebrow">{localize(language, "型号319花色", "Model 319 pattern", "تصميم موديل 319")}</p>
+          <p className="eyebrow">{localize(language, `型号${product.model}花色`, `Model ${product.model} pattern`, `تصميم موديل ${product.model}`)}</p>
           <h2>{localize(language, `${product.nameZh}保温壶产品图`, `${englishName} thermal pot image`, `صورة ترمس ${isolatedSlug} من ${arabicFamily}`)}</h2>
           <p>{localize(language, `本页展示 ${product.slug} ${product.nameZh}花色的清晰产品图片、容量、价格和装箱信息，支持从现有花色中选款，也支持来图定制。`, `This page shows clear product imagery, capacities, pricing, and carton details for ${product.slug}. Existing patterns and custom artwork are supported.`, `تعرض هذه الصفحة صور المنتج والسعات والأسعار ومعلومات التعبئة للصنف ${isolatedSlug}. يمكنك اختيار تصميم جاهز أو إرسال تصميمك الخاص.`)}</p>
         </section>
@@ -452,7 +455,7 @@ function Storefront() {
       if (!pattern) return [];
       return capacityIds.map((capacityId) => ({
         pattern,
-        capacity: capacities.find((item) => item.id === capacityId) || capacities[0],
+        capacity: capacitiesFor(pattern).find((item) => item.id === capacityId) || capacitiesFor(pattern)[0],
         quantity: selectedQuantities[`${patternId}-${capacityId}`] || 1,
       }));
     })
@@ -471,7 +474,7 @@ function Storefront() {
     if (pattern.family === "混色套装系列") return `Mixed Set ${String(pattern.no - 58).padStart(2, "0")}`;
     if (pattern.no === 43) return "Black Lid Stainless Plain Body";
     if (pattern.no === 58) return "White Plain Body";
-    return `${displayFamily(pattern.family).replace(" Series", "")} · 319-${String(pattern.no).padStart(2, "0")}`;
+    return `${displayFamily(pattern.family).replace(" Series", "")} · ${pattern.slug}`;
   };
 
   useEffect(() => {
@@ -771,14 +774,14 @@ function Storefront() {
               <div className="pattern-grid">
                 {seriesPatterns.map((pattern) => {
                   const active = Boolean(selectedCapacities[pattern.id]?.length);
-                  const catalogueCode = `319-${String(pattern.no).padStart(2, "0")}`;
+                  const catalogueCode = pattern.slug;
                   return (
                     <article className={`pattern-card ${active ? "selected" : ""}`} id={pattern.id} key={pattern.id}>
                       <button className="pattern-image-wrap" type="button" onClick={() => openExpanded(pattern)} aria-label={`${displayPatternName(pattern)}，${displayFamily(pattern.family)}，${t.zoomHint}。`}><img src={pattern.thumb} srcSet={`${pattern.thumb} 640w, ${pattern.displayImage} 1600w`} sizes="(max-width: 700px) 46vw, (max-width: 1100px) 30vw, 240px" alt={language === "zh" ? pattern.imageAltZh : (pattern.imageAltEn || displayPatternName(pattern))} width="640" height="640" loading="lazy" decoding="async" />{active && <span className="check-mark"><Check weight="bold" /></span>}<span className="zoom-hint"><MagnifyingGlassPlus weight="bold" /> {t.zoomHint}</span></button>
-                      <span className="pattern-code">MODEL 319 · {catalogueCode}</span><span className="pattern-name">{displayPatternName(pattern)}</span><span className="pattern-family">{displayBody(pattern.body)} · 1.6L ¥29 · 2.0L ¥31</span>
+                      <span className="pattern-code">MODEL {pattern.model} · {catalogueCode}</span><span className="pattern-name">{displayPatternName(pattern)}</span><span className="pattern-family">{displayBody(pattern.body)} · {capacitySummary(pattern)}</span>
                       <a className="product-detail-link" href={`/products/${pattern.slug}/`}>{localize(language, "查看商品详情", "View product details", "عرض تفاصيل المنتج")} <ArrowRight weight="bold" /></a>
                       <div className="capacity-picker" aria-label={`${displayPatternName(pattern)} ${localize(language, "容量选择", "capacity selection", "اختيار السعة")}`}>
-                        {capacities.map((capacity) => (
+                        {capacitiesFor(pattern).map((capacity) => (
                           <button className={isCapacitySelected(pattern.id, capacity.id) ? "active" : ""} type="button" key={capacity.id} onClick={() => toggleCapacity(pattern, capacity.id)} aria-pressed={isCapacitySelected(pattern.id, capacity.id)}>
                             <strong>{capacity.id}</strong><span>{capacity.price}</span>{isCapacitySelected(pattern.id, capacity.id) && <em>{getSelectedQuantity(pattern.id, capacity.id)} {localize(language, "箱", "cartons", "كرتون")}</em>}
                           </button>
@@ -915,7 +918,7 @@ function Storefront() {
                     <img src={pattern.thumb} alt="" width="640" height="640" loading="lazy" decoding="async" />
                     <div>
                       <strong>{displayPatternName(pattern)}</strong>
-                      <small>319-{String(pattern.no).padStart(2, "0")} · {capacity.id} · {capacity.price} · {capacity.packing}</small>
+                      <small>{pattern.slug} · {capacity.id} · {capacity.price} · {capacity.packing}</small>
                       <div className="qty-control">
                         <span>{localize(language, "箱数", "Cartons", "الكراتين")}</span>
                         <button type="button" onClick={(event) => { event.stopPropagation(); updateQuantity(pattern.id, capacity.id, quantity - 1); }} aria-label={localize(language, `${pattern.name} ${capacity.id} 减少一箱`, `Decrease ${displayPatternName(pattern)} ${capacity.id} by one carton`, `تقليل ${displayPatternName(pattern)} ${capacity.id} كرتوناً واحداً`)}>−</button>
@@ -948,16 +951,16 @@ function Storefront() {
           <div className="lightbox-info">
             <div className="lightbox-pack">
               <span>{localize(language, "价格 / 装箱", "PRICE / PACKING", "السعر / التعبئة")}</span>
-              {capacities.map((capacity) => (
+              {capacitiesFor(expanded).map((capacity) => (
                 <button className={`pack-option ${isCapacitySelected(expanded.id, capacity.id) ? "active" : ""}`} type="button" key={capacity.id} onClick={() => toggleCapacity(expanded, capacity.id)} aria-pressed={isCapacitySelected(expanded.id, capacity.id)}>
                   <strong>{capacity.id}</strong><small>{capacity.price} · {capacity.packing}{isCapacitySelected(expanded.id, capacity.id) ? ` · ${getSelectedQuantity(expanded.id, capacity.id)} ${localize(language, "箱", "cartons", "كرتون")}` : ""}</small>
                 </button>
               ))}
             </div>
             <div className="lightbox-meta">
-              <span>MODEL 319 · {String(expanded.no).padStart(2, "0")}</span>
+              <span>MODEL {expanded.model} · {expanded.slug}</span>
               <strong>{displayPatternName(expanded)}</strong>
-              <small>{displayFamily(expanded.family)} · {displayBody(expanded.body)} · 1.6L ¥29 RMB · 2.0L ¥31 RMB</small>
+              <small>{displayFamily(expanded.family)} · {displayBody(expanded.body)} · {capacitySummary(expanded)}</small>
             </div>
           </div>
         </div>

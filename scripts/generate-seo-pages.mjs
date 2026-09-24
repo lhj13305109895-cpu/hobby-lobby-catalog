@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const siteOrigin = (process.env.SITE_URL || "https://hobby-lobby-catalog.pages.dev").replace(/\/$/, "");
 const products = JSON.parse(readFileSync(path.join(root, "src", "data", "products.json"), "utf8")).filter((product) => product.visible);
+const models = JSON.parse(readFileSync(path.join(root, "src", "data", "models.json"), "utf8"));
 const categories = JSON.parse(readFileSync(path.join(root, "src", "data", "categories.json"), "utf8"));
 const categoryById = new Map(categories.map((category) => [category.categoryId, category]));
 const mode = process.argv[2] || "--all";
@@ -19,12 +20,15 @@ const escapeXml = (value) => String(value ?? "")
 const escapeHtml = escapeXml;
 const absoluteUrl = (source) => new URL(source, `${siteOrigin}/`).href;
 const productUrl = (product) => `${siteOrigin}/products/${product.slug}/`;
-const productDescription = (product) => product.descriptionZh || `${product.nameZh}花色型号319保温壶，提供1.6L和2.0L两种容量。`;
+const modelCapacities = (product) => models[product.model]?.capacities || models["319"].capacities;
+const productDescription = (product) => product.descriptionZh || `${product.nameZh}花色型号${product.model}保温壶，提供${modelCapacities(product).map((capacity) => capacity.id).join("和")}容量。`;
 
 function structuredData(product) {
   const images = [product.mainImage, product.originalImage, ...(product.detailImages || [])]
     .filter(Boolean)
     .map(absoluteUrl);
+  const offers = modelCapacities(product);
+  const prices = offers.map((offer) => offer.priceNumber);
   return {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -42,9 +46,9 @@ function structuredData(product) {
       "@type": "AggregateOffer",
       url: productUrl(product),
       priceCurrency: "CNY",
-      lowPrice: "29",
-      highPrice: "31",
-      offerCount: 2,
+      lowPrice: String(Math.min(...prices)),
+      highPrice: String(Math.max(...prices)),
+      offerCount: offers.length,
       availability: "https://schema.org/InStock",
     },
   };
@@ -56,7 +60,7 @@ function writeDiscoveryFiles() {
   writeFileSync(path.join(publicDir, "robots.txt"), robots);
 
   const urls = [
-    `  <url>\n    <loc>${escapeXml(`${siteOrigin}/`)}</loc>\n    <image:image>\n      <image:loc>${escapeXml(`${siteOrigin}/assets/hero-reference-products.webp`)}</image:loc>\n      <image:title>型号319保温壶花色目录</image:title>\n    </image:image>\n  </url>`,
+    `  <url>\n    <loc>${escapeXml(`${siteOrigin}/`)}</loc>\n    <image:image>\n      <image:loc>${escapeXml(`${siteOrigin}/assets/hero-reference-products.webp`)}</image:loc>\n      <image:title>Hobby Lobby 保温壶花色目录</image:title>\n    </image:image>\n  </url>`,
     ...products.map((product) => {
       const lastmod = String(product.updatedAt || product.createdAt || "").slice(0, 10);
       return `  <url>\n    <loc>${escapeXml(productUrl(product))}</loc>${lastmod ? `\n    <lastmod>${escapeXml(lastmod)}</lastmod>` : ""}\n    <image:image>\n      <image:loc>${escapeXml(absoluteUrl(product.mainImage))}</image:loc>\n      <image:title>${escapeXml(`${product.slug} ${product.nameZh}保温壶`)}</image:title>\n      <image:caption>${escapeXml(product.imageAltZh || productDescription(product))}</image:caption>\n    </image:image>\n  </url>`;
@@ -79,7 +83,8 @@ function writeProductPages() {
     const canonical = productUrl(product);
     const image = absoluteUrl(product.mainImage);
     const jsonLd = JSON.stringify(structuredData(product)).replaceAll("<", "\\u003c");
-    const fallback = `<div id="root"><main><article><h1>${escapeHtml(product.slug)} ${escapeHtml(product.nameZh)}保温壶</h1><img src="${escapeHtml(product.mainImage)}" alt="${escapeHtml(product.imageAltZh || `${product.nameZh}保温壶`)}" width="1600" height="1600"><p>${escapeHtml(description)}</p><p>1.6L ¥29 RMB / 24 pcs；2.0L ¥31 RMB / 20 pcs</p><a href="/#gallery">查看全部花色</a></article></main></div>`;
+    const capacityLine = modelCapacities(product).map((capacity) => `${capacity.id} ${capacity.price} / ${capacity.packing}`).join("；");
+    const fallback = `<div id="root"><main><article><h1>${escapeHtml(product.slug)} ${escapeHtml(product.nameZh)}保温壶</h1><img src="${escapeHtml(product.mainImage)}" alt="${escapeHtml(product.imageAltZh || `${product.nameZh}保温壶`)}" width="1600" height="1600"><p>${escapeHtml(description)}</p><p>${escapeHtml(capacityLine)}</p><a href="/#gallery">查看全部花色</a></article></main></div>`;
     const html = template
       .replace(/<title>.*?<\/title>/, `<title>${escapeHtml(title)}</title>`)
       .replace(/<meta name="description" content="[^"]*"\s*\/?>/, `<meta name="description" content="${escapeHtml(description)}" />`)

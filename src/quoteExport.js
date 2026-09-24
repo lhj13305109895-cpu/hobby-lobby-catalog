@@ -275,7 +275,7 @@ async function buildQuotePageImages(entries, quoteNo, dateDisplay) {
     context.fillRect(0, 0, canvas.width, 18);
     context.fillStyle = "#211d1a";
     context.font = '700 50px "Microsoft YaHei", "PingFang SC", sans-serif';
-    context.fillText("型号 319 花色报价单", 58, 88);
+    context.fillText("保温壶花色报价单", 58, 88);
     context.fillStyle = "#6e655f";
     context.font = '26px "Microsoft YaHei", "PingFang SC", sans-serif';
     context.fillText(`报价单号：${quoteNo}    日期：${dateDisplay}`, 60, 137);
@@ -305,7 +305,7 @@ async function buildQuotePageImages(entries, quoteNo, dateDisplay) {
       drawContainedImage(context, loadedImages.get(pattern.id), 48, y + 4, 190, 182, 2);
       context.fillStyle = "#c90816";
       context.font = '700 24px "Microsoft YaHei", "PingFang SC", sans-serif';
-      context.fillText(`319-${String(pattern.no).padStart(2, "0")}`, 260, y + 52);
+      context.fillText(pattern.slug, 260, y + 52);
       context.fillStyle = "#211d1a";
       context.font = '700 30px "Microsoft YaHei", "PingFang SC", sans-serif';
       context.fillText(pattern.name, 260, y + 96);
@@ -443,7 +443,7 @@ function makeQuoteXlsx({ entries, quoteNo, dateDisplay, imageData }) {
     const totalAmount = totalPieces * capacity.priceNumber;
     const totalCbm = Number((quantity * capacity.cbm).toFixed(2));
     merges.push(`J${row}:K${row}`);
-    rowXml.push(`<row r="${row}" ht="105" customHeight="1">${inlineStringCell(`A${row}`, `319-${String(pattern.no).padStart(2, "0")} ${pattern.name} ${capacity.id}\n${pattern.family}`, 8)}${emptyCell(`B${row}`, 1)}${numberCell(`C${row}`, quantity, 4)}${numberCell(`D${row}`, capacity.pcsPerCarton, 4)}${numberCell(`E${row}`, totalPieces, 4)}${numberCell(`F${row}`, capacity.priceNumber, 4)}${formulaCurrencyCell(`G${row}`, `E${row}*F${row}`, totalAmount)}${numberCell(`H${row}`, capacity.cbm.toFixed(2), 4)}${numberCell(`I${row}`, totalCbm.toFixed(2), 4)}${inlineStringCell(`J${row}`, `型号319\n\n${capacity.id}`, 4)}${emptyCell(`K${row}`, 4)}</row>`);
+    rowXml.push(`<row r="${row}" ht="105" customHeight="1">${inlineStringCell(`A${row}`, `${pattern.slug} ${pattern.name} ${capacity.id}\n${pattern.family}`, 8)}${emptyCell(`B${row}`, 1)}${numberCell(`C${row}`, quantity, 4)}${numberCell(`D${row}`, capacity.pcsPerCarton, 4)}${numberCell(`E${row}`, totalPieces, 4)}${numberCell(`F${row}`, capacity.priceNumber, 4)}${formulaCurrencyCell(`G${row}`, `E${row}*F${row}`, totalAmount)}${numberCell(`H${row}`, capacity.cbm.toFixed(2), 4)}${numberCell(`I${row}`, totalCbm.toFixed(2), 4)}${inlineStringCell(`J${row}`, `型号${pattern.model}\n\n${capacity.id}`, 4)}${emptyCell(`K${row}`, 4)}</row>`);
   });
 
   const totals = entries.reduce((summary, { capacity, quantity }) => {
@@ -464,7 +464,7 @@ function makeQuoteXlsx({ entries, quoteNo, dateDisplay, imageData }) {
     const insetEmu = 2 * 9525;
     const widthEmu = 145 * 9525;
     const heightEmu = 136 * 9525;
-    return `<xdr:oneCellAnchor><xdr:from><xdr:col>1</xdr:col><xdr:colOff>${insetEmu}</xdr:colOff><xdr:row>${rowZero}</xdr:row><xdr:rowOff>${insetEmu}</xdr:rowOff></xdr:from><xdr:ext cx="${widthEmu}" cy="${heightEmu}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${index + 1}" name="Product ${index + 1}" descr="Model 319 product image"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId${index + 1}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`;
+    return `<xdr:oneCellAnchor><xdr:from><xdr:col>1</xdr:col><xdr:colOff>${insetEmu}</xdr:colOff><xdr:row>${rowZero}</xdr:row><xdr:rowOff>${insetEmu}</xdr:rowOff></xdr:from><xdr:ext cx="${widthEmu}" cy="${heightEmu}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${index + 1}" name="Product ${index + 1}" descr="Thermal pot product image"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId${index + 1}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`;
   }).join("");
 
   const worksheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetViews><sheetView workbookViewId="0" showGridLines="1"/></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols><col min="1" max="1" width="23.64" customWidth="1"/><col min="2" max="2" width="18.5" customWidth="1"/><col min="3" max="3" width="7.2" customWidth="1"/><col min="4" max="4" width="11.2" customWidth="1"/><col min="5" max="5" width="11.1" customWidth="1"/><col min="6" max="6" width="11.1" customWidth="1"/><col min="7" max="7" width="15.75" customWidth="1"/><col min="8" max="8" width="11.1" customWidth="1"/><col min="9" max="9" width="10.8" customWidth="1"/><col min="10" max="10" width="9" customWidth="1"/><col min="11" max="11" width="7.86" customWidth="1"/></cols><sheetData>${rowXml.join("")}</sheetData><mergeCells count="${merges.length}">${merges.map((ref) => `<mergeCell ref="${ref}"/>`).join("")}</mergeCells><pageMargins left="0.25" right="0.25" top="0.4" bottom="0.4" header="0.3" footer="0.3"/><drawing r:id="rId1"/></worksheet>`;

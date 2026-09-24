@@ -1,0 +1,19 @@
+{
+  "319": {
+    "nameZh": "型号319",
+    "nameEn": "Model 319",
+    "nameAr": "موديل 319",
+    "capacities": [
+      { "id": "1.6L", "price": "¥29 RMB", "priceNumber": 29, "packing": "24 pcs", "pcsPerCarton": 24, "cbm": 0.14, "quoteReady": true },
+      { "id": "2.0L", "price": "¥31 RMB", "priceNumber": 31, "packing": "20 pcs", "pcsPerCarton": 20, "cbm": 0.15, "quoteReady": true }
+    ]
+  },
+  "318": {
+    "nameZh": "型号318",
+    "nameEn": "Model 318",
+    "nameAr": "موديل 318",
+    "capacities": [
+      { "id": "1.2L", "price": "¥32 RMB", "priceNumber": 32, "packing": "24 pcs", "pcsPerCarton": 24, "cbm": 0.13, "quoteReady": true }
+    ]
+  }
+}

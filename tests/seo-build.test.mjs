@@ -10,10 +10,12 @@ const products = JSON.parse(readFileSync(path.join(root, "src", "data", "product
 test("visible products have unique sequential catalogue slugs", () => {
   const slugs = products.map((product) => product.slug);
   assert.equal(new Set(slugs).size, slugs.length);
-  for (const product of products) assert.match(product.slug, /^319-\d{2,3}$/);
-  const catalogueNumbers = slugs.map((slug) => Number(slug.split("-").at(-1)));
-  assert.ok(catalogueNumbers.every((number, index) => index === 0 || number > catalogueNumbers[index - 1]));
-  assert.equal(catalogueNumbers.at(-1), Math.max(...catalogueNumbers));
+  for (const product of products) assert.match(product.slug, /^(318|319)-\d{2,3}$/);
+  for (const model of ["318", "319"]) {
+    const catalogueNumbers = products.filter((product) => product.model === model).map((product) => Number(product.slug.split("-").at(-1)));
+    assert.ok(catalogueNumbers.every((number, index) => index === 0 || number > catalogueNumbers[index - 1]));
+    assert.equal(catalogueNumbers.at(-1), Math.max(...catalogueNumbers));
+  }
 });
 
 test("image sitemap contains every visible product and image", () => {
