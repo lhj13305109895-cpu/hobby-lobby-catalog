@@ -381,6 +381,20 @@ footer a { display:inline-flex; align-items:center; gap:7px; text-decoration:non
   .language-switcher button { padding-inline:7px; }
 }
 
+/* Right-side Model 318 product shortcut */
+.catalogue-layout { max-width:1650px; grid-template-columns:210px minmax(0,1fr) 190px; }
+.model-spotlight { position:sticky; top:112px; display:grid; gap:10px; padding:14px; border:1px solid var(--line); border-radius:4px; background:var(--white); }
+.model-spotlight>span { color:var(--red); font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+.model-spotlight button { display:grid; gap:8px; width:100%; padding:0 0 12px; border:0; background:transparent; color:var(--ink); text-align:left; cursor:pointer; }
+.model-spotlight img { width:100%; aspect-ratio:1; object-fit:contain; background:var(--paper); border:1px solid #eee5db; border-radius:3px; transition:transform .2s ease,box-shadow .2s ease; }
+.model-spotlight button:hover img { transform:translateY(-2px); box-shadow:0 12px 22px rgba(53,47,43,.12); }
+.model-spotlight strong { font-family:"Playfair Display",Georgia,serif; font-size:22px; font-weight:600; }
+.model-spotlight small,.model-spotlight em { color:var(--muted); font-size:11px; font-style:normal; line-height:1.4; }
+.model-spotlight b { display:flex; align-items:center; gap:5px; margin-top:4px; color:var(--red); font-size:11px; }
+.model-spotlight b svg { font-size:14px; }
+@media (max-width:1100px) { .catalogue-layout{grid-template-columns:190px minmax(0,1fr) 166px;gap:20px}.model-spotlight{padding:11px}.model-spotlight strong{font-size:19px} }
+@media (max-width:800px) { .catalogue-layout{grid-template-columns:1fr}.model-spotlight{position:static;grid-template-columns:105px 1fr;padding:12px;align-items:center}.model-spotlight>span{grid-column:1/-1}.model-spotlight button{grid-column:1/-1;grid-template-columns:105px 1fr;column-gap:14px;align-items:center}.model-spotlight img{grid-row:1/5;grid-column:1}.model-spotlight strong{font-size:20px} }
+
 @media (max-width:380px) {
   .topbar nav { display:none; }
   .language-switcher button { padding-inline:6px; font-size:10px; }

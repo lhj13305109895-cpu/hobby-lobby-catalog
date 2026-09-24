@@ -45,7 +45,8 @@ const heroShowcasePatterns = catalogue
   .slice(-4);
 const heroFeaturedPattern = catalogue.find((product) => product.no === 54) || heroShowcasePatterns[0] || catalogue[0];
 
-const filters = ["全部花色", "型号318", "型号319", "白色壶身", "316不锈钢", "混色套装"];
+const filters = ["全部花色", "白色壶身", "316不锈钢", "混色套装"];
+const model318Feature = catalogue.find((product) => product.model === "318");
 
 const modelForFilter = (filter) => (filter === "型号318" || filter === "型号319" ? filter.replace("型号", "") : null);
 const matchesFilter = (pattern, filter) => {
@@ -806,6 +807,16 @@ function Storefront() {
               </button>
             </div>}
             </div>
+            {model318Feature && <aside className="model-spotlight" aria-label={localize(language, "型号 318 分类", "Model 318 category", "فئة موديل 318")}>
+              <span>{localize(language, "新增壶型", "NEW MODEL", "موديل جديد")}</span>
+              <button type="button" onClick={() => chooseFilter("型号318")} aria-pressed={filter === "型号318"}>
+                <img src={model318Feature.displayImage} alt={language === "zh" ? model318Feature.imageAltZh : model318Feature.imageAltEn} width="640" height="640" loading="lazy" decoding="async" />
+                <strong>{localize(language, "型号 318", "Model 318", "موديل 318")}</strong>
+                <small>{localize(language, "1.2L · ¥32 RMB", "1.2L · ¥32 RMB", "1.2 لتر · ¥32 RMB")}</small>
+                <em>{localize(language, "24 pcs/箱 · 0.13 CBM", "24 pcs/carton · 0.13 CBM", "24 قطعة/كرتون · 0.13 CBM")}</em>
+                <b>{localize(language, "查看 318 全部花色", "Browse 318 patterns", "عرض تصاميم 318")} <ArrowRight weight="bold" /></b>
+              </button>
+            </aside>}
           </div>
           <p className="gallery-note">{t.currentShowing} {filteredPatterns.length} {t.currentSuffix}</p>
         </section>
