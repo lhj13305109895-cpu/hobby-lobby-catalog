@@ -11530,5 +11530,33 @@
     "visible": true,
     "createdAt": "2026-10-09T01:22:10.000Z",
     "updatedAt": "2026-10-09T01:22:10.000Z"
+  },
+  {
+    "productId": "pattern-314",
+    "slug": "319-314",
+    "nameZh": "金边草原牧马",
+    "nameEn": "Gold Bordered Steppe Herding",
+    "model": "319",
+    "capacities": [
+      "1.6L",
+      "2.0L"
+    ],
+    "descriptionZh": "型号319 金边草原牧马保温壶，以草原牧马生活、骑马人物、远山与云朵插画搭配金色卷纹边饰，提供1.6L和2.0L两种容量。",
+    "descriptionEn": "Model 319 Gold Bordered Steppe Herding thermal pot with illustrations of herding life, riders, distant mountains and clouds framed by golden scroll borders, available in 1.6L and 2.0L.",
+    "categoryId": "silk-road-story",
+    "bodyType": "白色壶身",
+    "mainImage": "/assets/catalogue/319-314-gold-bordered-steppe-herding.webp",
+    "thumbnailImage": "/assets/catalogue/319-314-gold-bordered-steppe-herding-thumb.webp",
+    "originalImage": "/assets/catalogue/319-314-gold-bordered-steppe-herding.webp",
+    "detailImages": [],
+    "imageAltZh": "319-314 金边草原牧马保温壶",
+    "imageAltEn": "Model 319-314 Gold Bordered Steppe Herding thermal pot",
+    "sortOrder": 3130,
+    "isNew": true,
+    "featured": false,
+    "pinned": false,
+    "visible": true,
+    "createdAt": "2026-10-09T01:47:01.000Z",
+    "updatedAt": "2026-10-09T01:47:01.000Z"
   }
 ]
