@@ -1049,9 +1049,9 @@
     "descriptionEn": "",
     "categoryId": "botanical-floral",
     "bodyType": "白色壶身",
-    "mainImage": "/assets/today-pattern-39.jpg",
-    "thumbnailImage": "/assets/today-thumb-39.jpg",
-    "originalImage": "/assets/today-pattern-39.jpg",
+    "mainImage": "/assets/catalogue/319-39-vintage-brown-botanical-20261009.webp",
+    "thumbnailImage": "/assets/catalogue/319-39-vintage-brown-botanical-20261009-thumb.webp",
+    "originalImage": "/assets/catalogue/319-39-vintage-brown-botanical-20261009.webp",
     "detailImages": [],
     "imageAltZh": "复古棕植保温壶",
     "imageAltEn": "",
@@ -1061,7 +1061,7 @@
     "pinned": false,
     "visible": true,
     "createdAt": "2026-07-28T00:00:00.000Z",
-    "updatedAt": "2026-07-28T00:00:00.000Z"
+    "updatedAt": "2026-10-09T03:15:48.000Z"
   },
   {
     "productId": "pattern-40",
