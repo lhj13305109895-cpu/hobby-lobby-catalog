@@ -10,6 +10,11 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 
 ## Durable Product Decisions
 
+- The 2026-10-09 image batch adds ten Model 319 patterns `319-304` through `319-313` in the supplied order, excluding image 8 (`6D72EAEB-E855-42CF-A26E-B02315681F83.PNG`). The user confirmed image 8 duplicates image 3; retain image 3 (`A782319A-F72C-4E69-8A64-2F0C8BF5122E.PNG`) as `319-306` only.
+
+- The 20 single-pot images added on 2026-10-08 are Model 319 patterns `319-284` through `319-303`, in the supplied image order. All use white bodies with decorative printing, including the full-coverage dark prints; do not call them stainless steel.
+- The three studio-rendered new patterns supplied on 2026-10-08 are Model 318 **1.2L only**, numbered `318-102` through `318-104` in the supplied order and classified under `ethnic-geometric`. Keep the existing ¥32 RMB / 24 pcs / 0.13 cbm settings.
+
 - English is the default storefront language and its responsive layout is the single source of truth for Chinese and Arabic too. Never substitute a separate language-specific screenshot layout. The header's Customization and About Us links, plus the hero customization action, all jump to the shared contact section.
 
 - The 28 images added on 2026-08-13 are numbered 319-151 through 319-178. Every image showing multiple pots is retained as one `混色套装系列` / `Mixed Set Series` entry; single-pot images use `316不锈钢花卉系列` or the new `田园萌兔系列` / `Cottage Rabbit Series`.
