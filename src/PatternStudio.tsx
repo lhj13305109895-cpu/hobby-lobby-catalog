@@ -9,10 +9,11 @@ import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLigh
 import { getDocument, GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf.mjs";
 import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
 import "./pattern-studio-source.css";
+import { POT_322_WRAP_WIDTH_MM, POT_322_BODY_HEIGHT_MM, POT_322_DIAMETER_MM, POT_322_VARIANTS, is322Capacity, get322BodyHeightMm, infer322ArtworkPrintHeight, configure322ModelHeight, configure322BodyPrint, configure322FixtureColor } from "./studio-model-322";
 
 type Finish = "matte" | "satin" | "gloss";
-type Capacity = "1.6" | "2.0" | "145" | "1.2";
-type PairMode = "none" | "319" | "318";
+type Capacity = "1.6" | "2.0" | "145" | "1.2" | "322" | "322-1.0";
+type PairMode = "none" | "319" | "318" | "322";
 
 GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -130,6 +131,7 @@ type CapacityArtwork = {
 };
 
 function maximumPrintHeightForCapacity(capacity: Capacity) {
+  if (is322Capacity(capacity)) return get322BodyHeightMm(capacity);
   if (capacity === "2.0") return TWO_LITER_WRAP_HEIGHT_MM;
   if (capacity === "1.6") return STANDARD_WRAP_HEIGHT_MM;
   if (capacity === "1.2") return POT_12_WRAP_HEIGHT_MM;
@@ -137,6 +139,7 @@ function maximumPrintHeightForCapacity(capacity: Capacity) {
 }
 
 function inferArtworkPrintHeight(capacity: Capacity, width: number, height: number) {
+  if (is322Capacity(capacity)) return infer322ArtworkPrintHeight(width, height, get322BodyHeightMm(capacity));
   const printWidth = capacity === "145" ? NEW_POT_WRAP_WIDTH_MM : WRAP_WIDTH_MM;
   const maximumHeight = maximumPrintHeightForCapacity(capacity);
   return THREE.MathUtils.clamp(
@@ -150,17 +153,17 @@ function formatMillimetres(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
-function applyArtworkTextureTransform(texture: THREE.Texture, settings: TextureSettings) {
+function applyArtworkTextureTransform(texture: THREE.Texture, settings: TextureSettings, capacity?: Capacity) {
   const image = texture.image as { width?: number } | undefined;
   // Sample a few pixels inside each horizontal edge, then stretch that inner
   // range across the same 365.99 mm circumference. This behaves like print
   // bleed: the physical width is unchanged, but transparent/white edge pixels
   // cannot open into a vertical line at the 0°/360° join.
-  const horizontalInset = image?.width
+  const horizontalInset = !is322Capacity(capacity) && image?.width
     ? Math.min(0.01, 3 / image.width)
     : 0;
   texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
+  texture.wrapT = is322Capacity(capacity) ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
   texture.repeat.set(
     settings.scaleX * (1 - horizontalInset * 2),
     settings.scaleY,
@@ -1300,13 +1303,15 @@ function Slider({
 export function PotStudio() {
   const initialCapacity = new URLSearchParams(window.location.search).get("capacity");
   const [capacity, setCapacity] = useState<Capacity>(
-    initialCapacity === "2.0" || initialCapacity === "145" || initialCapacity === "1.2" ? initialCapacity : "1.6",
+    initialCapacity === "2.0" || initialCapacity === "145" || initialCapacity === "1.2" || is322Capacity(initialCapacity) ? initialCapacity : "1.6",
   );
   const [pairMode, setPairMode] = useState<PairMode>("none");
   const isTwoLiter = capacity === "2.0";
   const isNewPot = capacity === "145";
   const isOneTwoLiter = capacity === "1.2";
-  const isStandaloneModel = isNewPot || isOneTwoLiter;
+  const is322 = is322Capacity(capacity);
+  const body322HeightMm = get322BodyHeightMm(capacity);
+  const isStandaloneModel = isNewPot || isOneTwoLiter || is322;
   const [newPotPrintHeightMm, setNewPotPrintHeightMm] = useState(
     maximumPrintHeightForCapacity(capacity),
   );
@@ -1316,21 +1321,23 @@ export function PotStudio() {
     "2.0": Array(4).fill(TWO_LITER_WRAP_HEIGHT_MM),
     "1.2": Array(4).fill(POT_12_WRAP_HEIGHT_MM),
     "145": Array(4).fill(NEW_POT_WRAP_HEIGHT_MM),
+    "322": Array(4).fill(POT_322_BODY_HEIGHT_MM),
+    "322-1.0": Array(4).fill(POT_322_VARIANTS["322-1.0"].bodyHeightMm),
   });
-  const wrapWidthMm = isOneTwoLiter ? POT_12_WRAP_WIDTH_MM : isNewPot ? NEW_POT_WRAP_WIDTH_MM : WRAP_WIDTH_MM;
+  const wrapWidthMm = is322 ? POT_322_WRAP_WIDTH_MM : isOneTwoLiter ? POT_12_WRAP_WIDTH_MM : isNewPot ? NEW_POT_WRAP_WIDTH_MM : WRAP_WIDTH_MM;
   const wrapHeightMm = isOneTwoLiter
     ? POT_12_WRAP_HEIGHT_MM
-    : isNewPot ? newPotPrintHeightMm : isTwoLiter ? TWO_LITER_WRAP_HEIGHT_MM : STANDARD_WRAP_HEIGHT_MM;
-  const templateHeightMm = isNewPot ? NEW_POT_WRAP_HEIGHT_MM : wrapHeightMm;
-  const capacityLabel = isOneTwoLiter ? "318 1.2L" : isNewPot ? "318 2.0L" : isTwoLiter ? "319 2.0L" : "319 1.6L";
-  const displayLabel = pairMode === "319" ? "319 一大一小" : pairMode === "318" ? "318 一大一小" : capacityLabel;
+    : is322 || isNewPot ? newPotPrintHeightMm : isTwoLiter ? TWO_LITER_WRAP_HEIGHT_MM : STANDARD_WRAP_HEIGHT_MM;
+  const templateHeightMm = is322 ? body322HeightMm : isNewPot ? NEW_POT_WRAP_HEIGHT_MM : wrapHeightMm;
+  const capacityLabel = is322 ? POT_322_VARIANTS[capacity].label : isOneTwoLiter ? "318 1.2L" : isNewPot ? "318 2.0L" : isTwoLiter ? "319 2.0L" : "319 1.6L";
+  const displayLabel = pairMode === "none" ? capacityLabel : `${pairMode} 一大一小`;
   const viewportRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const modelRef = useRef<THREE.Object3D | null>(null);
   const modelMaterialsRef = useRef<THREE.MeshPhysicalMaterial[]>([]);
-  const printMaterialsRef = useRef<THREE.MeshBasicMaterial[]>([]);
+  const printMaterialsRef = useRef<Array<THREE.MeshBasicMaterial | THREE.MeshPhysicalMaterial>>([]);
   const printSurfacesRef = useRef<THREE.Mesh[]>([]);
   const fixtureMaterialsRef = useRef<Array<THREE.MeshPhysicalMaterial | THREE.MeshBasicMaterial>>([]);
   const fixturePartUniformsRef = useRef<FixturePartUniforms[]>([]);
@@ -1357,6 +1364,8 @@ export function PotStudio() {
     "2.0": Array.from({ length: 4 }, () => ({ ...INITIAL_SETTINGS })),
     "1.2": Array.from({ length: 4 }, () => ({ ...INITIAL_SETTINGS })),
     "145": Array.from({ length: 4 }, () => ({ ...INITIAL_SETTINGS })),
+    "322": Array.from({ length: 4 }, () => ({ ...INITIAL_SETTINGS })),
+    "322-1.0": Array.from({ length: 4 }, () => ({ ...INITIAL_SETTINGS })),
   });
   const [finish, setFinish] = useState<Finish>(capacity === "1.6" || capacity === "2.0" ? "gloss" : "matte");
   const [bodyColor, setBodyColor] = useState(DEFAULT_BODY_COLOR);
@@ -1372,31 +1381,31 @@ export function PotStudio() {
       ? PAIR_LOCKED_POLAR_ANGLE
       : isNewPot
         ? NEW_POT_LOCKED_POLAR_ANGLE
-        : isOneTwoLiter ? POT_12_LOCKED_POLAR_ANGLE : LOCKED_POLAR_ANGLE;
+        : isOneTwoLiter || is322 ? POT_12_LOCKED_POLAR_ANGLE : LOCKED_POLAR_ANGLE;
     controls.minPolarAngle = resetPolarAngle;
     controls.maxPolarAngle = resetPolarAngle;
     if (pairMode !== "none") camera.position.copy(PAIR_CAMERA_POSITION);
     else if (isNewPot) camera.position.copy(NEW_POT_CAMERA_POSITION);
-    else if (isOneTwoLiter) camera.position.copy(POT_12_CAMERA_POSITION);
+    else if (isOneTwoLiter || is322) camera.position.copy(POT_12_CAMERA_POSITION);
     else if (isTwoLiter) camera.position.set(3.2, 1.35, 4.8);
     else camera.position.set(3.65, 1.22, 5.47);
     if (pairMode !== "none") controls.target.copy(PAIR_CAMERA_TARGET);
     else if (isNewPot) controls.target.copy(NEW_POT_CAMERA_TARGET);
-    else if (isOneTwoLiter) controls.target.copy(POT_12_CAMERA_TARGET);
+    else if (isOneTwoLiter || is322) controls.target.copy(POT_12_CAMERA_TARGET);
     else controls.target.set(0, -0.05, 0);
-    if ((pairMode !== "none" || groupCount > 1) && modelRef.current) {
+    if ((pairMode !== "none" || groupCount > 1 || is322) && modelRef.current) {
       const displayBox = new THREE.Box3().setFromObject(modelRef.current);
       const visualCenter = displayBox.getCenter(new THREE.Vector3());
-      if (pairMode !== "none") visualCenter.y -= 0.28;
+      if (pairMode !== "none" && pairMode !== "322") visualCenter.y -= 0.28;
       const centerShift = visualCenter.y - controls.target.y;
       controls.target.set(visualCenter.x, visualCenter.y, visualCenter.z);
       camera.position.y += centerShift;
       const viewDirection = camera.position.clone().sub(controls.target).normalize();
-      const fittedDistance = cameraDistanceToFitBox(camera, displayBox, visualCenter, viewDirection, pairMode !== "none" ? 0.64 : 0.88);
+      const fittedDistance = cameraDistanceToFitBox(camera, displayBox, visualCenter, viewDirection, pairMode === "322" ? 0.86 : pairMode !== "none" ? 0.64 : 0.88);
       camera.position.copy(visualCenter).addScaledVector(viewDirection, fittedDistance);
     }
     controls.update();
-  }, [isTwoLiter, isOneTwoLiter, isNewPot, groupCount, pairMode]);
+  }, [isTwoLiter, isOneTwoLiter, isNewPot, is322, groupCount, pairMode]);
 
   const showFrontView = useCallback(() => {
     const camera = cameraRef.current;
@@ -1407,7 +1416,7 @@ export function PotStudio() {
       ? PAIR_LOCKED_POLAR_ANGLE
       : isNewPot
         ? NEW_POT_LOCKED_POLAR_ANGLE
-        : isOneTwoLiter ? POT_12_LOCKED_POLAR_ANGLE : LOCKED_POLAR_ANGLE;
+        : isOneTwoLiter || is322 ? POT_12_LOCKED_POLAR_ANGLE : LOCKED_POLAR_ANGLE;
     const horizontalDistance = Math.sin(frontPolarAngle) * distance;
     const verticalOffset = Math.cos(frontPolarAngle) * distance;
     controls.minPolarAngle = frontPolarAngle;
@@ -1421,7 +1430,7 @@ export function PotStudio() {
     camera.lookAt(controls.target);
     camera.updateProjectionMatrix();
     controls.update();
-  }, [pairMode, isNewPot, isOneTwoLiter]);
+  }, [pairMode, isNewPot, isOneTwoLiter, is322]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -1433,7 +1442,7 @@ export function PotStudio() {
     const camera = new THREE.PerspectiveCamera(34, 1, 0.01, 100);
     if (pairMode !== "none") camera.position.copy(PAIR_CAMERA_POSITION);
     else if (isNewPot) camera.position.copy(NEW_POT_CAMERA_POSITION);
-    else if (isOneTwoLiter) camera.position.copy(POT_12_CAMERA_POSITION);
+    else if (isOneTwoLiter || is322) camera.position.copy(POT_12_CAMERA_POSITION);
     else if (isTwoLiter) camera.position.set(3.2, 1.35, 4.8);
     else camera.position.set(3.65, 1.22, 5.47);
     cameraRef.current = camera;
@@ -1465,14 +1474,14 @@ export function PotStudio() {
       ? PAIR_LOCKED_POLAR_ANGLE
       : isNewPot
       ? NEW_POT_LOCKED_POLAR_ANGLE
-      : isOneTwoLiter ? POT_12_LOCKED_POLAR_ANGLE : LOCKED_POLAR_ANGLE;
+      : isOneTwoLiter || is322 ? POT_12_LOCKED_POLAR_ANGLE : LOCKED_POLAR_ANGLE;
     controls.minPolarAngle = lockedPolarAngle;
     controls.maxPolarAngle = lockedPolarAngle;
     controls.minDistance = 2.2;
     controls.maxDistance = pairMode !== "none" || groupCount > 1 ? 30 : isTwoLiter ? 9 : 11.5;
     if (pairMode !== "none") controls.target.copy(PAIR_CAMERA_TARGET);
     else if (isNewPot) controls.target.copy(NEW_POT_CAMERA_TARGET);
-    else if (isOneTwoLiter) controls.target.copy(POT_12_CAMERA_TARGET);
+    else if (isOneTwoLiter || is322) controls.target.copy(POT_12_CAMERA_TARGET);
     else controls.target.set(0, -0.05, 0);
     controlsRef.current = controls;
 
@@ -1528,28 +1537,34 @@ export function PotStudio() {
       const uses319PairRecipe = pairMode === "319" || Boolean(single319Kind);
       const pairCapacities: Capacity[] = single319Kind
         ? [single319Kind]
-        : pairMode === "319" ? ["1.6", "2.0"] : ["1.2", "145"];
-      const modelPath = (kind: Capacity) => kind === "1.2" ? "/pot-454.glb" : kind === "145" ? "/pot-145.glb" : "/pot.glb";
+        : pairMode === "322" ? ["322-1.0", "322"] : pairMode === "319" ? ["1.6", "2.0"] : ["1.2", "145"];
+      const modelPath = (kind: Capacity) => is322Capacity(kind) ? "/pot-322.glb" : kind === "1.2" ? "/pot-454.glb" : kind === "145" ? "/pot-145.glb" : "/pot.glb";
       try {
         const gltfs = await Promise.all(pairCapacities.map((kind) => loader.loadAsync(modelPath(kind))));
         if (disposed) return;
         const allBodyMaterials: THREE.MeshPhysicalMaterial[] = [];
         const allFixtureMaterials: Array<THREE.MeshPhysicalMaterial | THREE.MeshBasicMaterial> = [];
         const allFixturePartUniforms: FixturePartUniforms[] = [];
-        const allPrintMaterials: THREE.MeshBasicMaterial[] = [];
+        const allPrintMaterials: Array<THREE.MeshBasicMaterial | THREE.MeshPhysicalMaterial> = [];
         const allPrintSurfaces: THREE.Mesh[] = [];
 
         const makePairProduct = (gltf: { scene: THREE.Group }, kind: Capacity) => {
           const pairIsTwoLiter = kind === "2.0";
           const pairIsNewPot = kind === "145";
           const pairIsOneTwoLiter = kind === "1.2";
-          const pairIsStandalone = pairIsNewPot || pairIsOneTwoLiter;
+          const pairIs322 = is322Capacity(kind);
+          const pairIsStandalone = pairIsNewPot || pairIsOneTwoLiter || pairIs322;
           const model = gltf.scene;
+          // Both 322 sizes use one physical scale, so the identical handle and
+          // diameter stay equal in the pair instead of enlarging the short pot.
+          const reference322Size = pairIs322 ? new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3()) : null;
+          if (pairIs322) configure322ModelHeight(model, get322BodyHeightMm(kind));
           if (pairIsTwoLiter) extendBodyToTwoLiter(model);
           const rawBox = new THREE.Box3().setFromObject(model);
           const rawSize = rawBox.getSize(new THREE.Vector3());
           const rawCenter = rawBox.getCenter(new THREE.Vector3());
-          const scale = 2.55 / Math.max(rawSize.x, rawSize.y, rawSize.z);
+          const sizingSize = reference322Size ?? rawSize;
+          const scale = 2.55 / Math.max(sizingSize.x, sizingSize.y, sizingSize.z);
           model.scale.setScalar(scale);
           model.position.copy(rawCenter.multiplyScalar(-scale));
           model.updateMatrixWorld(true);
@@ -1561,7 +1576,7 @@ export function PotStudio() {
           // 319 pair and single products deliberately start from the same
           // glossy shared-shell material. The common part shader below turns
           // only the plastic fixtures matte in both render paths.
-          const fixtureSurface = surface;
+          const fixtureSurface = pairIs322 ? MATTE_PLASTIC_SURFACE : surface;
           const bodyMaterial = new THREE.MeshPhysicalMaterial({
             color: bodyColor, roughness: surface.roughness, metalness: 0, clearcoat: surface.clearcoat,
             clearcoatRoughness: surface.clearcoatRoughness, ior: 1.46, specularIntensity: 0.42,
@@ -1576,6 +1591,12 @@ export function PotStudio() {
             side: THREE.DoubleSide,
           });
           const artwork = capacityArtworksRef.current[kind]?.[0];
+          if (pairIs322) {
+            configure322FixtureColor(fixtureMaterial, lidColor);
+            bodyMaterial.polygonOffset = false;
+            bodyMaterial.map = artwork?.texture ?? null;
+            configure322BodyPrint(bodyMaterial, newPotPrintHeightsRef.current[kind][0], get322BodyHeightMm(kind));
+          }
           const printMaterial = new THREE.MeshBasicMaterial({
             color: 0xffffff, map: artwork?.texture ?? null, side: THREE.FrontSide,
             transparent: true, alphaTest: 0.001, depthWrite: false, polygonOffset: true,
@@ -1593,10 +1614,11 @@ export function PotStudio() {
             if (!(child instanceof THREE.Mesh)) return;
             child.castShadow = false;
             child.receiveShadow = false;
-            if (!pairIsStandalone && child.name === "BODY_PRINT_365_99x183") {
+            if ((pairIs322 && child.name === "BODY_PRINT_364_11x151")
+              || (!pairIsStandalone && child.name === "BODY_PRINT_365_99x183")) {
               child.material = bodyMaterial;
               printSource = child;
-            } else if (pairIsStandalone) {
+            } else if (pairIsStandalone && !pairIs322) {
               child.material = bodyMaterial;
               if (!firstSurface) firstSurface = child;
             } else {
@@ -1615,7 +1637,12 @@ export function PotStudio() {
             if (fixturePartUniforms) allFixturePartUniforms.push(fixturePartUniforms);
           }
           let overlay: THREE.Mesh | null = null;
-          if (printSource) {
+          if (pairIs322 && printSource) {
+            // Print directly on the real body, with no additional carrier.
+            overlay = printSource;
+            overlay.renderOrder = 1;
+            overlay.visible = true;
+          } else if (printSource) {
             overlay = printSource.clone(false) as THREE.Mesh;
             overlay.name = "BODY_PRINT_MIXED_PAIR_OVERLAY";
             const maximumPrintHeight = maximumPrintHeightForCapacity(kind);
@@ -1658,7 +1685,7 @@ export function PotStudio() {
             overlay.visible = Boolean(artwork);
             model.add(overlay);
           }
-          if (overlay && !pairIsOneTwoLiter) {
+          if (overlay && !pairIsOneTwoLiter && !pairIs322) {
             softenPrintAtUpperSilhouette(
               printMaterial,
               overlay.geometry as THREE.BufferGeometry,
@@ -1674,7 +1701,7 @@ export function PotStudio() {
           if (pairIsOneTwoLiter) root.rotation.y = -Math.PI * 0.5;
           allBodyMaterials.push(bodyMaterial);
           allFixtureMaterials.push(fixtureMaterial);
-          allPrintMaterials.push(printMaterial);
+          allPrintMaterials.push(pairIs322 ? bodyMaterial : printMaterial);
           if (overlay) allPrintSurfaces.push(overlay);
           return root;
         };
@@ -1696,7 +1723,7 @@ export function PotStudio() {
           return;
         }
         const largeRoot = makePairProduct(gltfs[1], pairCapacities[1]);
-        largeRoot.scale.setScalar(pairMode === "319" ? 1.18 : 1.22);
+        largeRoot.scale.setScalar(pairMode === "322" ? 1 : pairMode === "319" ? 1.18 : 1.22);
         const alignBase = (root: THREE.Object3D) => {
           root.updateMatrixWorld(true);
           const box = new THREE.Box3().setFromObject(root);
@@ -1718,10 +1745,10 @@ export function PotStudio() {
         const framingCenter = visualCenter.clone();
         // Keep both complete vessels comfortably inside the on-screen canvas;
         // the slight upward optical shift balances their tall handles.
-        framingCenter.y -= 0.28;
+        if (pairMode !== "322") framingCenter.y -= 0.28;
         controls.target.copy(framingCenter);
         const viewDirection = camera.position.clone().sub(controls.target).normalize();
-        const distance = cameraDistanceToFitBox(camera, displayBox, framingCenter, viewDirection, 0.6);
+        const distance = cameraDistanceToFitBox(camera, displayBox, framingCenter, viewDirection, pairMode === "322" ? 0.86 : 0.6);
         camera.position.copy(framingCenter).addScaledVector(viewDirection, distance);
         controls.update();
         modelMaterialsRef.current = allBodyMaterials;
@@ -1745,11 +1772,12 @@ export function PotStudio() {
       const loader = new GLTFLoader();
       loader.setDRACOLoader(dracoLoader);
       loader.load(
-        isOneTwoLiter ? "/pot-454.glb" : isNewPot ? "/pot-145.glb" : "/pot.glb",
+        is322 ? "/pot-322.glb" : isOneTwoLiter ? "/pot-454.glb" : isNewPot ? "/pot-145.glb" : "/pot.glb",
         (gltf) => {
           if (disposed) return;
           const model = gltf.scene;
           if (isTwoLiter) extendBodyToTwoLiter(model);
+          if (is322) configure322ModelHeight(model, body322HeightMm);
           const box = new THREE.Box3().setFromObject(model);
           const size = box.getSize(new THREE.Vector3());
           const center = box.getCenter(new THREE.Vector3());
@@ -1801,15 +1829,15 @@ export function PotStudio() {
           // Artwork is colour-calibrated and intentionally independent from
           // scene lighting, so every rotation keeps the same source colours.
           printMaterial.toneMapped = false;
+          const initialFixtureSurface = is322 ? MATTE_PLASTIC_SURFACE : initialSurface;
           const fixtureMaterial = new THREE.MeshPhysicalMaterial({
             color: 0xffffff,
-            // This source mesh contains both the vessel shell and the plastic
-            // parts. Start with the vessel's gloss; the shader below makes
-            // only the fixture region matte.
-            roughness: initialSurface.roughness,
+            // 322 has separate plastic geometry. The shared 319 shell starts
+            // glossy and its fixture-region shader makes only the plastic matte.
+            roughness: initialFixtureSurface.roughness,
             metalness: 0,
-            clearcoat: initialSurface.clearcoat,
-            clearcoatRoughness: initialSurface.clearcoatRoughness,
+            clearcoat: initialFixtureSurface.clearcoat,
+            clearcoatRoughness: initialFixtureSurface.clearcoatRoughness,
             ior: 1.46,
             // The shared 319 shell contains part of the vessel body. Match the
             // dedicated body mesh exactly so the shoulder and straight wall do
@@ -1818,7 +1846,8 @@ export function PotStudio() {
             envMapIntensity: 0.55,
             side: THREE.DoubleSide,
           });
-          let bodyFound = isStandaloneModel;
+          if (is322) configure322FixtureColor(fixtureMaterial, lidColor);
+          let bodyFound = isStandaloneModel && !is322;
           const printSources: THREE.Mesh[] = [];
           const newPotSources: THREE.Mesh[] = [];
           model.traverse((child) => {
@@ -1828,14 +1857,16 @@ export function PotStudio() {
             // banding at normal viewing distances. Keep its floor shadow, but
             // let the studio lights describe a clean, continuous enamel skin.
             child.receiveShadow = false;
-            const isPrintSurface = !isStandaloneModel && child.name === "BODY_PRINT_365_99x183";
+            const isPrintSurface = is322
+              ? child.name === "BODY_PRINT_364_11x151"
+              : !isStandaloneModel && child.name === "BODY_PRINT_365_99x183";
             if (isPrintSurface) {
               child.material = bodyMaterial;
               child.renderOrder = 1;
               bodyFound = true;
               materials.push(bodyMaterial);
               printSources.push(child);
-            } else if (isStandaloneModel) {
+            } else if (isStandaloneModel && !is322) {
               child.material = bodyMaterial;
               child.receiveShadow = false;
               newPotSources.push(child);
@@ -1859,7 +1890,7 @@ export function PotStudio() {
             ? 1
             : newPotPrintHeightsRef.current[capacity][0]
               / maximumPrintHeightForCapacity(capacity);
-          let printSurfaces = printSources.map((source) => {
+          let printSurfaces = is322 ? printSources : printSources.map((source) => {
             const overlay = source.clone(false) as THREE.Mesh;
             overlay.name = "BODY_PRINT_TRANSPARENT_OVERLAY";
             overlay.geometry = createSeamClippedPrintGeometry(
@@ -1929,7 +1960,7 @@ export function PotStudio() {
             printSurfaces = [overlay];
             materials.push(bodyMaterial);
           }
-          if (printSurfaces[0] && !isOneTwoLiter) {
+          if (printSurfaces[0] && !isOneTwoLiter && !is322) {
             softenPrintAtUpperSilhouette(
               printMaterial,
               printSurfaces[0].geometry as THREE.BufferGeometry,
@@ -1947,7 +1978,7 @@ export function PotStudio() {
 
           const displayGroup = new THREE.Group();
           displayGroup.name = "POT_GROUP";
-          const groupedPrintMaterials: THREE.MeshBasicMaterial[] = [];
+          const groupedPrintMaterials: Array<THREE.MeshBasicMaterial | THREE.MeshPhysicalMaterial> = [];
           const groupedPrintSurfaces: THREE.Mesh[] = [];
           const productSize = new THREE.Box3().setFromObject(productRoot).getSize(new THREE.Vector3());
           const groupScale = groupCount === 1 ? 1 : groupCount === 2 ? 0.62 : groupCount === 3 ? 0.45 : 0.34;
@@ -1964,7 +1995,9 @@ export function PotStudio() {
             const artwork = capacityArtworksRef.current[capacity]?.[slot];
             let slotSurface: THREE.Mesh | null = null;
             root.traverse((child) => {
-              if (child instanceof THREE.Mesh && child.name.includes("_OVERLAY")) slotSurface = child;
+              if (child instanceof THREE.Mesh && (is322
+                ? child.name === "BODY_PRINT_364_11x151"
+                : child.name.includes("_OVERLAY"))) slotSurface = child;
             });
             if (slotSurface) {
               if (!isStandaloneModel && slot > 0 && printSources[0]) {
@@ -1985,8 +2018,14 @@ export function PotStudio() {
                   newPotSources[0], model.position.x, model.position.z, printBottom, printTop, radialLimit,
                 );
               }
-              const slotMaterial = printMaterial.clone();
+              const slotMaterial = is322 ? bodyMaterial.clone() : printMaterial.clone();
               slotMaterial.map = artwork?.texture ?? null;
+              if (is322 && slotMaterial instanceof THREE.MeshPhysicalMaterial) {
+                // The only visible vessel skin is the supplied model itself.
+                slotMaterial.polygonOffset = false;
+                configure322BodyPrint(slotMaterial, newPotPrintHeightsRef.current[capacity][slot], body322HeightMm);
+                materials.push(slotMaterial);
+              }
               if (isNewPot) {
                 const bodyBandBottom = -1.11;
                 const bodyBandHeight = 2.55 * (NEW_POT_WRAP_HEIGHT_MM / NEW_POT_OVERALL_HEIGHT_MM);
@@ -1997,7 +2036,7 @@ export function PotStudio() {
               }
               slotMaterial.needsUpdate = true;
               slotSurface.material = slotMaterial;
-              slotSurface.visible = Boolean(artwork);
+              slotSurface.visible = is322 || Boolean(artwork);
               groupedPrintMaterials.push(slotMaterial);
               groupedPrintSurfaces.push(slotSurface);
             }
@@ -2006,7 +2045,7 @@ export function PotStudio() {
             displayGroup.add(root);
           }
 
-          if (groupCount > 1) {
+          if (groupCount > 1 || is322) {
             const displayBox = new THREE.Box3().setFromObject(displayGroup);
             const visualCenter = displayBox.getCenter(new THREE.Vector3());
             const centerShift = visualCenter.y - controls.target.y;
@@ -2021,7 +2060,7 @@ export function PotStudio() {
           modelMaterialsRef.current = materials;
           printMaterialsRef.current = groupedPrintMaterials;
           printSurfacesRef.current = groupedPrintSurfaces;
-          fixtureMaterialsRef.current = isStandaloneModel
+          fixtureMaterialsRef.current = isStandaloneModel && !is322
             ? []
             : [fixtureMaterial, ...(seamCover ? [seamCover.material] : [])];
           fixturePartUniformsRef.current = fixturePartUniforms ? [fixturePartUniforms] : [];
@@ -2085,8 +2124,8 @@ export function PotStudio() {
   useEffect(() => {
     const texture = uploadedTextureRef.current;
     if (!texture) return;
-    applyArtworkTextureTransform(texture, settings);
-  }, [settings]);
+    applyArtworkTextureTransform(texture, settings, capacity);
+  }, [settings, capacity]);
 
   useEffect(() => {
     // 319 vessels use the same soft-gloss enamel in every presentation. This
@@ -2108,7 +2147,7 @@ export function PotStudio() {
     updateFixturePartUniforms(fixturePartUniformsRef.current, new THREE.Color(bodyColor).getHex(), lidColor);
     const fixtureSurface = fixturePartUniformsRef.current.length
       ? FINISH_SURFACE.gloss
-      : (capacity === "1.6" || capacity === "2.0")
+      : (capacity === "1.6" || capacity === "2.0" || is322)
         ? MATTE_PLASTIC_SURFACE
         : FINISH_SURFACE[finish];
     fixtureMaterialsRef.current.forEach((material) => {
@@ -2123,15 +2162,20 @@ export function PotStudio() {
   }, [bodyColor, lidColor, finish, capacity, ready]);
 
   const changeCapacity = (nextCapacity: Capacity, force = false) => {
-    if (!force && pairMode === "319" && nextCapacity !== "1.6" && nextCapacity !== "2.0") return;
-    if (!force && pairMode === "318" && nextCapacity !== "1.2" && nextCapacity !== "145") return;
+    if (!force && is322Capacity(nextCapacity) && pairMode !== "none" && pairMode !== "322") {
+      setPairMode("none");
+      setGroupCount(1);
+    }
+    if (!force && !is322Capacity(nextCapacity) && pairMode === "319" && nextCapacity !== "1.6" && nextCapacity !== "2.0") return;
+    if (!force && !is322Capacity(nextCapacity) && pairMode === "318" && nextCapacity !== "1.2" && nextCapacity !== "145") return;
+    if (!force && pairMode === "322" && !is322Capacity(nextCapacity)) return;
     if (nextCapacity === capacity) return;
     settingsByCapacityRef.current[capacity][activePotIndex] = settings;
     const nextArtwork = capacityArtworksRef.current[nextCapacity]?.[0];
     uploadedTextureRef.current = nextArtwork?.texture ?? null;
     uploadedAspectRatioRef.current = nextArtwork?.aspectRatio ?? null;
     if (nextArtwork) {
-      nextArtwork.texture.flipY = nextCapacity === "145" || nextCapacity === "1.2";
+      nextArtwork.texture.flipY = nextCapacity === "145" || nextCapacity === "1.2" || is322Capacity(nextCapacity);
       nextArtwork.texture.needsUpdate = true;
     }
     setTextureName(nextArtwork?.name ?? "");
@@ -2140,15 +2184,19 @@ export function PotStudio() {
     setSettings({ ...settingsByCapacityRef.current[nextCapacity][0] });
     setNewPotPrintHeightMm(newPotPrintHeightsRef.current[nextCapacity][0]);
     const url = new URL(window.location.href);
-    if (nextCapacity === "2.0" || nextCapacity === "145" || nextCapacity === "1.2") url.searchParams.set("capacity", nextCapacity);
+    if (nextCapacity !== "1.6") url.searchParams.set("capacity", nextCapacity);
     else url.searchParams.delete("capacity");
     window.history.replaceState({}, "", url);
     setProgress(0);
     setLoadError(false);
     setReady(false);
-    setFinish(nextCapacity === "1.6" || nextCapacity === "2.0" ? "gloss" : "matte");
-    setBodyColor(DEFAULT_BODY_COLOR);
-    setLidColor(DEFAULT_LID_COLOR);
+    // Selecting the other member of a 322 pair is an editing operation, not a
+    // reset of their common plastic/body palette. Preserve it within the family.
+    if (!(is322Capacity(capacity) && is322Capacity(nextCapacity))) {
+      setFinish(nextCapacity === "1.6" || nextCapacity === "2.0" ? "gloss" : "matte");
+      setBodyColor(DEFAULT_BODY_COLOR);
+      setLidColor(DEFAULT_LID_COLOR);
+    }
     setCapacity(nextCapacity);
   };
 
@@ -2158,6 +2206,7 @@ export function PotStudio() {
     setGroupCount(nextMode === "none" ? 1 : 2);
     if (nextMode === "319") changeCapacity("1.6", true);
     if (nextMode === "318") changeCapacity("1.2", true);
+    if (nextMode === "322") changeCapacity("322-1.0", true);
   };
 
   const selectPotSlot = (nextIndex: number) => {
@@ -2191,7 +2240,7 @@ export function PotStudio() {
   };
 
   const changeNewPotPrintHeight = (value: number) => {
-    const nextHeight = THREE.MathUtils.clamp(value || 1, 1, NEW_POT_WRAP_HEIGHT_MM);
+    const nextHeight = THREE.MathUtils.clamp(value || 1, 1, maximumPrintHeightForCapacity(capacity));
     newPotPrintHeightsRef.current[capacity][activePotIndex] = nextHeight;
     setNewPotPrintHeightMm(nextHeight);
   };
@@ -2221,13 +2270,14 @@ export function PotStudio() {
     }
     const targetCapacity = requestedCapacity;
     const targetPotIndex = requestedPotIndex;
-    const targetIsStandalone = targetCapacity === "145" || targetCapacity === "1.2";
+    const targetIs322 = is322Capacity(targetCapacity);
+    const targetIsStandalone = targetCapacity === "145" || targetCapacity === "1.2" || targetIs322;
     const targetDisplayIndex = pairMode === "319"
       ? (targetCapacity === "2.0" ? 1 : 0)
       : pairMode === "318"
         ? (targetCapacity === "145" ? 1 : 0)
-        : targetPotIndex;
-    const targetSettings = targetPotIndex === activePotIndex
+        : pairMode === "322" ? (targetCapacity === "322" ? 1 : 0) : targetPotIndex;
+    const targetSettings = targetCapacity === capacity && targetPotIndex === activePotIndex
       ? settings
       : settingsByCapacityRef.current[targetCapacity][targetPotIndex];
     const targetUrls = objectUrlsRef.current[targetCapacity] ?? [];
@@ -2246,7 +2296,7 @@ export function PotStudio() {
       // runtime cylindrical UVs and therefore needs the normal image flip.
       texture.flipY = targetIsStandalone;
       texture.anisotropy = rendererRef.current?.capabilities.getMaxAnisotropy() ?? 1;
-      applyArtworkTextureTransform(texture, targetSettings);
+      applyArtworkTextureTransform(texture, targetSettings, targetCapacity);
       const image = texture.image as { width?: number; height?: number };
       const aspectRatio = image.width && image.height ? image.width / image.height : null;
       targetArtworks[targetPotIndex] = { texture, preview: url, name: file.name, aspectRatio };
@@ -2263,13 +2313,18 @@ export function PotStudio() {
           setArtworkGeometryRevision((revision) => revision + 1);
         }
       }
-      const activeMaterial = printMaterialsRef.current[targetDisplayIndex];
+      const activeMaterial = activeCapacityRef.current === targetCapacity || pairMode !== "none"
+        ? printMaterialsRef.current[targetDisplayIndex]
+        : undefined;
       if (activeMaterial) {
         activeMaterial.map = texture;
-        activeMaterial.color.set(0xffffff);
+        if (!targetIs322) activeMaterial.color.set(0xffffff);
+        if (targetIs322 && activeMaterial instanceof THREE.MeshPhysicalMaterial) {
+          configure322BodyPrint(activeMaterial, newPotPrintHeightsRef.current[targetCapacity][targetPotIndex], get322BodyHeightMm(targetCapacity));
+        }
         activeMaterial.needsUpdate = true;
       }
-      const activeSurface = printSurfacesRef.current[targetDisplayIndex];
+      const activeSurface = activeMaterial ? printSurfacesRef.current[targetDisplayIndex] : undefined;
       if (activeSurface) activeSurface.visible = true;
       if (activeCapacityRef.current !== targetCapacity || activePotIndexRef.current !== targetPotIndex) return;
       uploadedTextureRef.current = texture;
@@ -2301,6 +2356,11 @@ export function PotStudio() {
     if (pairMode === "318") {
       void applyFile(selectedFiles[0], 0, "1.2");
       if (selectedFiles[1]) void applyFile(selectedFiles[1], 0, "145");
+      return;
+    }
+    if (pairMode === "322") {
+      void applyFile(selectedFiles[0], 0, "322-1.0");
+      if (selectedFiles[1]) void applyFile(selectedFiles[1], 0, "322");
       return;
     }
     const nextCount = Math.min(4, Math.max(groupCount, selectedFiles.length));
@@ -2341,13 +2401,14 @@ export function PotStudio() {
     if (objectUrlsRef.current[capacity]) objectUrlsRef.current[capacity]![activePotIndex] = undefined;
     uploadedTextureRef.current = null;
     uploadedAspectRatioRef.current = null;
-    const activeMaterial = printMaterialsRef.current[activePotIndex];
+    const activePrintIndex = pairMode === "322" ? (capacity === "322" ? 1 : 0) : activePotIndex;
+    const activeMaterial = printMaterialsRef.current[activePrintIndex];
     if (activeMaterial) {
       activeMaterial.map = null;
       activeMaterial.needsUpdate = true;
     }
-    const activeSurface = printSurfacesRef.current[activePotIndex];
-    if (activeSurface) activeSurface.visible = false;
+    const activeSurface = printSurfacesRef.current[activePrintIndex];
+    if (activeSurface) activeSurface.visible = is322;
     modelMaterialsRef.current.forEach((material) => {
       material.color.set(bodyColor);
       material.needsUpdate = true;
@@ -2576,6 +2637,12 @@ export function PotStudio() {
               <button className={capacity === "145" ? "active" : ""} onClick={() => changeCapacity("145")}>
                 <strong>318 2.0L</strong><small>Φ145 × 171 mm</small>
               </button>
+              <button className={`model-322-button ${capacity === "322" ? "active" : ""}`} onClick={() => changeCapacity("322")}>
+                <strong>322 1.3L</strong><small>364.11 × 151 mm</small>
+              </button>
+              <button className={`model-322-button ${capacity === "322-1.0" ? "active" : ""}`} onClick={() => changeCapacity("322-1.0")}>
+                <strong>322 1.0L</strong><small>364.11 × 119 mm</small>
+              </button>
             </div>
           </section>
 
@@ -2585,6 +2652,7 @@ export function PotStudio() {
               <button className={pairMode === "none" ? "active" : ""} onClick={() => changePairMode("none")}>单一壶型</button>
               <button className={pairMode === "319" ? "active" : ""} onClick={() => changePairMode("319")}>319 一大一小</button>
               <button className={pairMode === "318" ? "active" : ""} onClick={() => changePairMode("318")}>318 一大一小</button>
+              <button className={pairMode === "322" ? "active" : ""} onClick={() => changePairMode("322")}>322 一大一小</button>
             </div>
             {pairMode !== "none" && (
               <p className="group-note">小壶在左、大壶在右。上方切换两个对应壶型，可分别上传和调整它们各自的图案。</p>
@@ -2660,9 +2728,9 @@ export function PotStudio() {
               <div><small>展开宽度</small><strong>{wrapWidthMm} <em>mm</em></strong></div>
               <i>×</i>
               <div>
-                <small>{isNewPot || ((capacity === "1.6" || capacity === "2.0") && textureName) ? "图案实际高度" : "展开高度"}</small>
-                {isNewPot ? (
-                  <strong className="dimension-input"><input type="number" min="1" max={NEW_POT_WRAP_HEIGHT_MM} step="0.1" value={newPotPrintHeightMm} onChange={(event) => changeNewPotPrintHeight(Number(event.target.value))} /><em>mm</em></strong>
+                <small>{is322 || isNewPot || ((capacity === "1.6" || capacity === "2.0") && textureName) ? "图案实际高度" : "展开高度"}</small>
+                {isNewPot || is322 ? (
+                  <strong className="dimension-input"><input aria-label="图案实际高度（毫米）" type="number" min="1" max={maximumPrintHeightForCapacity(capacity)} step="0.1" value={newPotPrintHeightMm} onChange={(event) => changeNewPotPrintHeight(Number(event.target.value))} /><em>mm</em></strong>
                 ) : <strong>{formatMillimetres(
                   (capacity === "1.6" || capacity === "2.0") && textureName
                     ? newPotPrintHeightMm
@@ -2671,6 +2739,7 @@ export function PotStudio() {
               </div>
             </div>
             {isNewPot && <p className="dimension-note">壶身 Φ145 × 171 mm · 最大打印高度 145 mm · 当前图案 {newPotPrintHeightMm} mm</p>}
+            {is322 && <p className="dimension-note">壶身 Φ{POT_322_DIAMETER_MM.toFixed(2)} × {body322HeightMm} mm · 最大印刷 364.11 × {body322HeightMm} mm<br />按原图比例计算高度，底部对齐 · 顶部留白 {formatMillimetres(Math.max(0, body322HeightMm - newPotPrintHeightMm))} mm</p>}
             {isOneTwoLiter && <p className="dimension-note">壶身高度 108 mm · 印刷高度 91 mm · 顶部留白 17 mm</p>}
             {(capacity === "1.6" || capacity === "2.0") && textureName && (
               <p className="dimension-note">
@@ -2731,7 +2800,7 @@ export function PotStudio() {
                 />
               ))}
             </div>
-            {!isStandaloneModel && <>
+            {(!isStandaloneModel || is322) && <>
               <div className="product-color-control">
                 <div>
                   <strong>盖子颜色</strong>

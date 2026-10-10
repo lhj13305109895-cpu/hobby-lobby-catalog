@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:studio": "node scripts/studio-preview.mjs",
     "build": "node scripts/generate-seo-pages.mjs --public && vite build && node scripts/generate-seo-pages.mjs --dist && node scripts/prepare-sites-build.mjs",
     "preview": "vite preview",
     "test:admin": "node --test tests/admin-functions.test.mjs",
