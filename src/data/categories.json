@@ -292,5 +292,33 @@
     "protected": false,
     "createdAt": "2026-08-14T00:00:00.000Z",
     "updatedAt": "2026-08-14T00:00:00.000Z"
+  },
+  {
+    "categoryId": "modern-checks",
+    "nameZh": "现代棋盘格系列",
+    "nameEn": "Modern Checkerboard Series",
+    "slug": "modern-checks",
+    "descriptionZh": "色彩鲜明、简洁有序的现代棋盘格图案。",
+    "descriptionEn": "Bold, clean modern checkerboard patterns in a variety of colors.",
+    "sortOrder": 35,
+    "enabled": true,
+    "visible": true,
+    "protected": false,
+    "createdAt": "2026-10-19T05:28:40.000Z",
+    "updatedAt": "2026-10-19T05:28:40.000Z"
+  },
+  {
+    "categoryId": "animal-print",
+    "nameZh": "时尚动物纹系列",
+    "nameEn": "Animal Print Series",
+    "slug": "animal-print",
+    "descriptionZh": "豹纹、斑马纹、奶牛斑与花卉混搭的时尚动物纹图案。",
+    "descriptionEn": "Leopard, zebra and cow-spot prints, with colorful and floral variations.",
+    "sortOrder": 36,
+    "enabled": true,
+    "visible": true,
+    "protected": false,
+    "createdAt": "2026-10-19T05:28:40.000Z",
+    "updatedAt": "2026-10-19T05:28:40.000Z"
   }
 ]
