@@ -295,17 +295,17 @@
   },
   {
     "categoryId": "modern-checks",
-    "nameZh": "现代棋盘格系列",
-    "nameEn": "Modern Checkerboard Series",
+    "nameZh": "现代格纹系列",
+    "nameEn": "Modern Check Series",
     "slug": "modern-checks",
-    "descriptionZh": "色彩鲜明、简洁有序的现代棋盘格图案。",
-    "descriptionEn": "Bold, clean modern checkerboard patterns in a variety of colors.",
+    "descriptionZh": "简洁有序的棋盘格、斜格与交错线条格纹图案。",
+    "descriptionEn": "Clean modern checkerboards, diagonal plaids and intersecting line patterns.",
     "sortOrder": 35,
     "enabled": true,
     "visible": true,
     "protected": false,
     "createdAt": "2026-10-19T05:28:40.000Z",
-    "updatedAt": "2026-10-19T05:28:40.000Z"
+    "updatedAt": "2026-10-19T05:59:03.000Z"
   },
   {
     "categoryId": "animal-print",
