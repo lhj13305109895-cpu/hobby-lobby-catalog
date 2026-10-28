@@ -2,6 +2,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { catalogueCodeFor, catalogueImageAlt } from "../src/catalogue-numbering.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const siteOrigin = (process.env.SITE_URL || "https://hobby-lobby-catalog.pages.dev").replace(/\/$/, "");
@@ -33,12 +34,12 @@ function structuredData(product) {
     "@context": "https://schema.org",
     "@type": "Product",
     "@id": `${productUrl(product)}#product`,
-    name: `${product.nameZh}保温壶（${product.slug}）`,
+    name: `${product.nameZh}保温壶（${catalogueCodeFor(product)}）`,
     alternateName: product.nameEn || undefined,
     description: productDescription(product),
     image: [...new Set(images)],
-    sku: product.slug,
-    mpn: product.slug,
+    sku: catalogueCodeFor(product),
+    mpn: catalogueCodeFor(product),
     brand: { "@type": "Brand", name: "Hobby Lobby Ask for More" },
     category: categoryById.get(product.categoryId)?.nameZh || "保温壶",
     material: product.bodyType,
@@ -63,7 +64,7 @@ function writeDiscoveryFiles() {
     `  <url>\n    <loc>${escapeXml(`${siteOrigin}/`)}</loc>\n    <image:image>\n      <image:loc>${escapeXml(`${siteOrigin}/assets/hero-reference-products.webp`)}</image:loc>\n      <image:title>Hobby Lobby 保温壶花色目录</image:title>\n    </image:image>\n  </url>`,
     ...products.map((product) => {
       const lastmod = String(product.updatedAt || product.createdAt || "").slice(0, 10);
-      return `  <url>\n    <loc>${escapeXml(productUrl(product))}</loc>${lastmod ? `\n    <lastmod>${escapeXml(lastmod)}</lastmod>` : ""}\n    <image:image>\n      <image:loc>${escapeXml(absoluteUrl(product.mainImage))}</image:loc>\n      <image:title>${escapeXml(`${product.slug} ${product.nameZh}保温壶`)}</image:title>\n      <image:caption>${escapeXml(product.imageAltZh || productDescription(product))}</image:caption>\n    </image:image>\n  </url>`;
+      return `  <url>\n    <loc>${escapeXml(productUrl(product))}</loc>${lastmod ? `\n    <lastmod>${escapeXml(lastmod)}</lastmod>` : ""}\n    <image:image>\n      <image:loc>${escapeXml(absoluteUrl(product.mainImage))}</image:loc>\n      <image:title>${escapeXml(`${catalogueCodeFor(product)} ${product.nameZh}保温壶`)}</image:title>\n      <image:caption>${escapeXml(catalogueImageAlt(product, product.imageAltZh) || productDescription(product))}</image:caption>\n    </image:image>\n  </url>`;
     }),
   ];
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n${urls.join("\n")}\n</urlset>\n`;
@@ -78,13 +79,13 @@ function writeProductPages() {
   const template = readFileSync(indexPath, "utf8");
 
   for (const product of products) {
-    const title = `${product.slug} ${product.nameZh}保温壶 | Hobby Lobby`;
+    const title = `${catalogueCodeFor(product)} ${product.nameZh}保温壶 | Hobby Lobby`;
     const description = productDescription(product);
     const canonical = productUrl(product);
     const image = absoluteUrl(product.mainImage);
     const jsonLd = JSON.stringify(structuredData(product)).replaceAll("<", "\\u003c");
     const capacityLine = modelCapacities(product).map((capacity) => `${capacity.id} ${capacity.price} / ${capacity.packing}`).join("；");
-    const fallback = `<div id="root"><main><article><h1>${escapeHtml(product.slug)} ${escapeHtml(product.nameZh)}保温壶</h1><img src="${escapeHtml(product.mainImage)}" alt="${escapeHtml(product.imageAltZh || `${product.nameZh}保温壶`)}" width="1600" height="1600"><p>${escapeHtml(description)}</p><p>${escapeHtml(capacityLine)}</p><a href="/#gallery">查看全部花色</a></article></main></div>`;
+    const fallback = `<div id="root"><main><article><h1>${escapeHtml(catalogueCodeFor(product))} ${escapeHtml(product.nameZh)}保温壶</h1><img src="${escapeHtml(product.mainImage)}" alt="${escapeHtml(catalogueImageAlt(product, product.imageAltZh) || `${product.nameZh}保温壶`)}" width="1600" height="1600"><p>${escapeHtml(description)}</p><p>${escapeHtml(capacityLine)}</p><a href="/#gallery">查看全部花色</a></article></main></div>`;
     const html = template
       .replace(/<title>.*?<\/title>/, `<title>${escapeHtml(title)}</title>`)
       .replace(/<meta name="description" content="[^"]*"\s*\/?>/, `<meta name="description" content="${escapeHtml(description)}" />`)

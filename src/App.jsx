@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import productsData from "./data/products.json";
+import { catalogueCodeFor, catalogueImageAlt } from "./catalogue-numbering.js";
 import categoriesData from "./data/categories.json";
 import modelsData from "./data/models.json";
 import {
@@ -28,6 +29,9 @@ const catalogue = [...productsData]
     || Number(b.pinned) - Number(a.pinned) || a.sortOrder - b.sortOrder)
   .map((product) => ({
     ...product,
+    catalogueCode: catalogueCodeFor(product),
+    imageAltZh: catalogueImageAlt(product, product.imageAltZh),
+    imageAltEn: catalogueImageAlt(product, product.imageAltEn),
     id: product.productId,
     no: Number(product.slug.split("-").at(-1)),
     name: product.nameZh,
@@ -329,12 +333,12 @@ function productStructuredData(product) {
     "@context": "https://schema.org",
     "@type": "Product",
     "@id": `${productUrl(product)}#product`,
-    name: `${product.nameZh}保温壶（${product.slug}）`,
+    name: `${product.nameZh}保温壶（${product.catalogueCode}）`,
     alternateName: product.nameEn || undefined,
     description: product.descriptionZh || `${product.nameZh}花色型号319保温壶，提供1.6L和2.0L两种容量。`,
     image: [...new Set(imageUrls)],
-    sku: product.slug,
-    mpn: product.slug,
+    sku: product.catalogueCode,
+    mpn: product.catalogueCode,
     brand: { "@type": "Brand", name: "Hobby Lobby Ask for More" },
     category: category?.nameZh || "保温壶",
     material: product.bodyType,
@@ -356,10 +360,10 @@ function ProductDetail({ product }) {
   const category = categoryById.get(product.categoryId);
   const englishFamily = category?.nameEn || "Pattern Series";
   const arabicFamily = copy.ar.familyLabels[category?.nameZh] || englishFamily;
-  const englishName = product.nameEn || `${englishFamily.replace(" Series", "")} · ${product.slug}`;
+  const englishName = product.nameEn || `${englishFamily.replace(" Series", "")} · ${product.catalogueCode}`;
   const productCapacities = capacitiesFor(product);
   const capacityText = productCapacities.map((capacity) => capacity.id).join(" / ");
-  const isolatedSlug = `\u2066${product.slug}\u2069`;
+  const isolatedSlug = `\u2066${product.catalogueCode}\u2069`;
   const name = localize(language, product.nameZh, englishName, `${arabicFamily} · ${isolatedSlug}`);
   const description = localize(
     language,
@@ -367,11 +371,11 @@ function ProductDetail({ product }) {
     product.descriptionEn || `Model ${product.model} thermal pot in the ${englishName} pattern, available in ${capacityText}.`,
     `ترمس حراري موديل ${product.model} من ${arabicFamily} برقم ${isolatedSlug}، متوفر بسعة ${capacityText}.`,
   );
-  const imageAlt = localize(language, product.imageAltZh, product.imageAltEn || `${englishName} Model ${product.model} thermal pot`, `ترمس حراري موديل ${product.model} من ${arabicFamily} برقم ${product.slug}`);
+  const imageAlt = localize(language, product.imageAltZh, product.imageAltEn || `${englishName} Model ${product.model} thermal pot`, `ترمس حراري موديل ${product.model} من ${arabicFamily} برقم ${product.catalogueCode}`);
   const structuredData = productStructuredData(product);
 
   useEffect(() => {
-    document.title = localize(language, `${product.slug} ${product.nameZh}保温壶 | Hobby Lobby`, `${englishName} Thermal Pot | Hobby Lobby`, `${product.slug} ترمس من ${arabicFamily} | Hobby Lobby`);
+    document.title = localize(language, `${product.catalogueCode} ${product.nameZh}保温壶 | Hobby Lobby`, `${englishName} Thermal Pot | Hobby Lobby`, `${product.catalogueCode} ترمس من ${arabicFamily} | Hobby Lobby`);
     const descriptionMeta = document.querySelector('meta[name="description"]');
     if (descriptionMeta) descriptionMeta.setAttribute("content", description);
     const canonical = document.querySelector('link[rel="canonical"]');
@@ -402,18 +406,18 @@ function ProductDetail({ product }) {
         <a className="button button-primary header-cta" href="/#gallery">{localize(language, "浏览目录", "Browse catalogue", "تصفح الكتالوج")}</a>
       </header>
       <main className="product-detail-page">
-        <nav className="product-breadcrumb" aria-label={localize(language, "面包屑", "Breadcrumb", "مسار التنقل")}><a href="/">{localize(language, "首页", "Home", "الرئيسية")}</a><span>/</span><a href="/#gallery">{localize(language, "花色目录", "Patterns", "التصاميم")}</a><span>/</span><strong>{product.slug}</strong></nav>
+        <nav className="product-breadcrumb" aria-label={localize(language, "面包屑", "Breadcrumb", "مسار التنقل")}><a href="/">{localize(language, "首页", "Home", "الرئيسية")}</a><span>/</span><a href="/#gallery">{localize(language, "花色目录", "Patterns", "التصاميم")}</a><span>/</span><strong>{product.catalogueCode}</strong></nav>
         <article className="product-detail-card">
           <figure className="product-detail-media"><img src={product.displayImage} alt={imageAlt} width="1600" height="1600" fetchPriority="high" decoding="async" /></figure>
           <div className="product-detail-copy">
-            <p className="eyebrow">MODEL {product.model} · {product.slug}</p>
+            <p className="eyebrow">MODEL {product.model} · {product.catalogueCode}</p>
             <h1>{name}</h1>
             {language === "zh" && product.nameEn && <p className="product-name-en">{product.nameEn}</p>}
             <p className="product-description">{description}</p>
             <dl className="product-attributes">
               <div><dt>{localize(language, "系列", "Series", "المجموعة")}</dt><dd>{language === "zh" ? category?.nameZh : (language === "ar" ? (t.familyLabels[category?.nameZh] || category?.nameEn || category?.nameZh) : (category?.nameEn || category?.nameZh))}</dd></div>
               <div><dt>{localize(language, "壶身", "Body", "الهيكل")}</dt><dd>{t.bodyLabels[product.bodyType] || product.bodyType}</dd></div>
-              <div><dt>{localize(language, "货号", "SKU", "رقم الصنف")}</dt><dd>{product.slug}</dd></div>
+              <div><dt>{localize(language, "货号", "SKU", "رقم الصنف")}</dt><dd>{product.catalogueCode}</dd></div>
             </dl>
             <div className="product-offers" aria-label={localize(language, "容量和价格", "Capacities and prices", "السعات والأسعار")}>
               {productCapacities.map((capacity) => <div key={capacity.id}><strong><bdi dir="ltr">{capacity.id}</bdi></strong><span><bdi dir="ltr">{capacity.price}</bdi></span><small><bdi dir="ltr">{capacity.packing}</bdi> / {localize(language, "箱", "carton", "كرتون")}</small></div>)}
@@ -424,10 +428,10 @@ function ProductDetail({ product }) {
         <section className="product-index-copy">
           <p className="eyebrow">{localize(language, `型号${product.model}花色`, `Model ${product.model} pattern`, `تصميم موديل ${product.model}`)}</p>
           <h2>{localize(language, `${product.nameZh}保温壶产品图`, `${englishName} thermal pot image`, `صورة ترمس ${isolatedSlug} من ${arabicFamily}`)}</h2>
-          <p>{localize(language, `本页展示 ${product.slug} ${product.nameZh}花色的清晰产品图片、容量、价格和装箱信息，支持从现有花色中选款，也支持来图定制。`, `This page shows clear product imagery, capacities, pricing, and carton details for ${product.slug}. Existing patterns and custom artwork are supported.`, `تعرض هذه الصفحة صور المنتج والسعات والأسعار ومعلومات التعبئة للصنف ${isolatedSlug}. يمكنك اختيار تصميم جاهز أو إرسال تصميمك الخاص.`)}</p>
+          <p>{localize(language, `本页展示 ${product.catalogueCode} ${product.nameZh}花色的清晰产品图片、容量、价格和装箱信息，支持从现有花色中选款，也支持来图定制。`, `This page shows clear product imagery, capacities, pricing, and carton details for ${product.catalogueCode}. Existing patterns and custom artwork are supported.`, `تعرض هذه الصفحة صور المنتج والسعات والأسعار ومعلومات التعبئة للصنف ${isolatedSlug}. يمكنك اختيار تصميم جاهز أو إرسال تصميمك الخاص.`)}</p>
         </section>
       </main>
-      <footer><img src="/assets/brand-logo.webp" alt="" width="256" height="256" loading="lazy" /><p>Hobby Lobby Ask for More · {product.slug}</p><a href="/#gallery">{localize(language, "查看全部花色", "View all patterns", "عرض كل التصاميم")} <ArrowRight weight="bold" /></a></footer>
+      <footer><img src="/assets/brand-logo.webp" alt="" width="256" height="256" loading="lazy" /><p>Hobby Lobby Ask for More · {product.catalogueCode}</p><a href="/#gallery">{localize(language, "查看全部花色", "View all patterns", "عرض كل التصاميم")} <ArrowRight weight="bold" /></a></footer>
     </div>
   );
 }
@@ -484,10 +488,10 @@ function Storefront() {
   const displayPatternName = (pattern) => {
     if (language === "zh") return pattern.name;
     if (pattern.nameEn) return pattern.nameEn;
-    if (pattern.family === "混色套装系列") return `Mixed Set ${String(pattern.no - 58).padStart(2, "0")}`;
+    if (pattern.family === "混色套装系列") return `Mixed Set · ${pattern.catalogueCode}`;
     if (pattern.no === 43) return "Black Lid Stainless Plain Body";
     if (pattern.no === 58) return "White Plain Body";
-    return `${displayFamily(pattern.family).replace(" Series", "")} · ${pattern.slug}`;
+    return `${displayFamily(pattern.family).replace(" Series", "")} · ${pattern.catalogueCode}`;
   };
 
   useEffect(() => {
@@ -816,7 +820,7 @@ function Storefront() {
               <div className="pattern-grid">
                 {seriesPatterns.map((pattern) => {
                   const active = Boolean(selectedCapacities[pattern.id]?.length);
-                  const catalogueCode = pattern.slug;
+                  const catalogueCode = pattern.catalogueCode;
                   return (
                     <article className={`pattern-card ${active ? "selected" : ""}`} id={pattern.id} key={pattern.id}>
                       <button className="pattern-image-wrap" type="button" onClick={() => openExpanded(pattern)} aria-label={`${displayPatternName(pattern)}，${displayFamily(pattern.family)}，${t.zoomHint}。`}><img src={pattern.thumb} srcSet={`${pattern.thumb} 640w, ${pattern.displayImage} 1600w`} sizes="(max-width: 700px) 46vw, (max-width: 1100px) 30vw, 240px" alt={language === "zh" ? pattern.imageAltZh : (pattern.imageAltEn || displayPatternName(pattern))} width="640" height="640" loading="lazy" decoding="async" />{active && <span className="check-mark"><Check weight="bold" /></span>}<span className="zoom-hint"><MagnifyingGlassPlus weight="bold" /> {t.zoomHint}</span></button>
@@ -971,7 +975,7 @@ function Storefront() {
                     <img src={pattern.thumb} alt="" width="640" height="640" loading="lazy" decoding="async" />
                     <div>
                       <strong>{displayPatternName(pattern)}</strong>
-                      <small>{pattern.slug} · {capacity.id} · {capacity.price} · {capacity.packing}</small>
+                      <small>{pattern.catalogueCode} · {capacity.id} · {capacity.price} · {capacity.packing}</small>
                       <div className="qty-control">
                         <span>{localize(language, "箱数", "Cartons", "الكراتين")}</span>
                         <button type="button" onClick={(event) => { event.stopPropagation(); updateQuantity(pattern.id, capacity.id, quantity - 1); }} aria-label={localize(language, `${pattern.name} ${capacity.id} 减少一箱`, `Decrease ${displayPatternName(pattern)} ${capacity.id} by one carton`, `تقليل ${displayPatternName(pattern)} ${capacity.id} كرتوناً واحداً`)}>−</button>
@@ -1011,7 +1015,7 @@ function Storefront() {
               ))}
             </div>
             <div className="lightbox-meta">
-              <span>MODEL {expanded.model} · {expanded.slug}</span>
+              <span>MODEL {expanded.model} · {expanded.catalogueCode}</span>
               <strong>{displayPatternName(expanded)}</strong>
               <small>{displayFamily(expanded.family)} · {displayBody(expanded.body)} · {capacitySummary(expanded)}</small>
             </div>

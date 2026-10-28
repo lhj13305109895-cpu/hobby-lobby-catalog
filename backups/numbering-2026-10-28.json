@@ -1,0 +1,2291 @@
+{
+  "date": "2026-10-28",
+  "note": "Display catalogue codes renumbered in original products.json import order; stable productId, slug URLs, images and all other product values remain unchanged.",
+  "counts": {
+    "318": 120,
+    "319": 280,
+    "319套装": 56
+  },
+  "products": [
+    {
+      "productId": "pattern-01",
+      "previousCode": "319-01",
+      "catalogueCode": "319-20"
+    },
+    {
+      "productId": "pattern-02",
+      "previousCode": "319-02",
+      "catalogueCode": "319-21"
+    },
+    {
+      "productId": "pattern-03",
+      "previousCode": "319-03",
+      "catalogueCode": "319-22"
+    },
+    {
+      "productId": "pattern-04",
+      "previousCode": "319-04",
+      "catalogueCode": "319-23"
+    },
+    {
+      "productId": "pattern-05",
+      "previousCode": "319-05",
+      "catalogueCode": "319-24"
+    },
+    {
+      "productId": "pattern-06",
+      "previousCode": "319-06",
+      "catalogueCode": "319-25"
+    },
+    {
+      "productId": "pattern-07",
+      "previousCode": "319-07",
+      "catalogueCode": "319-26"
+    },
+    {
+      "productId": "pattern-08",
+      "previousCode": "319-08",
+      "catalogueCode": "319-27"
+    },
+    {
+      "productId": "pattern-09",
+      "previousCode": "319-09",
+      "catalogueCode": "319-28"
+    },
+    {
+      "productId": "pattern-10",
+      "previousCode": "319-10",
+      "catalogueCode": "319-29"
+    },
+    {
+      "productId": "pattern-11",
+      "previousCode": "319-11",
+      "catalogueCode": "319-30"
+    },
+    {
+      "productId": "pattern-13",
+      "previousCode": "319-13",
+      "catalogueCode": "319-31"
+    },
+    {
+      "productId": "pattern-14",
+      "previousCode": "319-14",
+      "catalogueCode": "319-32"
+    },
+    {
+      "productId": "pattern-15",
+      "previousCode": "319-15",
+      "catalogueCode": "319-33"
+    },
+    {
+      "productId": "pattern-16",
+      "previousCode": "319-16",
+      "catalogueCode": "319-34"
+    },
+    {
+      "productId": "pattern-17",
+      "previousCode": "319-17",
+      "catalogueCode": "319-35"
+    },
+    {
+      "productId": "pattern-18",
+      "previousCode": "319-18",
+      "catalogueCode": "319-36"
+    },
+    {
+      "productId": "pattern-19",
+      "previousCode": "319-19",
+      "catalogueCode": "319-37"
+    },
+    {
+      "productId": "pattern-20",
+      "previousCode": "319-20",
+      "catalogueCode": "319-38"
+    },
+    {
+      "productId": "pattern-21",
+      "previousCode": "319-21",
+      "catalogueCode": "319-39"
+    },
+    {
+      "productId": "pattern-22",
+      "previousCode": "319-22",
+      "catalogueCode": "319-40"
+    },
+    {
+      "productId": "pattern-23",
+      "previousCode": "319-23",
+      "catalogueCode": "319-41"
+    },
+    {
+      "productId": "pattern-24",
+      "previousCode": "319-24",
+      "catalogueCode": "319-42"
+    },
+    {
+      "productId": "pattern-25",
+      "previousCode": "319-25",
+      "catalogueCode": "319-43"
+    },
+    {
+      "productId": "pattern-26",
+      "previousCode": "319-26",
+      "catalogueCode": "319-44"
+    },
+    {
+      "productId": "pattern-27",
+      "previousCode": "319-27",
+      "catalogueCode": "319-45"
+    },
+    {
+      "productId": "pattern-28",
+      "previousCode": "319-28",
+      "catalogueCode": "319-46"
+    },
+    {
+      "productId": "pattern-29",
+      "previousCode": "319-29",
+      "catalogueCode": "319-47"
+    },
+    {
+      "productId": "pattern-30",
+      "previousCode": "319-30",
+      "catalogueCode": "319-48"
+    },
+    {
+      "productId": "pattern-31",
+      "previousCode": "319-31",
+      "catalogueCode": "319-49"
+    },
+    {
+      "productId": "pattern-32",
+      "previousCode": "319-32",
+      "catalogueCode": "319-50"
+    },
+    {
+      "productId": "pattern-33",
+      "previousCode": "319-33",
+      "catalogueCode": "319-51"
+    },
+    {
+      "productId": "pattern-34",
+      "previousCode": "319-34",
+      "catalogueCode": "319-52"
+    },
+    {
+      "productId": "pattern-35",
+      "previousCode": "319-35",
+      "catalogueCode": "319-53"
+    },
+    {
+      "productId": "pattern-36",
+      "previousCode": "319-36",
+      "catalogueCode": "319-54"
+    },
+    {
+      "productId": "pattern-37",
+      "previousCode": "319-37",
+      "catalogueCode": "319-55"
+    },
+    {
+      "productId": "pattern-38",
+      "previousCode": "319-38",
+      "catalogueCode": "319-56"
+    },
+    {
+      "productId": "pattern-39",
+      "previousCode": "319-39",
+      "catalogueCode": "319-57"
+    },
+    {
+      "productId": "pattern-40",
+      "previousCode": "319-40",
+      "catalogueCode": "319-58"
+    },
+    {
+      "productId": "pattern-41",
+      "previousCode": "319-41",
+      "catalogueCode": "319-59"
+    },
+    {
+      "productId": "pattern-42",
+      "previousCode": "319-42",
+      "catalogueCode": "319-60"
+    },
+    {
+      "productId": "pattern-43",
+      "previousCode": "319-43",
+      "catalogueCode": "319-61"
+    },
+    {
+      "productId": "pattern-44",
+      "previousCode": "319-44",
+      "catalogueCode": "319-62"
+    },
+    {
+      "productId": "pattern-45",
+      "previousCode": "319-45",
+      "catalogueCode": "319-63"
+    },
+    {
+      "productId": "pattern-46",
+      "previousCode": "319-46",
+      "catalogueCode": "319-64"
+    },
+    {
+      "productId": "pattern-47",
+      "previousCode": "319-47",
+      "catalogueCode": "319-65"
+    },
+    {
+      "productId": "pattern-48",
+      "previousCode": "319-48",
+      "catalogueCode": "319-66"
+    },
+    {
+      "productId": "pattern-49",
+      "previousCode": "319-49",
+      "catalogueCode": "319-67"
+    },
+    {
+      "productId": "pattern-50",
+      "previousCode": "319-50",
+      "catalogueCode": "319-68"
+    },
+    {
+      "productId": "pattern-51",
+      "previousCode": "319-51",
+      "catalogueCode": "319-69"
+    },
+    {
+      "productId": "pattern-52",
+      "previousCode": "319-52",
+      "catalogueCode": "319-70"
+    },
+    {
+      "productId": "pattern-53",
+      "previousCode": "319-53",
+      "catalogueCode": "319-71"
+    },
+    {
+      "productId": "pattern-54",
+      "previousCode": "319-54",
+      "catalogueCode": "319-72"
+    },
+    {
+      "productId": "pattern-55",
+      "previousCode": "319-55",
+      "catalogueCode": "319-73"
+    },
+    {
+      "productId": "pattern-56",
+      "previousCode": "319-56",
+      "catalogueCode": "319-74"
+    },
+    {
+      "productId": "pattern-57",
+      "previousCode": "319-57",
+      "catalogueCode": "319-75"
+    },
+    {
+      "productId": "pattern-58",
+      "previousCode": "319-58",
+      "catalogueCode": "319-76"
+    },
+    {
+      "productId": "pattern-59",
+      "previousCode": "319-59",
+      "catalogueCode": "319套装-1"
+    },
+    {
+      "productId": "pattern-60",
+      "previousCode": "319-60",
+      "catalogueCode": "319套装-2"
+    },
+    {
+      "productId": "pattern-61",
+      "previousCode": "319-61",
+      "catalogueCode": "319套装-3"
+    },
+    {
+      "productId": "pattern-62",
+      "previousCode": "319-62",
+      "catalogueCode": "319套装-4"
+    },
+    {
+      "productId": "pattern-63",
+      "previousCode": "319-63",
+      "catalogueCode": "319套装-5"
+    },
+    {
+      "productId": "pattern-64",
+      "previousCode": "319-64",
+      "catalogueCode": "319套装-6"
+    },
+    {
+      "productId": "pattern-65",
+      "previousCode": "319-65",
+      "catalogueCode": "319套装-7"
+    },
+    {
+      "productId": "pattern-66",
+      "previousCode": "319-66",
+      "catalogueCode": "319套装-8"
+    },
+    {
+      "productId": "pattern-67",
+      "previousCode": "319-67",
+      "catalogueCode": "319套装-9"
+    },
+    {
+      "productId": "pattern-68",
+      "previousCode": "319-68",
+      "catalogueCode": "319套装-10"
+    },
+    {
+      "productId": "pattern-69",
+      "previousCode": "319-69",
+      "catalogueCode": "319套装-11"
+    },
+    {
+      "productId": "pattern-70",
+      "previousCode": "319-70",
+      "catalogueCode": "319套装-12"
+    },
+    {
+      "productId": "pattern-71",
+      "previousCode": "319-71",
+      "catalogueCode": "319套装-13"
+    },
+    {
+      "productId": "pattern-72",
+      "previousCode": "319-72",
+      "catalogueCode": "319-77"
+    },
+    {
+      "productId": "pattern-73",
+      "previousCode": "319-73",
+      "catalogueCode": "319-78"
+    },
+    {
+      "productId": "pattern-74",
+      "previousCode": "319-74",
+      "catalogueCode": "319-79"
+    },
+    {
+      "productId": "pattern-75",
+      "previousCode": "319-75",
+      "catalogueCode": "319套装-14"
+    },
+    {
+      "productId": "pattern-76",
+      "previousCode": "319-76",
+      "catalogueCode": "319-80"
+    },
+    {
+      "productId": "pattern-77",
+      "previousCode": "319-77",
+      "catalogueCode": "319-81"
+    },
+    {
+      "productId": "pattern-78",
+      "previousCode": "319-78",
+      "catalogueCode": "319-82"
+    },
+    {
+      "productId": "pattern-79",
+      "previousCode": "319-79",
+      "catalogueCode": "319-83"
+    },
+    {
+      "productId": "pattern-80",
+      "previousCode": "319-80",
+      "catalogueCode": "319-84"
+    },
+    {
+      "productId": "pattern-81",
+      "previousCode": "319-81",
+      "catalogueCode": "319套装-15"
+    },
+    {
+      "productId": "pattern-82",
+      "previousCode": "319-82",
+      "catalogueCode": "319套装-16"
+    },
+    {
+      "productId": "pattern-83",
+      "previousCode": "319-83",
+      "catalogueCode": "319-85"
+    },
+    {
+      "productId": "pattern-84",
+      "previousCode": "319-84",
+      "catalogueCode": "319-86"
+    },
+    {
+      "productId": "product-645ea1a5-8e8",
+      "previousCode": "319-85",
+      "catalogueCode": "319-87"
+    },
+    {
+      "productId": "product-d94255e5-034",
+      "previousCode": "319-86",
+      "catalogueCode": "319-88"
+    },
+    {
+      "productId": "product-1b650140-f9e",
+      "previousCode": "319-87",
+      "catalogueCode": "319-89"
+    },
+    {
+      "productId": "pattern-88",
+      "previousCode": "319-88",
+      "catalogueCode": "319-90"
+    },
+    {
+      "productId": "pattern-89",
+      "previousCode": "319-89",
+      "catalogueCode": "319-91"
+    },
+    {
+      "productId": "pattern-90",
+      "previousCode": "319-90",
+      "catalogueCode": "319-92"
+    },
+    {
+      "productId": "pattern-91",
+      "previousCode": "319-91",
+      "catalogueCode": "319-93"
+    },
+    {
+      "productId": "pattern-92",
+      "previousCode": "319-92",
+      "catalogueCode": "319-94"
+    },
+    {
+      "productId": "pattern-93",
+      "previousCode": "319-93",
+      "catalogueCode": "319-95"
+    },
+    {
+      "productId": "pattern-94",
+      "previousCode": "319-94",
+      "catalogueCode": "319-96"
+    },
+    {
+      "productId": "pattern-95",
+      "previousCode": "319-95",
+      "catalogueCode": "319-97"
+    },
+    {
+      "productId": "pattern-96",
+      "previousCode": "319-96",
+      "catalogueCode": "319-98"
+    },
+    {
+      "productId": "pattern-97",
+      "previousCode": "319-97",
+      "catalogueCode": "319-99"
+    },
+    {
+      "productId": "pattern-98",
+      "previousCode": "319-98",
+      "catalogueCode": "319-100"
+    },
+    {
+      "productId": "pattern-99",
+      "previousCode": "319-99",
+      "catalogueCode": "319-101"
+    },
+    {
+      "productId": "pattern-100",
+      "previousCode": "319-100",
+      "catalogueCode": "319-102"
+    },
+    {
+      "productId": "pattern-101",
+      "previousCode": "319-101",
+      "catalogueCode": "319套装-17"
+    },
+    {
+      "productId": "pattern-102",
+      "previousCode": "319-102",
+      "catalogueCode": "319套装-18"
+    },
+    {
+      "productId": "pattern-103",
+      "previousCode": "319-103",
+      "catalogueCode": "319套装-19"
+    },
+    {
+      "productId": "pattern-104",
+      "previousCode": "319-104",
+      "catalogueCode": "319套装-20"
+    },
+    {
+      "productId": "pattern-105",
+      "previousCode": "319-105",
+      "catalogueCode": "319-103"
+    },
+    {
+      "productId": "pattern-106",
+      "previousCode": "319-106",
+      "catalogueCode": "319-104"
+    },
+    {
+      "productId": "pattern-107",
+      "previousCode": "319-107",
+      "catalogueCode": "319-105"
+    },
+    {
+      "productId": "pattern-108",
+      "previousCode": "319-108",
+      "catalogueCode": "319-106"
+    },
+    {
+      "productId": "pattern-109",
+      "previousCode": "319-109",
+      "catalogueCode": "319-107"
+    },
+    {
+      "productId": "pattern-110",
+      "previousCode": "319-110",
+      "catalogueCode": "319-108"
+    },
+    {
+      "productId": "pattern-111",
+      "previousCode": "319-111",
+      "catalogueCode": "319-109"
+    },
+    {
+      "productId": "pattern-112",
+      "previousCode": "319-112",
+      "catalogueCode": "319-110"
+    },
+    {
+      "productId": "pattern-113",
+      "previousCode": "319-113",
+      "catalogueCode": "319套装-21"
+    },
+    {
+      "productId": "pattern-114",
+      "previousCode": "319-114",
+      "catalogueCode": "319-111"
+    },
+    {
+      "productId": "pattern-115",
+      "previousCode": "319-115",
+      "catalogueCode": "319-112"
+    },
+    {
+      "productId": "pattern-116",
+      "previousCode": "319-116",
+      "catalogueCode": "319-113"
+    },
+    {
+      "productId": "pattern-117",
+      "previousCode": "319-117",
+      "catalogueCode": "319-114"
+    },
+    {
+      "productId": "pattern-118",
+      "previousCode": "319-118",
+      "catalogueCode": "319-115"
+    },
+    {
+      "productId": "pattern-119",
+      "previousCode": "319-119",
+      "catalogueCode": "319-116"
+    },
+    {
+      "productId": "pattern-120",
+      "previousCode": "319-120",
+      "catalogueCode": "319-117"
+    },
+    {
+      "productId": "pattern-121",
+      "previousCode": "319-121",
+      "catalogueCode": "319-118"
+    },
+    {
+      "productId": "pattern-122",
+      "previousCode": "319-122",
+      "catalogueCode": "319套装-22"
+    },
+    {
+      "productId": "pattern-123",
+      "previousCode": "319-123",
+      "catalogueCode": "319-119"
+    },
+    {
+      "productId": "pattern-124",
+      "previousCode": "319-124",
+      "catalogueCode": "319-120"
+    },
+    {
+      "productId": "pattern-125",
+      "previousCode": "319-125",
+      "catalogueCode": "319-121"
+    },
+    {
+      "productId": "pattern-126",
+      "previousCode": "319-126",
+      "catalogueCode": "319套装-23"
+    },
+    {
+      "productId": "pattern-127",
+      "previousCode": "319-127",
+      "catalogueCode": "319套装-24"
+    },
+    {
+      "productId": "pattern-128",
+      "previousCode": "319-128",
+      "catalogueCode": "319套装-25"
+    },
+    {
+      "productId": "pattern-129",
+      "previousCode": "319-129",
+      "catalogueCode": "319套装-26"
+    },
+    {
+      "productId": "pattern-130",
+      "previousCode": "319-130",
+      "catalogueCode": "319-122"
+    },
+    {
+      "productId": "pattern-131",
+      "previousCode": "319-131",
+      "catalogueCode": "319套装-27"
+    },
+    {
+      "productId": "pattern-132",
+      "previousCode": "319-132",
+      "catalogueCode": "319套装-28"
+    },
+    {
+      "productId": "pattern-133",
+      "previousCode": "319-133",
+      "catalogueCode": "319-123"
+    },
+    {
+      "productId": "pattern-134",
+      "previousCode": "319-134",
+      "catalogueCode": "319-124"
+    },
+    {
+      "productId": "pattern-135",
+      "previousCode": "319-135",
+      "catalogueCode": "319-125"
+    },
+    {
+      "productId": "pattern-136",
+      "previousCode": "319-136",
+      "catalogueCode": "319-126"
+    },
+    {
+      "productId": "pattern-137",
+      "previousCode": "319-137",
+      "catalogueCode": "319-127"
+    },
+    {
+      "productId": "pattern-138",
+      "previousCode": "319-138",
+      "catalogueCode": "319-128"
+    },
+    {
+      "productId": "pattern-139",
+      "previousCode": "319-139",
+      "catalogueCode": "319-129"
+    },
+    {
+      "productId": "pattern-140",
+      "previousCode": "319-140",
+      "catalogueCode": "319-130"
+    },
+    {
+      "productId": "pattern-141",
+      "previousCode": "319-141",
+      "catalogueCode": "319-131"
+    },
+    {
+      "productId": "pattern-142",
+      "previousCode": "319-142",
+      "catalogueCode": "319套装-29"
+    },
+    {
+      "productId": "pattern-143",
+      "previousCode": "319-143",
+      "catalogueCode": "319套装-30"
+    },
+    {
+      "productId": "pattern-144",
+      "previousCode": "319-144",
+      "catalogueCode": "319套装-31"
+    },
+    {
+      "productId": "pattern-145",
+      "previousCode": "319-145",
+      "catalogueCode": "319套装-32"
+    },
+    {
+      "productId": "pattern-146",
+      "previousCode": "319-146",
+      "catalogueCode": "319-132"
+    },
+    {
+      "productId": "pattern-147",
+      "previousCode": "319-147",
+      "catalogueCode": "319-133"
+    },
+    {
+      "productId": "pattern-148",
+      "previousCode": "319-148",
+      "catalogueCode": "319-134"
+    },
+    {
+      "productId": "pattern-149",
+      "previousCode": "319-149",
+      "catalogueCode": "319-135"
+    },
+    {
+      "productId": "pattern-150",
+      "previousCode": "319-150",
+      "catalogueCode": "319-136"
+    },
+    {
+      "productId": "pattern-151",
+      "previousCode": "319-151",
+      "catalogueCode": "319-137"
+    },
+    {
+      "productId": "pattern-152",
+      "previousCode": "319-152",
+      "catalogueCode": "319-138"
+    },
+    {
+      "productId": "pattern-153",
+      "previousCode": "319-153",
+      "catalogueCode": "319-139"
+    },
+    {
+      "productId": "pattern-154",
+      "previousCode": "319-154",
+      "catalogueCode": "319-140"
+    },
+    {
+      "productId": "pattern-155",
+      "previousCode": "319-155",
+      "catalogueCode": "319套装-33"
+    },
+    {
+      "productId": "pattern-156",
+      "previousCode": "319-156",
+      "catalogueCode": "319-141"
+    },
+    {
+      "productId": "pattern-157",
+      "previousCode": "319-157",
+      "catalogueCode": "319-142"
+    },
+    {
+      "productId": "pattern-158",
+      "previousCode": "319-158",
+      "catalogueCode": "319-143"
+    },
+    {
+      "productId": "pattern-159",
+      "previousCode": "319-159",
+      "catalogueCode": "319-144"
+    },
+    {
+      "productId": "pattern-160",
+      "previousCode": "319-160",
+      "catalogueCode": "319-145"
+    },
+    {
+      "productId": "pattern-161",
+      "previousCode": "319-161",
+      "catalogueCode": "319-146"
+    },
+    {
+      "productId": "pattern-162",
+      "previousCode": "319-162",
+      "catalogueCode": "319套装-34"
+    },
+    {
+      "productId": "pattern-163",
+      "previousCode": "319-163",
+      "catalogueCode": "319-147"
+    },
+    {
+      "productId": "pattern-164",
+      "previousCode": "319-164",
+      "catalogueCode": "319-148"
+    },
+    {
+      "productId": "pattern-165",
+      "previousCode": "319-165",
+      "catalogueCode": "319-149"
+    },
+    {
+      "productId": "pattern-166",
+      "previousCode": "319-166",
+      "catalogueCode": "319-150"
+    },
+    {
+      "productId": "pattern-167",
+      "previousCode": "319-167",
+      "catalogueCode": "319-151"
+    },
+    {
+      "productId": "pattern-168",
+      "previousCode": "319-168",
+      "catalogueCode": "319-152"
+    },
+    {
+      "productId": "pattern-169",
+      "previousCode": "319-169",
+      "catalogueCode": "319-153"
+    },
+    {
+      "productId": "pattern-170",
+      "previousCode": "319-170",
+      "catalogueCode": "319-154"
+    },
+    {
+      "productId": "pattern-171",
+      "previousCode": "319-171",
+      "catalogueCode": "319套装-35"
+    },
+    {
+      "productId": "pattern-172",
+      "previousCode": "319-172",
+      "catalogueCode": "319套装-36"
+    },
+    {
+      "productId": "pattern-173",
+      "previousCode": "319-173",
+      "catalogueCode": "319套装-37"
+    },
+    {
+      "productId": "pattern-174",
+      "previousCode": "319-174",
+      "catalogueCode": "319套装-38"
+    },
+    {
+      "productId": "pattern-175",
+      "previousCode": "319-175",
+      "catalogueCode": "319套装-39"
+    },
+    {
+      "productId": "pattern-176",
+      "previousCode": "319-176",
+      "catalogueCode": "319套装-40"
+    },
+    {
+      "productId": "pattern-177",
+      "previousCode": "319-177",
+      "catalogueCode": "319套装-41"
+    },
+    {
+      "productId": "pattern-178",
+      "previousCode": "319-178",
+      "catalogueCode": "319套装-42"
+    },
+    {
+      "productId": "pattern-179",
+      "previousCode": "319-179",
+      "catalogueCode": "319-155"
+    },
+    {
+      "productId": "pattern-180",
+      "previousCode": "319-180",
+      "catalogueCode": "319-156"
+    },
+    {
+      "productId": "pattern-181",
+      "previousCode": "319-181",
+      "catalogueCode": "319-157"
+    },
+    {
+      "productId": "pattern-182",
+      "previousCode": "319-182",
+      "catalogueCode": "319-158"
+    },
+    {
+      "productId": "pattern-183",
+      "previousCode": "319-183",
+      "catalogueCode": "319-159"
+    },
+    {
+      "productId": "pattern-184",
+      "previousCode": "319-184",
+      "catalogueCode": "319-160"
+    },
+    {
+      "productId": "pattern-185",
+      "previousCode": "319-185",
+      "catalogueCode": "319-161"
+    },
+    {
+      "productId": "pattern-186",
+      "previousCode": "319-186",
+      "catalogueCode": "319-162"
+    },
+    {
+      "productId": "pattern-187",
+      "previousCode": "319-187",
+      "catalogueCode": "319-163"
+    },
+    {
+      "productId": "pattern-188",
+      "previousCode": "319-188",
+      "catalogueCode": "319-164"
+    },
+    {
+      "productId": "pattern-189",
+      "previousCode": "319-189",
+      "catalogueCode": "319-165"
+    },
+    {
+      "productId": "pattern-190",
+      "previousCode": "319-190",
+      "catalogueCode": "319-166"
+    },
+    {
+      "productId": "pattern-191",
+      "previousCode": "319-191",
+      "catalogueCode": "319-167"
+    },
+    {
+      "productId": "pattern-192",
+      "previousCode": "319-192",
+      "catalogueCode": "319套装-43"
+    },
+    {
+      "productId": "pattern-193",
+      "previousCode": "319-193",
+      "catalogueCode": "319套装-44"
+    },
+    {
+      "productId": "pattern-194",
+      "previousCode": "319-194",
+      "catalogueCode": "319套装-45"
+    },
+    {
+      "productId": "pattern-195",
+      "previousCode": "319-195",
+      "catalogueCode": "319-168"
+    },
+    {
+      "productId": "pattern-196",
+      "previousCode": "319-196",
+      "catalogueCode": "319-169"
+    },
+    {
+      "productId": "pattern-197",
+      "previousCode": "319-197",
+      "catalogueCode": "319-170"
+    },
+    {
+      "productId": "pattern-198",
+      "previousCode": "319-198",
+      "catalogueCode": "319-171"
+    },
+    {
+      "productId": "pattern-199",
+      "previousCode": "319-199",
+      "catalogueCode": "319-172"
+    },
+    {
+      "productId": "pattern-200",
+      "previousCode": "319-200",
+      "catalogueCode": "319-173"
+    },
+    {
+      "productId": "pattern-201",
+      "previousCode": "319-201",
+      "catalogueCode": "319-174"
+    },
+    {
+      "productId": "pattern-202",
+      "previousCode": "319-202",
+      "catalogueCode": "319-175"
+    },
+    {
+      "productId": "pattern-203",
+      "previousCode": "319-203",
+      "catalogueCode": "319-176"
+    },
+    {
+      "productId": "pattern-204",
+      "previousCode": "319-204",
+      "catalogueCode": "319-177"
+    },
+    {
+      "productId": "pattern-205",
+      "previousCode": "319-205",
+      "catalogueCode": "319套装-46"
+    },
+    {
+      "productId": "pattern-206",
+      "previousCode": "319-206",
+      "catalogueCode": "319套装-47"
+    },
+    {
+      "productId": "pattern-207",
+      "previousCode": "319-207",
+      "catalogueCode": "319-178"
+    },
+    {
+      "productId": "pattern-208",
+      "previousCode": "319-208",
+      "catalogueCode": "319-179"
+    },
+    {
+      "productId": "pattern-209",
+      "previousCode": "319-209",
+      "catalogueCode": "319-180"
+    },
+    {
+      "productId": "pattern-210",
+      "previousCode": "319-210",
+      "catalogueCode": "319-181"
+    },
+    {
+      "productId": "pattern-211",
+      "previousCode": "319-211",
+      "catalogueCode": "319-182"
+    },
+    {
+      "productId": "pattern-212",
+      "previousCode": "319-212",
+      "catalogueCode": "319-183"
+    },
+    {
+      "productId": "pattern-213",
+      "previousCode": "319-213",
+      "catalogueCode": "319-184"
+    },
+    {
+      "productId": "pattern-214",
+      "previousCode": "319-214",
+      "catalogueCode": "319-185"
+    },
+    {
+      "productId": "pattern-215",
+      "previousCode": "319-215",
+      "catalogueCode": "319-186"
+    },
+    {
+      "productId": "pattern-216",
+      "previousCode": "319-216",
+      "catalogueCode": "319-187"
+    },
+    {
+      "productId": "pattern-217",
+      "previousCode": "319-217",
+      "catalogueCode": "319-188"
+    },
+    {
+      "productId": "pattern-218",
+      "previousCode": "319-218",
+      "catalogueCode": "319-189"
+    },
+    {
+      "productId": "pattern-219",
+      "previousCode": "319-219",
+      "catalogueCode": "319-190"
+    },
+    {
+      "productId": "pattern-220",
+      "previousCode": "319-220",
+      "catalogueCode": "319-191"
+    },
+    {
+      "productId": "pattern-221",
+      "previousCode": "319-221",
+      "catalogueCode": "319-192"
+    },
+    {
+      "productId": "pattern-222",
+      "previousCode": "319-222",
+      "catalogueCode": "319套装-48"
+    },
+    {
+      "productId": "pattern-223",
+      "previousCode": "319-223",
+      "catalogueCode": "319套装-49"
+    },
+    {
+      "productId": "pattern-224",
+      "previousCode": "319-224",
+      "catalogueCode": "319套装-50"
+    },
+    {
+      "productId": "pattern-225",
+      "previousCode": "319-225",
+      "catalogueCode": "319-193"
+    },
+    {
+      "productId": "pattern-226",
+      "previousCode": "319-226",
+      "catalogueCode": "319-194"
+    },
+    {
+      "productId": "pattern-227",
+      "previousCode": "319-227",
+      "catalogueCode": "319-195"
+    },
+    {
+      "productId": "pattern-228",
+      "previousCode": "319-228",
+      "catalogueCode": "319-196"
+    },
+    {
+      "productId": "pattern-229",
+      "previousCode": "319-229",
+      "catalogueCode": "319-197"
+    },
+    {
+      "productId": "pattern-230",
+      "previousCode": "319-230",
+      "catalogueCode": "319-198"
+    },
+    {
+      "productId": "pattern-231",
+      "previousCode": "319-231",
+      "catalogueCode": "319-199"
+    },
+    {
+      "productId": "pattern-232",
+      "previousCode": "319-232",
+      "catalogueCode": "319-200"
+    },
+    {
+      "productId": "pattern-233",
+      "previousCode": "319-233",
+      "catalogueCode": "319-201"
+    },
+    {
+      "productId": "pattern-234",
+      "previousCode": "319-234",
+      "catalogueCode": "319-202"
+    },
+    {
+      "productId": "pattern-235",
+      "previousCode": "319-235",
+      "catalogueCode": "319-203"
+    },
+    {
+      "productId": "pattern-236",
+      "previousCode": "319-236",
+      "catalogueCode": "319-204"
+    },
+    {
+      "productId": "pattern-237",
+      "previousCode": "319-237",
+      "catalogueCode": "319-205"
+    },
+    {
+      "productId": "pattern-238",
+      "previousCode": "319-238",
+      "catalogueCode": "319-206"
+    },
+    {
+      "productId": "pattern-239",
+      "previousCode": "319-239",
+      "catalogueCode": "319-207"
+    },
+    {
+      "productId": "pattern-240",
+      "previousCode": "319-240",
+      "catalogueCode": "319-208"
+    },
+    {
+      "productId": "pattern-241",
+      "previousCode": "319-241",
+      "catalogueCode": "319-209"
+    },
+    {
+      "productId": "pattern-242",
+      "previousCode": "319-242",
+      "catalogueCode": "319-210"
+    },
+    {
+      "productId": "pattern-243",
+      "previousCode": "319-243",
+      "catalogueCode": "319-211"
+    },
+    {
+      "productId": "pattern-244",
+      "previousCode": "319-244",
+      "catalogueCode": "319-212"
+    },
+    {
+      "productId": "pattern-245",
+      "previousCode": "319-245",
+      "catalogueCode": "319-213"
+    },
+    {
+      "productId": "pattern-246",
+      "previousCode": "319-246",
+      "catalogueCode": "319-214"
+    },
+    {
+      "productId": "pattern-247",
+      "previousCode": "319-247",
+      "catalogueCode": "319-215"
+    },
+    {
+      "productId": "pattern-248",
+      "previousCode": "319-248",
+      "catalogueCode": "319-216"
+    },
+    {
+      "productId": "pattern-249",
+      "previousCode": "319-249",
+      "catalogueCode": "319-217"
+    },
+    {
+      "productId": "pattern-250",
+      "previousCode": "319-250",
+      "catalogueCode": "319-218"
+    },
+    {
+      "productId": "pattern-251",
+      "previousCode": "319-251",
+      "catalogueCode": "319-219"
+    },
+    {
+      "productId": "pattern-252",
+      "previousCode": "319-252",
+      "catalogueCode": "319-220"
+    },
+    {
+      "productId": "pattern-253",
+      "previousCode": "319-253",
+      "catalogueCode": "319-221"
+    },
+    {
+      "productId": "pattern-254",
+      "previousCode": "319-254",
+      "catalogueCode": "319-222"
+    },
+    {
+      "productId": "pattern-255",
+      "previousCode": "319-255",
+      "catalogueCode": "319-223"
+    },
+    {
+      "productId": "pattern-256",
+      "previousCode": "319-256",
+      "catalogueCode": "319-224"
+    },
+    {
+      "productId": "pattern-257",
+      "previousCode": "319-257",
+      "catalogueCode": "319-225"
+    },
+    {
+      "productId": "pattern-258",
+      "previousCode": "319-258",
+      "catalogueCode": "319-226"
+    },
+    {
+      "productId": "pattern-259",
+      "previousCode": "319-259",
+      "catalogueCode": "319-227"
+    },
+    {
+      "productId": "pattern-260",
+      "previousCode": "319-260",
+      "catalogueCode": "319-228"
+    },
+    {
+      "productId": "pattern-261",
+      "previousCode": "319-261",
+      "catalogueCode": "319-229"
+    },
+    {
+      "productId": "pattern-262",
+      "previousCode": "319-262",
+      "catalogueCode": "319-230"
+    },
+    {
+      "productId": "pattern-263",
+      "previousCode": "319-263",
+      "catalogueCode": "319-231"
+    },
+    {
+      "productId": "pattern-264",
+      "previousCode": "319-264",
+      "catalogueCode": "319-232"
+    },
+    {
+      "productId": "pattern-265",
+      "previousCode": "319-265",
+      "catalogueCode": "319-233"
+    },
+    {
+      "productId": "pattern-266",
+      "previousCode": "319-266",
+      "catalogueCode": "319-234"
+    },
+    {
+      "productId": "pattern-267",
+      "previousCode": "319-267",
+      "catalogueCode": "319-235"
+    },
+    {
+      "productId": "pattern-268",
+      "previousCode": "319-268",
+      "catalogueCode": "319-236"
+    },
+    {
+      "productId": "pattern-269",
+      "previousCode": "319-269",
+      "catalogueCode": "319-237"
+    },
+    {
+      "productId": "pattern-270",
+      "previousCode": "319-270",
+      "catalogueCode": "319套装-51"
+    },
+    {
+      "productId": "pattern-271",
+      "previousCode": "319-271",
+      "catalogueCode": "319套装-52"
+    },
+    {
+      "productId": "pattern-272",
+      "previousCode": "319-272",
+      "catalogueCode": "319套装-53"
+    },
+    {
+      "productId": "pattern-273",
+      "previousCode": "319-273",
+      "catalogueCode": "319套装-54"
+    },
+    {
+      "productId": "pattern-274",
+      "previousCode": "319-274",
+      "catalogueCode": "319套装-55"
+    },
+    {
+      "productId": "pattern-275",
+      "previousCode": "319-275",
+      "catalogueCode": "319套装-56"
+    },
+    {
+      "productId": "pattern-276",
+      "previousCode": "319-276",
+      "catalogueCode": "319-238"
+    },
+    {
+      "productId": "pattern-277",
+      "previousCode": "319-277",
+      "catalogueCode": "319-239"
+    },
+    {
+      "productId": "pattern-278",
+      "previousCode": "319-278",
+      "catalogueCode": "319-240"
+    },
+    {
+      "productId": "pattern-279",
+      "previousCode": "319-279",
+      "catalogueCode": "319-241"
+    },
+    {
+      "productId": "pattern-318-001",
+      "previousCode": "318-001",
+      "catalogueCode": "318-25"
+    },
+    {
+      "productId": "pattern-318-002",
+      "previousCode": "318-002",
+      "catalogueCode": "318-26"
+    },
+    {
+      "productId": "pattern-318-003",
+      "previousCode": "318-003",
+      "catalogueCode": "318-27"
+    },
+    {
+      "productId": "pattern-318-004",
+      "previousCode": "318-004",
+      "catalogueCode": "318-28"
+    },
+    {
+      "productId": "pattern-318-005",
+      "previousCode": "318-005",
+      "catalogueCode": "318-29"
+    },
+    {
+      "productId": "pattern-318-006",
+      "previousCode": "318-006",
+      "catalogueCode": "318-30"
+    },
+    {
+      "productId": "pattern-318-007",
+      "previousCode": "318-007",
+      "catalogueCode": "318-31"
+    },
+    {
+      "productId": "pattern-318-008",
+      "previousCode": "318-008",
+      "catalogueCode": "318-32"
+    },
+    {
+      "productId": "pattern-318-009",
+      "previousCode": "318-009",
+      "catalogueCode": "318-33"
+    },
+    {
+      "productId": "pattern-318-010",
+      "previousCode": "318-010",
+      "catalogueCode": "318-34"
+    },
+    {
+      "productId": "pattern-318-011",
+      "previousCode": "318-011",
+      "catalogueCode": "318-35"
+    },
+    {
+      "productId": "pattern-318-012",
+      "previousCode": "318-012",
+      "catalogueCode": "318-36"
+    },
+    {
+      "productId": "pattern-318-013",
+      "previousCode": "318-013",
+      "catalogueCode": "318-37"
+    },
+    {
+      "productId": "pattern-318-014",
+      "previousCode": "318-014",
+      "catalogueCode": "318-38"
+    },
+    {
+      "productId": "pattern-318-015",
+      "previousCode": "318-015",
+      "catalogueCode": "318-39"
+    },
+    {
+      "productId": "pattern-318-016",
+      "previousCode": "318-016",
+      "catalogueCode": "318-40"
+    },
+    {
+      "productId": "pattern-318-017",
+      "previousCode": "318-017",
+      "catalogueCode": "318-41"
+    },
+    {
+      "productId": "pattern-318-018",
+      "previousCode": "318-018",
+      "catalogueCode": "318-42"
+    },
+    {
+      "productId": "pattern-318-019",
+      "previousCode": "318-019",
+      "catalogueCode": "318-43"
+    },
+    {
+      "productId": "pattern-318-020",
+      "previousCode": "318-020",
+      "catalogueCode": "318-44"
+    },
+    {
+      "productId": "pattern-318-021",
+      "previousCode": "318-021",
+      "catalogueCode": "318-45"
+    },
+    {
+      "productId": "pattern-318-022",
+      "previousCode": "318-022",
+      "catalogueCode": "318-46"
+    },
+    {
+      "productId": "pattern-318-023",
+      "previousCode": "318-023",
+      "catalogueCode": "318-47"
+    },
+    {
+      "productId": "pattern-318-024",
+      "previousCode": "318-024",
+      "catalogueCode": "318-48"
+    },
+    {
+      "productId": "pattern-318-025",
+      "previousCode": "318-025",
+      "catalogueCode": "318-49"
+    },
+    {
+      "productId": "pattern-318-026",
+      "previousCode": "318-026",
+      "catalogueCode": "318-50"
+    },
+    {
+      "productId": "pattern-318-027",
+      "previousCode": "318-027",
+      "catalogueCode": "318-51"
+    },
+    {
+      "productId": "pattern-318-028",
+      "previousCode": "318-028",
+      "catalogueCode": "318-52"
+    },
+    {
+      "productId": "pattern-318-029",
+      "previousCode": "318-029",
+      "catalogueCode": "318-53"
+    },
+    {
+      "productId": "pattern-318-030",
+      "previousCode": "318-030",
+      "catalogueCode": "318-54"
+    },
+    {
+      "productId": "pattern-318-031",
+      "previousCode": "318-031",
+      "catalogueCode": "318-55"
+    },
+    {
+      "productId": "pattern-318-032",
+      "previousCode": "318-032",
+      "catalogueCode": "318-56"
+    },
+    {
+      "productId": "pattern-318-033",
+      "previousCode": "318-033",
+      "catalogueCode": "318-57"
+    },
+    {
+      "productId": "pattern-318-034",
+      "previousCode": "318-034",
+      "catalogueCode": "318-58"
+    },
+    {
+      "productId": "pattern-318-035",
+      "previousCode": "318-035",
+      "catalogueCode": "318-59"
+    },
+    {
+      "productId": "pattern-318-036",
+      "previousCode": "318-036",
+      "catalogueCode": "318-60"
+    },
+    {
+      "productId": "pattern-318-037",
+      "previousCode": "318-037",
+      "catalogueCode": "318-61"
+    },
+    {
+      "productId": "pattern-318-038",
+      "previousCode": "318-038",
+      "catalogueCode": "318-62"
+    },
+    {
+      "productId": "pattern-318-039",
+      "previousCode": "318-039",
+      "catalogueCode": "318-63"
+    },
+    {
+      "productId": "pattern-318-040",
+      "previousCode": "318-040",
+      "catalogueCode": "318-64"
+    },
+    {
+      "productId": "pattern-318-041",
+      "previousCode": "318-041",
+      "catalogueCode": "318-65"
+    },
+    {
+      "productId": "pattern-318-042",
+      "previousCode": "318-042",
+      "catalogueCode": "318-66"
+    },
+    {
+      "productId": "pattern-318-043",
+      "previousCode": "318-043",
+      "catalogueCode": "318-67"
+    },
+    {
+      "productId": "pattern-318-044",
+      "previousCode": "318-044",
+      "catalogueCode": "318-68"
+    },
+    {
+      "productId": "pattern-318-045",
+      "previousCode": "318-045",
+      "catalogueCode": "318-69"
+    },
+    {
+      "productId": "pattern-318-046",
+      "previousCode": "318-046",
+      "catalogueCode": "318-70"
+    },
+    {
+      "productId": "pattern-318-047",
+      "previousCode": "318-047",
+      "catalogueCode": "318-71"
+    },
+    {
+      "productId": "pattern-318-048",
+      "previousCode": "318-048",
+      "catalogueCode": "318-72"
+    },
+    {
+      "productId": "pattern-318-049",
+      "previousCode": "318-049",
+      "catalogueCode": "318-73"
+    },
+    {
+      "productId": "pattern-318-050",
+      "previousCode": "318-050",
+      "catalogueCode": "318-74"
+    },
+    {
+      "productId": "pattern-318-051",
+      "previousCode": "318-051",
+      "catalogueCode": "318-75"
+    },
+    {
+      "productId": "pattern-318-052",
+      "previousCode": "318-052",
+      "catalogueCode": "318-76"
+    },
+    {
+      "productId": "pattern-318-053",
+      "previousCode": "318-053",
+      "catalogueCode": "318-77"
+    },
+    {
+      "productId": "pattern-318-054",
+      "previousCode": "318-054",
+      "catalogueCode": "318-78"
+    },
+    {
+      "productId": "pattern-318-055",
+      "previousCode": "318-055",
+      "catalogueCode": "318-79"
+    },
+    {
+      "productId": "pattern-318-056",
+      "previousCode": "318-056",
+      "catalogueCode": "318-80"
+    },
+    {
+      "productId": "pattern-318-057",
+      "previousCode": "318-057",
+      "catalogueCode": "318-81"
+    },
+    {
+      "productId": "pattern-318-058",
+      "previousCode": "318-058",
+      "catalogueCode": "318-82"
+    },
+    {
+      "productId": "pattern-318-059",
+      "previousCode": "318-059",
+      "catalogueCode": "318-83"
+    },
+    {
+      "productId": "pattern-318-060",
+      "previousCode": "318-060",
+      "catalogueCode": "318-84"
+    },
+    {
+      "productId": "pattern-318-061",
+      "previousCode": "318-061",
+      "catalogueCode": "318-85"
+    },
+    {
+      "productId": "pattern-318-062",
+      "previousCode": "318-062",
+      "catalogueCode": "318-86"
+    },
+    {
+      "productId": "pattern-318-063",
+      "previousCode": "318-063",
+      "catalogueCode": "318-87"
+    },
+    {
+      "productId": "pattern-318-064",
+      "previousCode": "318-064",
+      "catalogueCode": "318-88"
+    },
+    {
+      "productId": "pattern-318-065",
+      "previousCode": "318-065",
+      "catalogueCode": "318-89"
+    },
+    {
+      "productId": "pattern-318-066",
+      "previousCode": "318-066",
+      "catalogueCode": "318-90"
+    },
+    {
+      "productId": "pattern-318-067",
+      "previousCode": "318-067",
+      "catalogueCode": "318-91"
+    },
+    {
+      "productId": "pattern-318-068",
+      "previousCode": "318-068",
+      "catalogueCode": "318-92"
+    },
+    {
+      "productId": "pattern-318-069",
+      "previousCode": "318-069",
+      "catalogueCode": "318-93"
+    },
+    {
+      "productId": "pattern-318-070",
+      "previousCode": "318-070",
+      "catalogueCode": "318-94"
+    },
+    {
+      "productId": "pattern-318-071",
+      "previousCode": "318-071",
+      "catalogueCode": "318-95"
+    },
+    {
+      "productId": "pattern-318-072",
+      "previousCode": "318-072",
+      "catalogueCode": "318-96"
+    },
+    {
+      "productId": "pattern-318-073",
+      "previousCode": "318-073",
+      "catalogueCode": "318-97"
+    },
+    {
+      "productId": "pattern-318-074",
+      "previousCode": "318-074",
+      "catalogueCode": "318-98"
+    },
+    {
+      "productId": "pattern-318-075",
+      "previousCode": "318-075",
+      "catalogueCode": "318-99"
+    },
+    {
+      "productId": "pattern-318-076",
+      "previousCode": "318-076",
+      "catalogueCode": "318-100"
+    },
+    {
+      "productId": "pattern-318-077",
+      "previousCode": "318-077",
+      "catalogueCode": "318-101"
+    },
+    {
+      "productId": "pattern-318-078",
+      "previousCode": "318-078",
+      "catalogueCode": "318-102"
+    },
+    {
+      "productId": "pattern-318-079",
+      "previousCode": "318-079",
+      "catalogueCode": "318-103"
+    },
+    {
+      "productId": "pattern-318-080",
+      "previousCode": "318-080",
+      "catalogueCode": "318-104"
+    },
+    {
+      "productId": "pattern-318-081",
+      "previousCode": "318-081",
+      "catalogueCode": "318-105"
+    },
+    {
+      "productId": "pattern-318-082",
+      "previousCode": "318-082",
+      "catalogueCode": "318-106"
+    },
+    {
+      "productId": "pattern-318-083",
+      "previousCode": "318-083",
+      "catalogueCode": "318-107"
+    },
+    {
+      "productId": "pattern-318-084",
+      "previousCode": "318-084",
+      "catalogueCode": "318-108"
+    },
+    {
+      "productId": "pattern-318-085",
+      "previousCode": "318-085",
+      "catalogueCode": "318-109"
+    },
+    {
+      "productId": "pattern-318-086",
+      "previousCode": "318-086",
+      "catalogueCode": "318-110"
+    },
+    {
+      "productId": "pattern-318-087",
+      "previousCode": "318-087",
+      "catalogueCode": "318-111"
+    },
+    {
+      "productId": "pattern-318-088",
+      "previousCode": "318-088",
+      "catalogueCode": "318-112"
+    },
+    {
+      "productId": "pattern-318-089",
+      "previousCode": "318-089",
+      "catalogueCode": "318-113"
+    },
+    {
+      "productId": "pattern-318-090",
+      "previousCode": "318-090",
+      "catalogueCode": "318-114"
+    },
+    {
+      "productId": "pattern-318-091",
+      "previousCode": "318-091",
+      "catalogueCode": "318-115"
+    },
+    {
+      "productId": "pattern-318-092",
+      "previousCode": "318-092",
+      "catalogueCode": "318-116"
+    },
+    {
+      "productId": "pattern-318-093",
+      "previousCode": "318-093",
+      "catalogueCode": "318-117"
+    },
+    {
+      "productId": "pattern-318-094",
+      "previousCode": "318-094",
+      "catalogueCode": "318-118"
+    },
+    {
+      "productId": "pattern-318-095",
+      "previousCode": "318-095",
+      "catalogueCode": "318-119"
+    },
+    {
+      "productId": "pattern-318-096",
+      "previousCode": "318-096",
+      "catalogueCode": "318-120"
+    },
+    {
+      "productId": "pattern-318-097",
+      "previousCode": "318-097",
+      "catalogueCode": "318-121"
+    },
+    {
+      "productId": "pattern-318-098",
+      "previousCode": "318-098",
+      "catalogueCode": "318-122"
+    },
+    {
+      "productId": "pattern-318-099",
+      "previousCode": "318-099",
+      "catalogueCode": "318-123"
+    },
+    {
+      "productId": "pattern-318-100",
+      "previousCode": "318-100",
+      "catalogueCode": "318-124"
+    },
+    {
+      "productId": "pattern-318-101",
+      "previousCode": "318-101",
+      "catalogueCode": "318-125"
+    },
+    {
+      "productId": "pattern-280",
+      "previousCode": "319-280",
+      "catalogueCode": "319-242"
+    },
+    {
+      "productId": "pattern-281",
+      "previousCode": "319-281",
+      "catalogueCode": "319-243"
+    },
+    {
+      "productId": "pattern-282",
+      "previousCode": "319-282",
+      "catalogueCode": "319-244"
+    },
+    {
+      "productId": "pattern-283",
+      "previousCode": "319-283",
+      "catalogueCode": "319-245"
+    },
+    {
+      "productId": "pattern-284",
+      "previousCode": "319-284",
+      "catalogueCode": "319-246"
+    },
+    {
+      "productId": "pattern-285",
+      "previousCode": "319-285",
+      "catalogueCode": "319-247"
+    },
+    {
+      "productId": "pattern-286",
+      "previousCode": "319-286",
+      "catalogueCode": "319-248"
+    },
+    {
+      "productId": "pattern-287",
+      "previousCode": "319-287",
+      "catalogueCode": "319-249"
+    },
+    {
+      "productId": "pattern-288",
+      "previousCode": "319-288",
+      "catalogueCode": "319-250"
+    },
+    {
+      "productId": "pattern-289",
+      "previousCode": "319-289",
+      "catalogueCode": "319-251"
+    },
+    {
+      "productId": "pattern-290",
+      "previousCode": "319-290",
+      "catalogueCode": "319-252"
+    },
+    {
+      "productId": "pattern-291",
+      "previousCode": "319-291",
+      "catalogueCode": "319-253"
+    },
+    {
+      "productId": "pattern-292",
+      "previousCode": "319-292",
+      "catalogueCode": "319-254"
+    },
+    {
+      "productId": "pattern-293",
+      "previousCode": "319-293",
+      "catalogueCode": "319-255"
+    },
+    {
+      "productId": "pattern-294",
+      "previousCode": "319-294",
+      "catalogueCode": "319-256"
+    },
+    {
+      "productId": "pattern-295",
+      "previousCode": "319-295",
+      "catalogueCode": "319-257"
+    },
+    {
+      "productId": "pattern-296",
+      "previousCode": "319-296",
+      "catalogueCode": "319-258"
+    },
+    {
+      "productId": "pattern-297",
+      "previousCode": "319-297",
+      "catalogueCode": "319-259"
+    },
+    {
+      "productId": "pattern-298",
+      "previousCode": "319-298",
+      "catalogueCode": "319-260"
+    },
+    {
+      "productId": "pattern-299",
+      "previousCode": "319-299",
+      "catalogueCode": "319-261"
+    },
+    {
+      "productId": "pattern-300",
+      "previousCode": "319-300",
+      "catalogueCode": "319-262"
+    },
+    {
+      "productId": "pattern-301",
+      "previousCode": "319-301",
+      "catalogueCode": "319-263"
+    },
+    {
+      "productId": "pattern-302",
+      "previousCode": "319-302",
+      "catalogueCode": "319-264"
+    },
+    {
+      "productId": "pattern-303",
+      "previousCode": "319-303",
+      "catalogueCode": "319-265"
+    },
+    {
+      "productId": "pattern-318-102",
+      "previousCode": "318-102",
+      "catalogueCode": "318-126"
+    },
+    {
+      "productId": "pattern-318-103",
+      "previousCode": "318-103",
+      "catalogueCode": "318-127"
+    },
+    {
+      "productId": "pattern-318-104",
+      "previousCode": "318-104",
+      "catalogueCode": "318-128"
+    },
+    {
+      "productId": "pattern-304",
+      "previousCode": "319-304",
+      "catalogueCode": "319-266"
+    },
+    {
+      "productId": "pattern-305",
+      "previousCode": "319-305",
+      "catalogueCode": "319-267"
+    },
+    {
+      "productId": "pattern-306",
+      "previousCode": "319-306",
+      "catalogueCode": "319-268"
+    },
+    {
+      "productId": "pattern-307",
+      "previousCode": "319-307",
+      "catalogueCode": "319-269"
+    },
+    {
+      "productId": "pattern-308",
+      "previousCode": "319-308",
+      "catalogueCode": "319-270"
+    },
+    {
+      "productId": "pattern-309",
+      "previousCode": "319-309",
+      "catalogueCode": "319-271"
+    },
+    {
+      "productId": "pattern-310",
+      "previousCode": "319-310",
+      "catalogueCode": "319-272"
+    },
+    {
+      "productId": "pattern-311",
+      "previousCode": "319-311",
+      "catalogueCode": "319-273"
+    },
+    {
+      "productId": "pattern-312",
+      "previousCode": "319-312",
+      "catalogueCode": "319-274"
+    },
+    {
+      "productId": "pattern-313",
+      "previousCode": "319-313",
+      "catalogueCode": "319-275"
+    },
+    {
+      "productId": "pattern-314",
+      "previousCode": "319-314",
+      "catalogueCode": "319-276"
+    },
+    {
+      "productId": "pattern-315",
+      "previousCode": "319-315",
+      "catalogueCode": "319-277"
+    },
+    {
+      "productId": "pattern-316",
+      "previousCode": "319-316",
+      "catalogueCode": "319-278"
+    },
+    {
+      "productId": "pattern-317",
+      "previousCode": "319-317",
+      "catalogueCode": "319-279"
+    },
+    {
+      "productId": "pattern-318",
+      "previousCode": "319-318",
+      "catalogueCode": "319-280"
+    },
+    {
+      "productId": "pattern-319",
+      "previousCode": "319-319",
+      "catalogueCode": "319-281"
+    },
+    {
+      "productId": "pattern-320",
+      "previousCode": "319-320",
+      "catalogueCode": "319-282"
+    },
+    {
+      "productId": "pattern-321",
+      "previousCode": "319-321",
+      "catalogueCode": "319-283"
+    },
+    {
+      "productId": "pattern-322",
+      "previousCode": "319-322",
+      "catalogueCode": "319-284"
+    },
+    {
+      "productId": "pattern-323",
+      "previousCode": "319-323",
+      "catalogueCode": "319-285"
+    },
+    {
+      "productId": "pattern-324",
+      "previousCode": "319-324",
+      "catalogueCode": "319-286"
+    },
+    {
+      "productId": "pattern-325",
+      "previousCode": "319-325",
+      "catalogueCode": "319-287"
+    },
+    {
+      "productId": "pattern-326",
+      "previousCode": "319-326",
+      "catalogueCode": "319-288"
+    },
+    {
+      "productId": "pattern-327",
+      "previousCode": "319-327",
+      "catalogueCode": "319-289"
+    },
+    {
+      "productId": "pattern-328",
+      "previousCode": "319-328",
+      "catalogueCode": "319-290"
+    },
+    {
+      "productId": "pattern-329",
+      "previousCode": "319-329",
+      "catalogueCode": "319-291"
+    },
+    {
+      "productId": "pattern-330",
+      "previousCode": "319-330",
+      "catalogueCode": "319-292"
+    },
+    {
+      "productId": "pattern-331",
+      "previousCode": "319-331",
+      "catalogueCode": "319-293"
+    },
+    {
+      "productId": "pattern-332",
+      "previousCode": "319-332",
+      "catalogueCode": "319-294"
+    },
+    {
+      "productId": "pattern-333",
+      "previousCode": "319-333",
+      "catalogueCode": "319-295"
+    },
+    {
+      "productId": "pattern-334",
+      "previousCode": "319-334",
+      "catalogueCode": "319-296"
+    },
+    {
+      "productId": "pattern-335",
+      "previousCode": "319-335",
+      "catalogueCode": "319-297"
+    },
+    {
+      "productId": "pattern-336",
+      "previousCode": "319-336",
+      "catalogueCode": "319-298"
+    },
+    {
+      "productId": "pattern-337",
+      "previousCode": "319-337",
+      "catalogueCode": "319-299"
+    },
+    {
+      "productId": "pattern-318-105",
+      "previousCode": "318-105",
+      "catalogueCode": "318-129"
+    },
+    {
+      "productId": "pattern-318-106",
+      "previousCode": "318-106",
+      "catalogueCode": "318-130"
+    },
+    {
+      "productId": "pattern-318-107",
+      "previousCode": "318-107",
+      "catalogueCode": "318-131"
+    },
+    {
+      "productId": "pattern-318-108",
+      "previousCode": "318-108",
+      "catalogueCode": "318-132"
+    },
+    {
+      "productId": "pattern-318-109",
+      "previousCode": "318-109",
+      "catalogueCode": "318-133"
+    },
+    {
+      "productId": "pattern-318-110",
+      "previousCode": "318-110",
+      "catalogueCode": "318-134"
+    },
+    {
+      "productId": "pattern-318-111",
+      "previousCode": "318-111",
+      "catalogueCode": "318-135"
+    },
+    {
+      "productId": "pattern-318-112",
+      "previousCode": "318-112",
+      "catalogueCode": "318-136"
+    },
+    {
+      "productId": "pattern-318-113",
+      "previousCode": "318-113",
+      "catalogueCode": "318-137"
+    },
+    {
+      "productId": "pattern-318-114",
+      "previousCode": "318-114",
+      "catalogueCode": "318-138"
+    },
+    {
+      "productId": "pattern-318-115",
+      "previousCode": "318-115",
+      "catalogueCode": "318-139"
+    },
+    {
+      "productId": "pattern-318-116",
+      "previousCode": "318-116",
+      "catalogueCode": "318-140"
+    },
+    {
+      "productId": "pattern-318-117",
+      "previousCode": "318-117",
+      "catalogueCode": "318-141"
+    },
+    {
+      "productId": "pattern-318-118",
+      "previousCode": "318-118",
+      "catalogueCode": "318-142"
+    },
+    {
+      "productId": "pattern-318-119",
+      "previousCode": "318-119",
+      "catalogueCode": "318-143"
+    },
+    {
+      "productId": "pattern-318-120",
+      "previousCode": "318-120",
+      "catalogueCode": "318-144"
+    }
+  ]
+}

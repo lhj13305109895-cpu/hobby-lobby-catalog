@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { onRequestGet as session } from "../functions/api/admin/session.js";
 import { onRequestPost as publish } from "../functions/api/admin/publish.js";
 import { createSessionToken } from "../functions/api/admin/_shared.js";
+import { readFileSync } from "node:fs";
 
 const request = (cookie, body) => new Request("https://example.com/api/admin/publish", {
   method: body ? "POST" : "GET",
@@ -55,6 +56,30 @@ test("publish rejects duplicate catalogue numbers before contacting GitHub", asy
   ];
   const response = await publish({ request: request(await adminCookie(), {
     products, categories, files: [], message: "test", idempotencyKey: "12345678-1234-1234-1234-123456789012",
+  }), env });
+  assert.equal(response.status, 409);
+  assert.match((await response.json()).error, /产品编号/);
+});
+
+test("publish accepts all current model and set display numbers without changing stable URLs", async (t) => {
+  const products = JSON.parse(readFileSync(new URL("../src/data/products.json", import.meta.url), "utf8"));
+  const categories = JSON.parse(readFileSync(new URL("../src/data/categories.json", import.meta.url), "utf8"));
+  const github = t.mock.method(globalThis, "fetch", async () => new Response('{"message":"mocked GitHub response"}', { status: 503 }));
+  const response = await publish({ request: request(await adminCookie(), {
+    products, categories, files: [], idempotencyKey: "12345678-1234-1234-1234-123456789012",
+  }), env });
+  assert.equal(github.mock.callCount(), 1, "Valid catalogue must reach the mocked save stage; no network is used");
+  assert.equal(response.status, 502);
+});
+
+test("publish rejects duplicate public numbers even when stable URLs are distinct", async () => {
+  const categories = [{ categoryId: "uncategorized", slug: "uncategorized", protected: true }];
+  const products = [
+    { productId: "one", slug: "319-21", model: "319", catalogueCode: "319-20", categoryId: "uncategorized" },
+    { productId: "two", slug: "319-22", model: "319", catalogueCode: "319-20", categoryId: "uncategorized" },
+  ];
+  const response = await publish({ request: request(await adminCookie(), {
+    products, categories, files: [], idempotencyKey: "12345678-1234-1234-1234-123456789012",
   }), env });
   assert.equal(response.status, 409);
   assert.match((await response.json()).error, /产品编号/);

@@ -1,3 +1,5 @@
+import { catalogueCodeFor } from "./catalogue-numbering.js";
+
 const escapeXml = (value) => String(value ?? "")
   .replaceAll("&", "&amp;")
   .replaceAll("<", "&lt;")
@@ -305,7 +307,7 @@ async function buildQuotePageImages(entries, quoteNo, dateDisplay) {
       drawContainedImage(context, loadedImages.get(pattern.id), 48, y + 4, 190, 182, 2);
       context.fillStyle = "#c90816";
       context.font = '700 24px "Microsoft YaHei", "PingFang SC", sans-serif';
-      context.fillText(pattern.slug, 260, y + 52);
+      context.fillText(catalogueCodeFor(pattern), 260, y + 52);
       context.fillStyle = "#211d1a";
       context.font = '700 30px "Microsoft YaHei", "PingFang SC", sans-serif';
       context.fillText(pattern.name, 260, y + 96);
@@ -443,7 +445,7 @@ function makeQuoteXlsx({ entries, quoteNo, dateDisplay, imageData }) {
     const totalAmount = totalPieces * capacity.priceNumber;
     const totalCbm = Number((quantity * capacity.cbm).toFixed(2));
     merges.push(`J${row}:K${row}`);
-    rowXml.push(`<row r="${row}" ht="105" customHeight="1">${inlineStringCell(`A${row}`, `${pattern.slug} ${pattern.name} ${capacity.id}\n${pattern.family}`, 8)}${emptyCell(`B${row}`, 1)}${numberCell(`C${row}`, quantity, 4)}${numberCell(`D${row}`, capacity.pcsPerCarton, 4)}${numberCell(`E${row}`, totalPieces, 4)}${numberCell(`F${row}`, capacity.priceNumber, 4)}${formulaCurrencyCell(`G${row}`, `E${row}*F${row}`, totalAmount)}${numberCell(`H${row}`, capacity.cbm.toFixed(2), 4)}${numberCell(`I${row}`, totalCbm.toFixed(2), 4)}${inlineStringCell(`J${row}`, `型号${pattern.model}\n\n${capacity.id}`, 4)}${emptyCell(`K${row}`, 4)}</row>`);
+    rowXml.push(`<row r="${row}" ht="105" customHeight="1">${inlineStringCell(`A${row}`, `${catalogueCodeFor(pattern)} ${pattern.name} ${capacity.id}\n${pattern.family}`, 8)}${emptyCell(`B${row}`, 1)}${numberCell(`C${row}`, quantity, 4)}${numberCell(`D${row}`, capacity.pcsPerCarton, 4)}${numberCell(`E${row}`, totalPieces, 4)}${numberCell(`F${row}`, capacity.priceNumber, 4)}${formulaCurrencyCell(`G${row}`, `E${row}*F${row}`, totalAmount)}${numberCell(`H${row}`, capacity.cbm.toFixed(2), 4)}${numberCell(`I${row}`, totalCbm.toFixed(2), 4)}${inlineStringCell(`J${row}`, `型号${pattern.model}\n\n${capacity.id}`, 4)}${emptyCell(`K${row}`, 4)}</row>`);
   });
 
   const totals = entries.reduce((summary, { capacity, quantity }) => {

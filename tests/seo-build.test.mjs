@@ -38,5 +38,6 @@ test("generated product pages expose canonical, image and Product JSON-LD", () =
     assert.ok(html.includes(`<link rel="canonical" href="https://hobby-lobby-catalog.pages.dev/products/${product.slug}/" />`));
     assert.ok(html.includes('"@type":"Product"'));
     assert.ok(html.includes(product.mainImage));
+    assert.ok(html.includes(`"sku":"${product.catalogueCode || product.slug}"`));
   }
 });
