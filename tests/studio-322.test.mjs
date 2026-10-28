@@ -105,7 +105,8 @@ test('322 plastic parts receive independent lid colour and are wired to the stud
   assert.equal(body.color.getHexString(), 'fff5db', 'Plastic selection must not recolour the vessel');
   const studio = fs.readFileSync(new URL('../src/PatternStudio.tsx', import.meta.url), 'utf8');
   assert.ok(studio.includes('if (is322) configure322FixtureColor(fixtureMaterial, lidColor)'));
-  assert.ok(studio.includes('{(!isStandaloneModel || is322) && <>'), 'Show the lid controls for 322 too');
+  assert.ok(studio.includes('aria-label="选择盖子颜色"'), 'Show the shared lid controls for 322 and all other models');
+  assert.ok(!studio.includes('{(!isStandaloneModel || is322) && <>'), '318 must no longer hide the lid controls');
   assert.ok(studio.includes('capacity === "1.6" || capacity === "2.0" || is322'), 'Keep both 322 sizes plastic matte');
 });
 

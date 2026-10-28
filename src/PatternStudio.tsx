@@ -10,6 +10,7 @@ import { getDocument, GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf.mj
 import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
 import "./pattern-studio-source.css";
 import { POT_322_WRAP_WIDTH_MM, POT_322_BODY_HEIGHT_MM, POT_322_DIAMETER_MM, POT_322_VARIANTS, is322Capacity, get322BodyHeightMm, infer322ArtworkPrintHeight, configure322ModelHeight, configure322BodyPrint, configure322FixtureColor } from "./studio-model-322";
+import { configure318PartColors, update318FixtureColor, is318Capacity } from "./studio-parts-318";
 
 type Finish = "matte" | "satin" | "gloss";
 type Capacity = "1.6" | "2.0" | "145" | "1.2" | "322" | "322-1.0";
@@ -109,8 +110,8 @@ const NEW_POT_LOCKED_POLAR_ANGLE = Math.atan2(
   Math.hypot(NEW_POT_CAMERA_POSITION.x - NEW_POT_CAMERA_TARGET.x, NEW_POT_CAMERA_POSITION.z - NEW_POT_CAMERA_TARGET.z),
   NEW_POT_CAMERA_POSITION.y - NEW_POT_CAMERA_TARGET.y,
 );
-const DEFAULT_BODY_COLOR = "#fff5db";
-const DEFAULT_LID_COLOR = "#fff6d7";
+const DEFAULT_BODY_COLOR = "#ffeec2";
+const DEFAULT_LID_COLOR = "#ffeec2";
 const FINISH_SURFACE: Record<Finish, { roughness: number; clearcoat: number; clearcoatRoughness: number }> = {
   // A fine, molded matte finish: soft enough to avoid the white-model look,
   // while retaining broad highlights that describe the curved vessel.
@@ -1435,6 +1436,7 @@ export function PotStudio() {
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
+    setReady(false);
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf8f8f6);
@@ -1626,6 +1628,9 @@ export function PotStudio() {
             }
           });
           let fixturePartUniforms: FixturePartUniforms | null = null;
+          if (is318Capacity(kind) && firstSurface) {
+            configure318PartColors(bodyMaterial, firstSurface, model, kind, lidColor);
+          }
           if (uses319PairRecipe && printSource) {
             fixturePartUniforms = configureFixturePartMaterial(
               fixtureMaterial,
@@ -1877,6 +1882,9 @@ export function PotStudio() {
           if (!bodyFound) {
             setLoadError(true);
             return;
+          }
+          if (is318Capacity(capacity) && newPotSources[0]) {
+            configure318PartColors(bodyMaterial, newPotSources[0], model, capacity, lidColor);
           }
           const fixturePartUniforms = isStandaloneModel ? null : configureFixturePartMaterial(
             fixtureMaterial,
@@ -2145,6 +2153,7 @@ export function PotStudio() {
 
   useEffect(() => {
     updateFixturePartUniforms(fixturePartUniformsRef.current, new THREE.Color(bodyColor).getHex(), lidColor);
+    modelMaterialsRef.current.forEach((material) => update318FixtureColor(material, lidColor));
     const fixtureSurface = fixturePartUniformsRef.current.length
       ? FINISH_SURFACE.gloss
       : (capacity === "1.6" || capacity === "2.0" || is322)
@@ -2800,7 +2809,6 @@ export function PotStudio() {
                 />
               ))}
             </div>
-            {(!isStandaloneModel || is322) && <>
               <div className="product-color-control">
                 <div>
                   <strong>盖子颜色</strong>
@@ -2830,7 +2838,6 @@ export function PotStudio() {
                   />
                 ))}
               </div>
-            </>}
           </section>
 
           <div className="panel-footer">
