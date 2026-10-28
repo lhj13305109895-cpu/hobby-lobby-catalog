@@ -158,6 +158,11 @@ input[type="range"] { width: 100%; height: 3px; accent-color: var(--accent); }
 .product-color-presets { margin-top: 10px; display: flex; gap: 8px; }
 .product-color-presets button { width: 26px; height: 26px; padding: 0; border: 1px solid rgba(33,35,31,.22); border-radius: 50%; box-shadow: inset 0 0 0 2px rgba(255,255,255,.5); }
 .product-color-presets button.active { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pair-color-target { margin-top: 14px; padding: 11px; border: 1px solid var(--line); border-radius: 6px; background: #f4f2ed; }
+.pair-color-target strong { display: block; margin-bottom: 8px; font-size: 11px; }
+.pair-color-target .segmented { grid-template-columns: repeat(2, 1fr); }
+.pair-color-target .segmented button { font-size: 10px; }
+.pair-color-target small { display: block; margin-top: 7px; color: var(--muted); font-size: 9px; }
 
 .panel-footer { padding: 22px 26px 28px; }
 .secondary-button { width: 100%; border: 1px solid #bbb9b1; background: transparent; color: #4c4f48; }

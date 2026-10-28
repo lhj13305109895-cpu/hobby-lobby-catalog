@@ -11,6 +11,7 @@ import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
 import "./pattern-studio-source.css";
 import { POT_322_WRAP_WIDTH_MM, POT_322_BODY_HEIGHT_MM, POT_322_DIAMETER_MM, POT_322_VARIANTS, is322Capacity, get322BodyHeightMm, infer322ArtworkPrintHeight, configure322ModelHeight, configure322BodyPrint, configure322FixtureColor } from "./studio-model-322";
 import { configure318PartColors, update318FixtureColor, is318Capacity } from "./studio-parts-318";
+import { createCapacityPalettes, setPaletteColor, tagPaletteMaterial, getMaterialPalette, getPairCapacities, CAPACITY_LABELS } from "./studio-palettes";
 
 type Finish = "matte" | "satin" | "gloss";
 type Capacity = "1.6" | "2.0" | "145" | "1.2" | "322" | "322-1.0";
@@ -1020,6 +1021,7 @@ function extendBodyToTwoLiter(model: THREE.Object3D) {
 }
 
 type FixturePartUniforms = {
+  capacity?: Capacity;
   bodyColor: { value: THREE.Color };
   fixtureColor: { value: THREE.Color };
   bodyTopHeight: { value: number };
@@ -1369,8 +1371,18 @@ export function PotStudio() {
     "322-1.0": Array.from({ length: 4 }, () => ({ ...INITIAL_SETTINGS })),
   });
   const [finish, setFinish] = useState<Finish>(capacity === "1.6" || capacity === "2.0" ? "gloss" : "matte");
-  const [bodyColor, setBodyColor] = useState(DEFAULT_BODY_COLOR);
-  const [lidColor, setLidColor] = useState(DEFAULT_LID_COLOR);
+  const capacityPalettesRef = useRef(createCapacityPalettes(DEFAULT_BODY_COLOR, DEFAULT_LID_COLOR));
+  const [bodyColor, setBodyColorState] = useState(DEFAULT_BODY_COLOR);
+  const [lidColor, setLidColorState] = useState(DEFAULT_LID_COLOR);
+  // Write before render/load so quick target switches cannot cross-save colours.
+  const setBodyColor = (color: string) => {
+    setPaletteColor(capacityPalettesRef.current, capacity, "bodyColor", color);
+    setBodyColorState(color);
+  };
+  const setLidColor = (color: string) => {
+    setPaletteColor(capacityPalettesRef.current, capacity, "lidColor", color);
+    setLidColorState(color);
+  };
   const [isDragging, setIsDragging] = useState(false);
   const [draggingPotIndex, setDraggingPotIndex] = useState<number | null>(null);
 
@@ -1539,7 +1551,7 @@ export function PotStudio() {
       const uses319PairRecipe = pairMode === "319" || Boolean(single319Kind);
       const pairCapacities: Capacity[] = single319Kind
         ? [single319Kind]
-        : pairMode === "322" ? ["322-1.0", "322"] : pairMode === "319" ? ["1.6", "2.0"] : ["1.2", "145"];
+        : getPairCapacities(pairMode);
       const modelPath = (kind: Capacity) => is322Capacity(kind) ? "/pot-322.glb" : kind === "1.2" ? "/pot-454.glb" : kind === "145" ? "/pot-145.glb" : "/pot.glb";
       try {
         const gltfs = await Promise.all(pairCapacities.map((kind) => loader.loadAsync(modelPath(kind))));
@@ -1551,6 +1563,7 @@ export function PotStudio() {
         const allPrintSurfaces: THREE.Mesh[] = [];
 
         const makePairProduct = (gltf: { scene: THREE.Group }, kind: Capacity) => {
+          const { bodyColor, lidColor } = capacityPalettesRef.current[kind];
           const pairIsTwoLiter = kind === "2.0";
           const pairIsNewPot = kind === "145";
           const pairIsOneTwoLiter = kind === "1.2";
@@ -1592,6 +1605,8 @@ export function PotStudio() {
             envMapIntensity: uses319PairRecipe ? 0.55 : 0.42,
             side: THREE.DoubleSide,
           });
+          tagPaletteMaterial(bodyMaterial, kind);
+          tagPaletteMaterial(fixtureMaterial, kind);
           const artwork = capacityArtworksRef.current[kind]?.[0];
           if (pairIs322) {
             configure322FixtureColor(fixtureMaterial, lidColor);
@@ -1639,7 +1654,10 @@ export function PotStudio() {
               lidColor,
               pairIsTwoLiter,
             );
-            if (fixturePartUniforms) allFixturePartUniforms.push(fixturePartUniforms);
+            if (fixturePartUniforms) {
+              fixturePartUniforms.capacity = kind;
+              allFixturePartUniforms.push(fixturePartUniforms);
+            }
           }
           let overlay: THREE.Mesh | null = null;
           if (pairIs322 && printSource) {
@@ -1780,6 +1798,7 @@ export function PotStudio() {
         is322 ? "/pot-322.glb" : isOneTwoLiter ? "/pot-454.glb" : isNewPot ? "/pot-145.glb" : "/pot.glb",
         (gltf) => {
           if (disposed) return;
+          const { bodyColor, lidColor } = capacityPalettesRef.current[capacity];
           const model = gltf.scene;
           if (isTwoLiter) extendBodyToTwoLiter(model);
           if (is322) configure322ModelHeight(model, body322HeightMm);
@@ -1851,6 +1870,8 @@ export function PotStudio() {
             envMapIntensity: 0.55,
             side: THREE.DoubleSide,
           });
+          tagPaletteMaterial(bodyMaterial, capacity);
+          tagPaletteMaterial(fixtureMaterial, capacity);
           if (is322) configure322FixtureColor(fixtureMaterial, lidColor);
           let bodyFound = isStandaloneModel && !is322;
           const printSources: THREE.Mesh[] = [];
@@ -1893,6 +1914,7 @@ export function PotStudio() {
             lidColor,
             isTwoLiter,
           );
+          if (fixturePartUniforms) fixturePartUniforms.capacity = capacity;
           const seamCover = null;
           const artworkHeightRatio = isStandaloneModel
             ? 1
@@ -2143,7 +2165,7 @@ export function PotStudio() {
       ? FINISH_SURFACE.gloss
       : FINISH_SURFACE[finish];
     modelMaterialsRef.current.forEach((material) => {
-      material.color.set(bodyColor);
+      material.color.set(getMaterialPalette(material, capacityPalettesRef.current, capacity).bodyColor);
       material.roughness = surface.roughness;
       material.clearcoat = surface.clearcoat;
       material.clearcoatRoughness = surface.clearcoatRoughness;
@@ -2152,15 +2174,22 @@ export function PotStudio() {
   }, [finish, bodyColor, capacity, ready]);
 
   useEffect(() => {
-    updateFixturePartUniforms(fixturePartUniformsRef.current, new THREE.Color(bodyColor).getHex(), lidColor);
-    modelMaterialsRef.current.forEach((material) => update318FixtureColor(material, lidColor));
+    fixturePartUniformsRef.current.forEach((uniforms) => {
+      const palette = capacityPalettesRef.current[uniforms.capacity ?? capacity];
+      updateFixturePartUniforms([uniforms], new THREE.Color(palette.bodyColor).getHex(), palette.lidColor);
+    });
+    modelMaterialsRef.current.forEach((material) => {
+      const palette = getMaterialPalette(material, capacityPalettesRef.current, capacity);
+      update318FixtureColor(material, palette.lidColor);
+    });
     const fixtureSurface = fixturePartUniformsRef.current.length
       ? FINISH_SURFACE.gloss
       : (capacity === "1.6" || capacity === "2.0" || is322)
         ? MATTE_PLASTIC_SURFACE
         : FINISH_SURFACE[finish];
     fixtureMaterialsRef.current.forEach((material) => {
-      material.color.set(material.userData.directFixtureColor ? lidColor : 0xffffff);
+      const palette = getMaterialPalette(material, capacityPalettesRef.current, capacity);
+      material.color.set(material.userData.directFixtureColor ? palette.lidColor : 0xffffff);
       if (material instanceof THREE.MeshPhysicalMaterial) {
         material.roughness = fixtureSurface.roughness;
         material.clearcoat = fixtureSurface.clearcoat;
@@ -2199,13 +2228,13 @@ export function PotStudio() {
     setProgress(0);
     setLoadError(false);
     setReady(false);
-    // Selecting the other member of a 322 pair is an editing operation, not a
-    // reset of their common plastic/body palette. Preserve it within the family.
+    // Preserve the 322 finish, but restore the selected product's own colours.
     if (!(is322Capacity(capacity) && is322Capacity(nextCapacity))) {
       setFinish(nextCapacity === "1.6" || nextCapacity === "2.0" ? "gloss" : "matte");
-      setBodyColor(DEFAULT_BODY_COLOR);
-      setLidColor(DEFAULT_LID_COLOR);
     }
+    const nextPalette = capacityPalettesRef.current[nextCapacity];
+    setBodyColorState(nextPalette.bodyColor);
+    setLidColorState(nextPalette.lidColor);
     setCapacity(nextCapacity);
   };
 
@@ -2419,7 +2448,7 @@ export function PotStudio() {
     const activeSurface = printSurfacesRef.current[activePrintIndex];
     if (activeSurface) activeSurface.visible = is322;
     modelMaterialsRef.current.forEach((material) => {
-      material.color.set(bodyColor);
+      material.color.set(getMaterialPalette(material, capacityPalettesRef.current, capacity).bodyColor);
       material.needsUpdate = true;
     });
     setTextureName("");
@@ -2780,6 +2809,18 @@ export function PotStudio() {
                 </button>
               ))}
             </div>
+            {pairMode !== "none" && <div className="pair-color-target">
+              <strong>单独调色 · 当前：{capacityLabel}</strong>
+              <div className="segmented" aria-label="选择要调色的壶">
+                {getPairCapacities(pairMode).map((kind, index) => (
+                  <button key={kind} className={capacity === kind ? "active" : ""}
+                    aria-pressed={capacity === kind} onClick={() => changeCapacity(kind)}>
+                    {index === 0 ? "小壶" : "大壶"} · {CAPACITY_LABELS[kind]}
+                  </button>
+                ))}
+              </div>
+              <small>以下颜色只影响选中的壶，另一只保持不变。</small>
+            </div>}
             <div className="product-color-control">
               <div>
                 <strong>壶身颜色</strong>

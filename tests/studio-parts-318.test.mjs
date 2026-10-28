@@ -91,7 +91,7 @@ test('318 calibrated regions include bodies but exclude the lid, spout and low-h
 test('single/group/mixed-pair paths are wired and lid controls are visible for every model', () => {
   assert.ok(studio.includes('configure318PartColors(bodyMaterial, firstSurface, model, kind, lidColor)'));
   assert.ok(studio.includes('configure318PartColors(bodyMaterial, newPotSources[0], model, capacity, lidColor)'));
-  assert.ok(studio.includes('update318FixtureColor(material, lidColor)'));
+  assert.ok(studio.includes('update318FixtureColor(material, palette.lidColor)'));
   assert.ok(studio.includes('aria-label="选择盖子颜色"'));
   assert.ok(!studio.includes('{(!isStandaloneModel || is322) && <>'));
   assert.match(studio, /if \(!viewport\) return;\s+setReady\(false\);/, 'Reapply the palette after scene/group rebuilds');

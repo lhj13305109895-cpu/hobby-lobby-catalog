@@ -210,7 +210,7 @@ test('322 1.0L shader prints 100 mm at 100/119 and 119 mm as full height', () =>
 
 test('322 mixed pair uses equal physical scale and independently addresses each size', () => {
   const studio = fs.readFileSync(new URL('../src/PatternStudio.tsx', import.meta.url), 'utf8');
-  assert.ok(studio.includes('pairMode === "322" ? ["322-1.0", "322"]'), 'Small pot left, large pot right');
+  assert.ok(studio.includes(': getPairCapacities(pairMode)'), 'Renderer uses the shared, small-first pair mapping');
   assert.ok(studio.includes('const sizingSize = reference322Size ?? rawSize'), 'Both sizes reference the unshortened scan for equal scaling');
   assert.ok(studio.includes('largeRoot.scale.setScalar(pairMode === "322" ? 1'), 'Do not enlarge the shared lid and handle');
   assert.ok(studio.includes('if (pairIs322 && printSource)'), 'Use the original vessel surface in pair mode too');
@@ -220,7 +220,7 @@ test('322 mixed pair uses equal physical scale and independently addresses each 
   assert.ok(studio.includes('const activePrintIndex = pairMode === "322" ? (capacity === "322" ? 1 : 0)'), 'Removing an artwork targets only its selected size');
   assert.ok(studio.includes('void applyFile(selectedFiles[0], 0, "322-1.0")'));
   assert.ok(studio.includes('if (selectedFiles[1]) void applyFile(selectedFiles[1], 0, "322")'));
-  assert.ok(studio.includes('if (!(is322Capacity(capacity) && is322Capacity(nextCapacity)))'), 'Switching which 322 size to edit retains the chosen plastic/body colours');
+  assert.ok(studio.includes('setBodyColorState(nextPalette.bodyColor)') && studio.includes('setLidColorState(nextPalette.lidColor)'), 'Each 322 size restores its own saved colours');
   assert.ok(studio.includes('const targetSettings = targetCapacity === capacity && targetPotIndex === activePotIndex'), 'A two-file upload retains the other capacity\'s saved placement settings');
   assert.ok(studio.includes('>322 一大一小</button>'));
 });

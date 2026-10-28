@@ -12,8 +12,9 @@ test('all studio bodies and plastic fixtures default to RGB 255, 238, 194', () =
   assert.deepEqual(body.slice(1).match(/../g).map(channel => parseInt(channel, 16)), [255, 238, 194]);
   assert.ok(studio.includes('useState(DEFAULT_BODY_COLOR)'), 'Direct URLs use the new body default');
   assert.ok(studio.includes('useState(DEFAULT_LID_COLOR)'), 'Direct URLs use the new plastic default');
-  assert.ok(studio.includes('setBodyColor(DEFAULT_BODY_COLOR)'), 'Model switching restores the same default');
-  assert.ok(studio.includes('setLidColor(DEFAULT_LID_COLOR)'));
+  assert.ok(studio.includes('createCapacityPalettes(DEFAULT_BODY_COLOR, DEFAULT_LID_COLOR)'), 'Every unsaved product starts at the supplied defaults');
+  assert.ok(studio.includes('setBodyColorState(nextPalette.bodyColor)'), 'Switching restores this product palette');
+  assert.ok(studio.includes('setLidColorState(nextPalette.lidColor)'));
 });
 
 test('default colour change retains custom pickers, independent artwork and nonmetal materials', () => {
