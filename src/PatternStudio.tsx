@@ -165,7 +165,10 @@ function applyArtworkTextureTransform(texture: THREE.Texture, settings: TextureS
     ? Math.min(0.01, 3 / image.width)
     : 0;
   texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = is322Capacity(capacity) ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
+  // The 318 1.2L band has a visible upper edge. Do not blend bottom-row
+  // colours into its top when filtering the texture at v=1.
+  texture.wrapT = is322Capacity(capacity) || capacity === "1.2"
+    ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
   texture.repeat.set(
     settings.scaleX * (1 - horizontalInset * 2),
     settings.scaleY,
