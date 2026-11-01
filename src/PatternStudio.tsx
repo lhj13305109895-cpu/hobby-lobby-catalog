@@ -13,6 +13,7 @@ import { POT_322_WRAP_WIDTH_MM, POT_322_BODY_HEIGHT_MM, POT_322_DIAMETER_MM, POT
 import { configure318PartColors, update318FixtureColor, is318Capacity } from "./studio-parts-318";
 import { createCapacityPalettes, setPaletteColor, tagPaletteMaterial, getMaterialPalette, getPairCapacities, CAPACITY_LABELS } from "./studio-palettes";
 import { createPotDirections, attachPotTurntables, setPotDirection, applyPotTurnDrag, directionIndexForObject, type PotTurntable, type PotTurnStart } from "./studio-pot-directions";
+import { clearOrbitMomentum } from "./studio-view-controls";
 
 type Finish = "matte" | "satin" | "gloss";
 type Capacity = "1.6" | "2.0" | "145" | "1.2" | "322" | "322-1.0";
@@ -1395,7 +1396,8 @@ export function PotStudio() {
   const [rotationTargetIndex, setRotationTargetIndex] = useState(0);
   const [, setDirectionRevision] = useState(0);
   const isMultiPot = pairMode !== "none" || groupCount > 1;
-  const is319Row = isMultiPot && (capacity === "1.6" || capacity === "2.0");
+  // The same frontal view applies to a single 319 pot as well as its rows.
+  const is319Row = capacity === "1.6" || capacity === "2.0";
   const rotationTargets = pairMode !== "none"
     ? getPairCapacities(pairMode).map(kind => ({ capacity: kind, slot: 0 }))
     : Array.from({ length: groupCount }, (_, slot) => ({ capacity, slot }));
@@ -1421,6 +1423,7 @@ export function PotStudio() {
     const camera = cameraRef.current;
     const controls = controlsRef.current;
     if (!camera || !controls) return;
+    if (is319Row) clearOrbitMomentum(controls);
     const resetPolarAngle = pairMode !== "none" || is319Row
       ? PAIR_LOCKED_POLAR_ANGLE
       : isNewPot
@@ -1437,7 +1440,7 @@ export function PotStudio() {
     else if (isNewPot) controls.target.copy(NEW_POT_CAMERA_TARGET);
     else if (isOneTwoLiter || is322) controls.target.copy(POT_12_CAMERA_TARGET);
     else controls.target.set(0, -0.05, 0);
-    if ((pairMode !== "none" || groupCount > 1 || is322) && modelRef.current) {
+    if ((pairMode !== "none" || groupCount > 1 || is322 || is319Row) && modelRef.current) {
       const displayBox = new THREE.Box3().setFromObject(modelRef.current);
       const visualCenter = displayBox.getCenter(new THREE.Vector3());
       if (pairMode === "318") visualCenter.y -= 0.28;
@@ -1445,7 +1448,7 @@ export function PotStudio() {
       controls.target.set(visualCenter.x, visualCenter.y, visualCenter.z);
       camera.position.y += centerShift;
       const viewDirection = is319Row ? POT_319_ROW_VIEW_DIRECTION : camera.position.clone().sub(controls.target).normalize();
-      const fittedDistance = cameraDistanceToFitBox(camera, displayBox, visualCenter, viewDirection, pairMode === "322" || pairMode === "319" ? 0.86 : pairMode !== "none" ? 0.64 : 0.88);
+      const fittedDistance = cameraDistanceToFitBox(camera, displayBox, visualCenter, viewDirection, pairMode === "322" || pairMode === "319" ? 0.86 : pairMode !== "none" ? 0.64 : is319Row && groupCount === 1 ? 0.8 : 0.88);
       camera.position.copy(visualCenter).addScaledVector(viewDirection, fittedDistance);
     }
     controls.update();
@@ -1459,8 +1462,9 @@ export function PotStudio() {
     const camera = cameraRef.current;
     const controls = controlsRef.current;
     if (!camera || !controls) return;
+    if (is319Row) clearOrbitMomentum(controls);
     const distance = camera.position.distanceTo(controls.target);
-    const frontPolarAngle = pairMode !== "none"
+    const frontPolarAngle = pairMode !== "none" || is319Row
       ? PAIR_LOCKED_POLAR_ANGLE
       : isNewPot
         ? NEW_POT_LOCKED_POLAR_ANGLE
@@ -1478,7 +1482,7 @@ export function PotStudio() {
     camera.lookAt(controls.target);
     camera.updateProjectionMatrix();
     controls.update();
-  }, [pairMode, isNewPot, isOneTwoLiter, is322, isMultiPot]);
+  }, [pairMode, isNewPot, isOneTwoLiter, is322, isMultiPot, is319Row]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -1819,6 +1823,12 @@ export function PotStudio() {
           displayGroup.name = "POT_GROUP";
           smallRoot.name = "POT_SLOT_0";
           displayGroup.add(smallRoot);
+          const displayBox = new THREE.Box3().setFromObject(displayGroup);
+          const visualCenter = displayBox.getCenter(new THREE.Vector3());
+          controls.target.copy(visualCenter);
+          const distance = cameraDistanceToFitBox(camera, displayBox, visualCenter, POT_319_ROW_VIEW_DIRECTION, 0.8);
+          camera.position.copy(visualCenter).addScaledVector(POT_319_ROW_VIEW_DIRECTION, distance);
+          controls.update();
           modelMaterialsRef.current = allBodyMaterials;
           fixtureMaterialsRef.current = allFixtureMaterials;
           fixturePartUniformsRef.current = allFixturePartUniforms;
