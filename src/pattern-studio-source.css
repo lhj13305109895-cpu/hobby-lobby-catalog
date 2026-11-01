@@ -72,7 +72,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .error-card { border-color: rgba(187,91,55,.4); }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.viewer-hints { position: absolute; left: 24px; bottom: 20px; z-index: 2; display: flex; gap: 9px; }
+.viewer-hints { position: absolute; left: 24px; right: 24px; bottom: 20px; z-index: 2; display: flex; flex-wrap: wrap; gap: 9px; pointer-events: none; }
 .viewer-hints span { padding: 7px 10px; border-radius: 4px; background: rgba(41,43,38,.74); color: #f3f1eb; font-size: 11px; backdrop-filter: blur(6px); }
 .reset-view, .front-view { position: absolute; top: 20px; z-index: 2; height: 36px; padding: 0 12px; border: 1px solid rgba(56,58,52,.24); border-radius: 5px; background: rgba(247,245,239,.72); color: #3a3d36; font-size: 12px; backdrop-filter: blur(6px); }
 .reset-view { right: 22px; }

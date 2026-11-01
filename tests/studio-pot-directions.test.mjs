@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { createPotDirections, attachPotTurntables, setPotDirection, directionIndexForObject, normalizePotAngle } from '../src/studio-pot-directions.ts';
+import { createPotDirections, attachPotTurntables, setPotDirection, applyPotTurnDrag, directionIndexForObject, normalizePotAngle } from '../src/studio-pot-directions.ts';
 import { getPairCapacities } from '../src/studio-palettes.ts';
 
 function products(count = 2) {
@@ -94,4 +94,26 @@ test('continuous dragging wraps cleanly through the full horizontal rotation', (
   assert.equal(normalizePotAngle(360),0);
   assert.equal(normalizePotAngle(180),180);
   assert.equal(normalizePotAngle(725),5);
+});
+
+test('blank-canvas dragging turns the entire set in place by an equal delta, preserving relative angles', () => {
+  const {row,items} = products(4);
+  const directions = createPotDirections();
+  const keys = items.map((_,slot) => ({capacity:'1.6',slot}));
+  const turns = attachPotTurntables(row,keys,directions);
+  const original = [175,-30,0,90];
+  original.forEach((angle,i) => setPotDirection(turns,directions,keys[i],angle));
+  row.updateMatrixWorld(true);
+  const positions = turns.map(({pivot}) => pivot.getWorldPosition(new THREE.Vector3()));
+  const starts = original.map((angle,index) => ({index,angle}));
+  applyPotTurnDrag(turns,directions,starts,20);
+  assert.deepEqual(directions['1.6'],[-165,-10,20,110]);
+  applyPotTurnDrag(turns,directions,starts,40);
+  assert.deepEqual(directions['1.6'],[-145,10,40,130], 'Every move uses pointer-down angles, without accumulating prior moves');
+  row.updateMatrixWorld(true);
+  turns.forEach(({pivot},i) => assert.ok(pivot.getWorldPosition(new THREE.Vector3()).distanceTo(positions[i])<1e-10));
+  assert.deepEqual(directions['2.0'],[0,0,0,0]);
+  // The identical drag code with a hit vessel leaves all partners unchanged.
+  applyPotTurnDrag(turns,directions,[{index:1,angle:10}],15);
+  assert.deepEqual(directions['1.6'],[-145,25,40,130]);
 });

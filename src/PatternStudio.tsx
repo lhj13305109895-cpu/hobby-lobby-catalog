@@ -12,7 +12,7 @@ import "./pattern-studio-source.css";
 import { POT_322_WRAP_WIDTH_MM, POT_322_BODY_HEIGHT_MM, POT_322_DIAMETER_MM, POT_322_VARIANTS, is322Capacity, get322BodyHeightMm, infer322ArtworkPrintHeight, configure322ModelHeight, configure322BodyPrint, configure322FixtureColor } from "./studio-model-322";
 import { configure318PartColors, update318FixtureColor, is318Capacity } from "./studio-parts-318";
 import { createCapacityPalettes, setPaletteColor, tagPaletteMaterial, getMaterialPalette, getPairCapacities, CAPACITY_LABELS } from "./studio-palettes";
-import { createPotDirections, attachPotTurntables, setPotDirection, directionIndexForObject, type PotTurntable } from "./studio-pot-directions";
+import { createPotDirections, attachPotTurntables, setPotDirection, applyPotTurnDrag, directionIndexForObject, type PotTurntable, type PotTurnStart } from "./studio-pot-directions";
 
 type Finish = "matte" | "satin" | "gloss";
 type Capacity = "1.6" | "2.0" | "145" | "1.2" | "322" | "322-1.0";
@@ -81,6 +81,7 @@ const PAIR_LOCKED_POLAR_ANGLE = Math.atan2(
   Math.hypot(PAIR_CAMERA_POSITION.x - PAIR_CAMERA_TARGET.x, PAIR_CAMERA_POSITION.z - PAIR_CAMERA_TARGET.z),
   PAIR_CAMERA_POSITION.y - PAIR_CAMERA_TARGET.y,
 );
+const POT_319_ROW_VIEW_DIRECTION = new THREE.Vector3(0, Math.cos(PAIR_LOCKED_POLAR_ANGLE), Math.sin(PAIR_LOCKED_POLAR_ANGLE));
 const POT_12_LOCKED_POLAR_ANGLE = Math.atan2(
   Math.hypot(POT_12_CAMERA_POSITION.x - POT_12_CAMERA_TARGET.x, POT_12_CAMERA_POSITION.z - POT_12_CAMERA_TARGET.z),
   POT_12_CAMERA_POSITION.y - POT_12_CAMERA_TARGET.y,
@@ -1394,6 +1395,7 @@ export function PotStudio() {
   const [rotationTargetIndex, setRotationTargetIndex] = useState(0);
   const [, setDirectionRevision] = useState(0);
   const isMultiPot = pairMode !== "none" || groupCount > 1;
+  const is319Row = isMultiPot && (capacity === "1.6" || capacity === "2.0");
   const rotationTargets = pairMode !== "none"
     ? getPairCapacities(pairMode).map(kind => ({ capacity: kind, slot: 0 }))
     : Array.from({ length: groupCount }, (_, slot) => ({ capacity, slot }));
@@ -1419,35 +1421,35 @@ export function PotStudio() {
     const camera = cameraRef.current;
     const controls = controlsRef.current;
     if (!camera || !controls) return;
-    const resetPolarAngle = pairMode !== "none"
+    const resetPolarAngle = pairMode !== "none" || is319Row
       ? PAIR_LOCKED_POLAR_ANGLE
       : isNewPot
         ? NEW_POT_LOCKED_POLAR_ANGLE
         : isOneTwoLiter || is322 ? POT_12_LOCKED_POLAR_ANGLE : LOCKED_POLAR_ANGLE;
     controls.minPolarAngle = resetPolarAngle;
     controls.maxPolarAngle = resetPolarAngle;
-    if (pairMode !== "none") camera.position.copy(PAIR_CAMERA_POSITION);
+    if (pairMode !== "none" || is319Row) camera.position.copy(PAIR_CAMERA_POSITION);
     else if (isNewPot) camera.position.copy(NEW_POT_CAMERA_POSITION);
     else if (isOneTwoLiter || is322) camera.position.copy(POT_12_CAMERA_POSITION);
     else if (isTwoLiter) camera.position.set(3.2, 1.35, 4.8);
     else camera.position.set(3.65, 1.22, 5.47);
-    if (pairMode !== "none") controls.target.copy(PAIR_CAMERA_TARGET);
+    if (pairMode !== "none" || is319Row) controls.target.copy(PAIR_CAMERA_TARGET);
     else if (isNewPot) controls.target.copy(NEW_POT_CAMERA_TARGET);
     else if (isOneTwoLiter || is322) controls.target.copy(POT_12_CAMERA_TARGET);
     else controls.target.set(0, -0.05, 0);
     if ((pairMode !== "none" || groupCount > 1 || is322) && modelRef.current) {
       const displayBox = new THREE.Box3().setFromObject(modelRef.current);
       const visualCenter = displayBox.getCenter(new THREE.Vector3());
-      if (pairMode !== "none" && pairMode !== "322") visualCenter.y -= 0.28;
+      if (pairMode === "318") visualCenter.y -= 0.28;
       const centerShift = visualCenter.y - controls.target.y;
       controls.target.set(visualCenter.x, visualCenter.y, visualCenter.z);
       camera.position.y += centerShift;
-      const viewDirection = camera.position.clone().sub(controls.target).normalize();
-      const fittedDistance = cameraDistanceToFitBox(camera, displayBox, visualCenter, viewDirection, pairMode === "322" ? 0.86 : pairMode !== "none" ? 0.64 : 0.88);
+      const viewDirection = is319Row ? POT_319_ROW_VIEW_DIRECTION : camera.position.clone().sub(controls.target).normalize();
+      const fittedDistance = cameraDistanceToFitBox(camera, displayBox, visualCenter, viewDirection, pairMode === "322" || pairMode === "319" ? 0.86 : pairMode !== "none" ? 0.64 : 0.88);
       camera.position.copy(visualCenter).addScaledVector(viewDirection, fittedDistance);
     }
     controls.update();
-  }, [isTwoLiter, isOneTwoLiter, isNewPot, is322, groupCount, pairMode]);
+  }, [isTwoLiter, isOneTwoLiter, isNewPot, is322, groupCount, pairMode, is319Row]);
 
   const showFrontView = useCallback(() => {
     if (isMultiPot) {
@@ -1487,7 +1489,7 @@ export function PotStudio() {
     scene.background = new THREE.Color(0xf8f8f6);
 
     const camera = new THREE.PerspectiveCamera(34, 1, 0.01, 100);
-    if (pairMode !== "none") camera.position.copy(PAIR_CAMERA_POSITION);
+    if (pairMode !== "none" || is319Row) camera.position.copy(PAIR_CAMERA_POSITION);
     else if (isNewPot) camera.position.copy(NEW_POT_CAMERA_POSITION);
     else if (isOneTwoLiter || is322) camera.position.copy(POT_12_CAMERA_POSITION);
     else if (isTwoLiter) camera.position.set(3.2, 1.35, 4.8);
@@ -1518,7 +1520,7 @@ export function PotStudio() {
     controls.dampingFactor = 0.07;
     controls.enablePan = false;
     controls.enableRotate = !isMultiPot;
-    const lockedPolarAngle = pairMode !== "none"
+    const lockedPolarAngle = pairMode !== "none" || is319Row
       ? PAIR_LOCKED_POLAR_ANGLE
       : isNewPot
       ? NEW_POT_LOCKED_POLAR_ANGLE
@@ -1527,7 +1529,7 @@ export function PotStudio() {
     controls.maxPolarAngle = lockedPolarAngle;
     controls.minDistance = 2.2;
     controls.maxDistance = pairMode !== "none" || groupCount > 1 ? 30 : isTwoLiter ? 9 : 11.5;
-    if (pairMode !== "none") controls.target.copy(PAIR_CAMERA_TARGET);
+    if (pairMode !== "none" || is319Row) controls.target.copy(PAIR_CAMERA_TARGET);
     else if (isNewPot) controls.target.copy(NEW_POT_CAMERA_TARGET);
     else if (isOneTwoLiter || is322) controls.target.copy(POT_12_CAMERA_TARGET);
     else controls.target.set(0, -0.05, 0);
@@ -1538,7 +1540,7 @@ export function PotStudio() {
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
     const touches = new Set<number>();
-    let turnDrag: { pointerId: number; startX: number; startAngle: number; index: number } | null = null;
+    let turnDrag: { pointerId: number; startX: number; starts: PotTurnStart[] } | null = null;
     const startPotTurn = (event: PointerEvent) => {
       if (!isMultiPot || (event.pointerType !== "touch" && event.button !== 0)) return;
       if (event.pointerType === "touch") touches.add(event.pointerId);
@@ -1554,18 +1556,20 @@ export function PotStudio() {
       group.updateMatrixWorld(true);
       raycaster.setFromCamera(pointer, camera);
       const hit = raycaster.intersectObject(group, true).find(item => directionIndexForObject(item.object) !== null);
-      if (!hit) return;
-      const index = directionIndexForObject(hit.object)!;
-      const target = potTurntablesRef.current[index];
-      if (!target) return;
-      setRotationTargetIndex(index);
-      turnDrag = { pointerId: event.pointerId, startX: event.clientX, startAngle: potDirectionsRef.current[target.key.capacity][target.key.slot], index };
+      const index = hit ? directionIndexForObject(hit.object) : null;
+      if (index !== null) setRotationTargetIndex(index);
+      const starts = potTurntablesRef.current.flatMap((target, targetIndex) => index === null || targetIndex === index
+        ? [{ index: targetIndex, angle: potDirectionsRef.current[target.key.capacity][target.key.slot] }]
+        : []);
+      if (!starts.length) return;
+      turnDrag = { pointerId: event.pointerId, startX: event.clientX, starts };
       canvas.setPointerCapture(event.pointerId);
       canvas.style.cursor = "grabbing";
     };
     const movePotTurn = (event: PointerEvent) => {
       if (!turnDrag || event.pointerId !== turnDrag.pointerId || touches.size > 1) return;
-      rotatePotRef.current(turnDrag.index, turnDrag.startAngle + (event.clientX - turnDrag.startX) * 0.4);
+      applyPotTurnDrag(potTurntablesRef.current, potDirectionsRef.current, turnDrag.starts, (event.clientX - turnDrag.startX) * 0.4);
+      setDirectionRevision(revision => revision + 1);
     };
     const endPotTurn = (event: PointerEvent) => {
       touches.delete(event.pointerId);
@@ -1849,10 +1853,10 @@ export function PotStudio() {
         const framingCenter = visualCenter.clone();
         // Keep both complete vessels comfortably inside the on-screen canvas;
         // the slight upward optical shift balances their tall handles.
-        if (pairMode !== "322") framingCenter.y -= 0.28;
+        if (pairMode === "318") framingCenter.y -= 0.28;
         controls.target.copy(framingCenter);
-        const viewDirection = camera.position.clone().sub(controls.target).normalize();
-        const distance = cameraDistanceToFitBox(camera, displayBox, framingCenter, viewDirection, pairMode === "322" ? 0.86 : 0.6);
+        const viewDirection = is319Row ? POT_319_ROW_VIEW_DIRECTION : camera.position.clone().sub(controls.target).normalize();
+        const distance = cameraDistanceToFitBox(camera, displayBox, framingCenter, viewDirection, pairMode === "322" || pairMode === "319" ? 0.86 : 0.6);
         camera.position.copy(framingCenter).addScaledVector(viewDirection, distance);
         controls.update();
         modelMaterialsRef.current = allBodyMaterials;
@@ -2165,7 +2169,7 @@ export function PotStudio() {
             const centerShift = visualCenter.y - controls.target.y;
             controls.target.set(visualCenter.x, visualCenter.y, visualCenter.z);
             camera.position.y += centerShift;
-            const viewDirection = camera.position.clone().sub(controls.target).normalize();
+            const viewDirection = is319Row ? POT_319_ROW_VIEW_DIRECTION : camera.position.clone().sub(controls.target).normalize();
             const fittedDistance = cameraDistanceToFitBox(camera, displayBox, visualCenter, viewDirection, 0.88);
             camera.position.copy(visualCenter).addScaledVector(viewDirection, fittedDistance);
             controls.update();
@@ -2741,7 +2745,8 @@ export function PotStudio() {
             )}
             {loadError && <div className="loading-card error-card"><strong>模型加载失败</strong><p>请刷新页面后重试。</p></div>}
             <div className="viewer-hints">
-              <span>{isMultiPot ? `拖动单只壶旋转 · 当前：${rotationTargetLabel}` : "拖动左右旋转"}</span><span>滚轮缩放</span>
+              <span>{isMultiPot ? `拖壶转单只 · 当前：${rotationTargetLabel}` : "拖动左右旋转"}</span>
+              {isMultiPot && <span>空白处整组旋转</span>}<span>滚轮缩放</span>
             </div>
             <button className="front-view" onClick={showFrontView} aria-label={isMultiPot ? "重置当前壶方向" : "切换到正面视图"}>{isMultiPot ? "当前壶归位" : "正面视图"}</button>
             <button className="reset-view" onClick={resetView} aria-label={isMultiPot ? "重置组合缩放" : "重置模型视角"}>↺ {isMultiPot ? "重置缩放" : "重置视角"}</button>
@@ -2855,7 +2860,7 @@ export function PotStudio() {
                 <button disabled={!ready} onClick={() => rotatePot(selectedRotationIndex, rotationAngle + 15)} aria-label="当前壶向右旋转15度">↷ 15°</button>
                 <button disabled={!ready} onClick={() => rotatePot(selectedRotationIndex, 0)}>恢复当前壶方向</button>
               </div>
-              <p className="group-note">也可直接拖动预览中的某一只壶，其他壶保持不动。</p>
+              <p className="group-note">拖动壶身只转那一只；拖上方空白处整组一起转，位置保持不变。</p>
             </div>}
           </section>
 

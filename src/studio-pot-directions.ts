@@ -4,6 +4,7 @@ import { STUDIO_CAPACITIES, type PaletteCapacity } from "./studio-palettes.ts";
 export type PotDirectionKey = { capacity: PaletteCapacity; slot: number };
 export type PotDirections = Record<PaletteCapacity, number[]>;
 export type PotTurntable = { key: PotDirectionKey; pivot: THREE.Group };
+export type PotTurnStart = { index: number; angle: number };
 
 export function createPotDirections(): PotDirections {
   return Object.fromEntries(STUDIO_CAPACITIES.map(capacity => [capacity, [0, 0, 0, 0]])) as PotDirections;
@@ -43,6 +44,15 @@ export function setPotDirection(turntables: PotTurntable[], directions: PotDirec
   directions[key.capacity][key.slot] = angle;
   const target = turntables.find(item => item.key.capacity === key.capacity && item.key.slot === key.slot);
   if (target) target.pivot.rotation.y = THREE.MathUtils.degToRad(angle);
+}
+
+// Use pointer-down angles on every move: background drags turn all vessels by
+// the same delta, retaining relative directions without moving the row/camera.
+export function applyPotTurnDrag(turntables: PotTurntable[], directions: PotDirections, starts: PotTurnStart[], delta: number) {
+  for (const start of starts) {
+    const target = turntables[start.index];
+    if (target) setPotDirection(turntables, directions, target.key, start.angle + delta);
+  }
 }
 
 export function directionIndexForObject(object: THREE.Object3D): number | null {
