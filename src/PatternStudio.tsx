@@ -12,6 +12,7 @@ import "./pattern-studio-source.css";
 import { POT_322_WRAP_WIDTH_MM, POT_322_BODY_HEIGHT_MM, POT_322_DIAMETER_MM, POT_322_VARIANTS, is322Capacity, get322BodyHeightMm, infer322ArtworkPrintHeight, configure322ModelHeight, configure322BodyPrint, configure322FixtureColor } from "./studio-model-322";
 import { configure318PartColors, update318FixtureColor, is318Capacity } from "./studio-parts-318";
 import { createCapacityPalettes, setPaletteColor, tagPaletteMaterial, getMaterialPalette, getPairCapacities, CAPACITY_LABELS } from "./studio-palettes";
+import { createPotDirections, attachPotTurntables, setPotDirection, directionIndexForObject, type PotTurntable } from "./studio-pot-directions";
 
 type Finish = "matte" | "satin" | "gloss";
 type Capacity = "1.6" | "2.0" | "145" | "1.2" | "322" | "322-1.0";
@@ -1388,6 +1389,31 @@ export function PotStudio() {
   };
   const [isDragging, setIsDragging] = useState(false);
   const [draggingPotIndex, setDraggingPotIndex] = useState<number | null>(null);
+  const potDirectionsRef = useRef(createPotDirections());
+  const potTurntablesRef = useRef<PotTurntable[]>([]);
+  const [rotationTargetIndex, setRotationTargetIndex] = useState(0);
+  const [, setDirectionRevision] = useState(0);
+  const isMultiPot = pairMode !== "none" || groupCount > 1;
+  const rotationTargets = pairMode !== "none"
+    ? getPairCapacities(pairMode).map(kind => ({ capacity: kind, slot: 0 }))
+    : Array.from({ length: groupCount }, (_, slot) => ({ capacity, slot }));
+  const selectedRotationIndex = Math.min(rotationTargetIndex, rotationTargets.length - 1);
+  const rotationTarget = rotationTargets[selectedRotationIndex];
+  const rotationAngle = potDirectionsRef.current[rotationTarget.capacity][rotationTarget.slot];
+  const rotationTargetLabel = pairMode !== "none"
+    ? `${selectedRotationIndex === 0 ? "小壶" : "大壶"} · ${CAPACITY_LABELS[rotationTarget.capacity]}`
+    : `第 ${selectedRotationIndex + 1} 只`;
+  const rotatePot = (index: number, degrees: number) => {
+    const key = rotationTargets[index];
+    if (!key) return;
+    setPotDirection(potTurntablesRef.current, potDirectionsRef.current, key, degrees);
+    setDirectionRevision(revision => revision + 1);
+  };
+  // Pointer handlers use the latest target without rebuilding the GLB scene.
+  const rotatePotRef = useRef(rotatePot);
+  rotatePotRef.current = rotatePot;
+  const rotationTargetIndexRef = useRef(selectedRotationIndex);
+  rotationTargetIndexRef.current = selectedRotationIndex;
 
   const resetView = useCallback(() => {
     const camera = cameraRef.current;
@@ -1424,6 +1450,10 @@ export function PotStudio() {
   }, [isTwoLiter, isOneTwoLiter, isNewPot, is322, groupCount, pairMode]);
 
   const showFrontView = useCallback(() => {
+    if (isMultiPot) {
+      rotatePotRef.current(rotationTargetIndexRef.current, 0);
+      return;
+    }
     const camera = cameraRef.current;
     const controls = controlsRef.current;
     if (!camera || !controls) return;
@@ -1446,7 +1476,7 @@ export function PotStudio() {
     camera.lookAt(controls.target);
     camera.updateProjectionMatrix();
     controls.update();
-  }, [pairMode, isNewPot, isOneTwoLiter, is322]);
+  }, [pairMode, isNewPot, isOneTwoLiter, is322, isMultiPot]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -1487,6 +1517,7 @@ export function PotStudio() {
     controls.enableDamping = true;
     controls.dampingFactor = 0.07;
     controls.enablePan = false;
+    controls.enableRotate = !isMultiPot;
     const lockedPolarAngle = pairMode !== "none"
       ? PAIR_LOCKED_POLAR_ANGLE
       : isNewPot
@@ -1501,6 +1532,52 @@ export function PotStudio() {
     else if (isOneTwoLiter || is322) controls.target.copy(POT_12_CAMERA_TARGET);
     else controls.target.set(0, -0.05, 0);
     controlsRef.current = controls;
+
+    const canvas = renderer.domElement;
+    if (isMultiPot) canvas.style.cursor = "grab";
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    const touches = new Set<number>();
+    let turnDrag: { pointerId: number; startX: number; startAngle: number; index: number } | null = null;
+    const startPotTurn = (event: PointerEvent) => {
+      if (!isMultiPot || (event.pointerType !== "touch" && event.button !== 0)) return;
+      if (event.pointerType === "touch") touches.add(event.pointerId);
+      if (touches.size > 1) {
+        turnDrag = null;
+        canvas.style.cursor = "grab";
+        return; // Let OrbitControls retain two-finger zoom.
+      }
+      const group = modelRef.current;
+      if (!group) return;
+      const bounds = canvas.getBoundingClientRect();
+      pointer.set((event.clientX - bounds.left) / bounds.width * 2 - 1, -(event.clientY - bounds.top) / bounds.height * 2 + 1);
+      group.updateMatrixWorld(true);
+      raycaster.setFromCamera(pointer, camera);
+      const hit = raycaster.intersectObject(group, true).find(item => directionIndexForObject(item.object) !== null);
+      if (!hit) return;
+      const index = directionIndexForObject(hit.object)!;
+      const target = potTurntablesRef.current[index];
+      if (!target) return;
+      setRotationTargetIndex(index);
+      turnDrag = { pointerId: event.pointerId, startX: event.clientX, startAngle: potDirectionsRef.current[target.key.capacity][target.key.slot], index };
+      canvas.setPointerCapture(event.pointerId);
+      canvas.style.cursor = "grabbing";
+    };
+    const movePotTurn = (event: PointerEvent) => {
+      if (!turnDrag || event.pointerId !== turnDrag.pointerId || touches.size > 1) return;
+      rotatePotRef.current(turnDrag.index, turnDrag.startAngle + (event.clientX - turnDrag.startX) * 0.4);
+    };
+    const endPotTurn = (event: PointerEvent) => {
+      touches.delete(event.pointerId);
+      if (!turnDrag || event.pointerId !== turnDrag.pointerId) return;
+      turnDrag = null;
+      if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+      canvas.style.cursor = "grab";
+    };
+    canvas.addEventListener("pointerdown", startPotTurn);
+    canvas.addEventListener("pointermove", movePotTurn);
+    canvas.addEventListener("pointerup", endPotTurn);
+    canvas.addEventListener("pointercancel", endPotTurn);
 
     // Use neutral, symmetrical studio lights so uploaded artwork keeps the
     // same colour on the left and right sides of the pot.
@@ -1766,6 +1843,7 @@ export function PotStudio() {
         const displayGroup = new THREE.Group();
         displayGroup.name = "POT_GROUP";
         displayGroup.add(smallRoot, largeRoot);
+        potTurntablesRef.current = attachPotTurntables(displayGroup, pairCapacities.map(kind => ({ capacity: kind, slot: 0 })), potDirectionsRef.current);
         const displayBox = new THREE.Box3().setFromObject(displayGroup);
         const visualCenter = displayBox.getCenter(new THREE.Vector3());
         const framingCenter = visualCenter.clone();
@@ -2078,6 +2156,9 @@ export function PotStudio() {
             displayGroup.add(root);
           }
 
+          if (groupCount > 1) {
+            potTurntablesRef.current = attachPotTurntables(displayGroup, Array.from({ length: groupCount }, (_, slot) => ({ capacity, slot })), potDirectionsRef.current);
+          }
           if (groupCount > 1 || is322) {
             const displayBox = new THREE.Box3().setFromObject(displayGroup);
             const visualCenter = displayBox.getCenter(new THREE.Vector3());
@@ -2140,8 +2221,13 @@ export function PotStudio() {
       printSurfacesRef.current = [];
       fixtureMaterialsRef.current = [];
       fixturePartUniformsRef.current = [];
+      potTurntablesRef.current = [];
       cancelAnimationFrame(frame);
       observer.disconnect();
+      canvas.removeEventListener("pointerdown", startPotTurn);
+      canvas.removeEventListener("pointermove", movePotTurn);
+      canvas.removeEventListener("pointerup", endPotTurn);
+      canvas.removeEventListener("pointercancel", endPotTurn);
       controls.dispose();
       dracoLoader?.dispose();
       studioEnvironment?.texture.dispose();
@@ -2210,6 +2296,7 @@ export function PotStudio() {
     if (!force && !is322Capacity(nextCapacity) && pairMode === "319" && nextCapacity !== "1.6" && nextCapacity !== "2.0") return;
     if (!force && !is322Capacity(nextCapacity) && pairMode === "318" && nextCapacity !== "1.2" && nextCapacity !== "145") return;
     if (!force && pairMode === "322" && !is322Capacity(nextCapacity)) return;
+    setRotationTargetIndex(pairMode === "none" ? 0 : Math.max(0, getPairCapacities(pairMode).indexOf(nextCapacity)));
     if (nextCapacity === capacity) return;
     settingsByCapacityRef.current[capacity][activePotIndex] = settings;
     const nextArtwork = capacityArtworksRef.current[nextCapacity]?.[0];
@@ -2248,9 +2335,11 @@ export function PotStudio() {
     if (nextMode === "319") changeCapacity("1.6", true);
     if (nextMode === "318") changeCapacity("1.2", true);
     if (nextMode === "322") changeCapacity("322-1.0", true);
+    setRotationTargetIndex(0);
   };
 
   const selectPotSlot = (nextIndex: number) => {
+    if (nextIndex >= 0 && nextIndex < groupCount) setRotationTargetIndex(nextIndex);
     if (nextIndex === activePotIndex || nextIndex < 0 || nextIndex >= groupCount) return;
     settingsByCapacityRef.current[capacity][activePotIndex] = settings;
     const nextArtwork = capacityArtworksRef.current[capacity]?.[nextIndex];
@@ -2266,6 +2355,7 @@ export function PotStudio() {
 
   const changeGroupCount = (nextCount: number) => {
     if (nextCount === groupCount) return;
+    if (rotationTargetIndex >= nextCount) setRotationTargetIndex(0);
     if (activePotIndex >= nextCount) {
       settingsByCapacityRef.current[capacity][activePotIndex] = settings;
       const firstArtwork = capacityArtworksRef.current[capacity]?.[0];
@@ -2651,10 +2741,10 @@ export function PotStudio() {
             )}
             {loadError && <div className="loading-card error-card"><strong>模型加载失败</strong><p>请刷新页面后重试。</p></div>}
             <div className="viewer-hints">
-              <span>拖动左右旋转</span><span>滚轮缩放</span>
+              <span>{isMultiPot ? `拖动单只壶旋转 · 当前：${rotationTargetLabel}` : "拖动左右旋转"}</span><span>滚轮缩放</span>
             </div>
-            <button className="front-view" onClick={showFrontView} aria-label="切换到正面视图">正面视图</button>
-            <button className="reset-view" onClick={resetView} aria-label="重置模型视角">↺ 重置视角</button>
+            <button className="front-view" onClick={showFrontView} aria-label={isMultiPot ? "重置当前壶方向" : "切换到正面视图"}>{isMultiPot ? "当前壶归位" : "正面视图"}</button>
+            <button className="reset-view" onClick={resetView} aria-label={isMultiPot ? "重置组合缩放" : "重置模型视角"}>↺ {isMultiPot ? "重置缩放" : "重置视角"}</button>
           </div>
           <div className="viewer-footer">
             <div><b>MODEL</b><span>壶体 GLB · UV 已识别</span></div>
@@ -2744,6 +2834,29 @@ export function PotStudio() {
             )}
             <p className="group-note">每只壶的图案和位置独立保存；也可把图片直接拖到对应的壶卡片上替换。</p>
             </>}
+            {isMultiPot && <div className="pot-direction-control">
+              <strong>单只壶方向 · {rotationTargetLabel}</strong>
+              <div className="segmented direction-target-picker" role="group" aria-label="选择要旋转的壶">
+                {rotationTargets.map((target, index) => <button key={`${target.capacity}-${target.slot}`}
+                  className={index === selectedRotationIndex ? "active" : ""}
+                  aria-pressed={index === selectedRotationIndex} onClick={() => setRotationTargetIndex(index)}>
+                  {pairMode === "none" ? `第 ${index + 1} 只` : index === 0 ? "小壶" : "大壶"}
+                </button>)}
+              </div>
+              <label className="pot-direction-slider">
+                <span>左右方向</span>
+                <input type="range" min={-180} max={180} step={1} value={rotationAngle}
+                  aria-label={`调整${rotationTargetLabel}的方向`} disabled={!ready}
+                  onChange={event => rotatePot(selectedRotationIndex, Number(event.target.value))} />
+                <output>{Math.round(rotationAngle)}°</output>
+              </label>
+              <div className="pot-direction-actions">
+                <button disabled={!ready} onClick={() => rotatePot(selectedRotationIndex, rotationAngle - 15)} aria-label="当前壶向左旋转15度">↶ 15°</button>
+                <button disabled={!ready} onClick={() => rotatePot(selectedRotationIndex, rotationAngle + 15)} aria-label="当前壶向右旋转15度">↷ 15°</button>
+                <button disabled={!ready} onClick={() => rotatePot(selectedRotationIndex, 0)}>恢复当前壶方向</button>
+              </div>
+              <p className="group-note">也可直接拖动预览中的某一只壶，其他壶保持不动。</p>
+            </div>}
           </section>
 
           <section className="control-section upload-section">

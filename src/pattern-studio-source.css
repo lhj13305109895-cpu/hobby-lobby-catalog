@@ -145,6 +145,14 @@ input[type="range"] { width: 100%; height: 3px; accent-color: var(--accent); }
 .pair-segmented { grid-template-columns: repeat(4, 1fr); }
 .pair-segmented button { min-height: 42px; font-size: 12px; }
 .group-note { margin: 9px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.pot-direction-control { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.pot-direction-control > strong { display: block; margin-bottom: 9px; font-size: 12px; }
+.direction-target-picker { grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); }
+.pot-direction-slider { display: grid; grid-template-columns: 56px minmax(0, 1fr) 36px; align-items: center; gap: 8px; margin-top: 15px; font-size: 11px; }
+.pot-direction-slider output { text-align: right; font: 10px monospace; }
+.pot-direction-actions { display: flex; gap: 6px; margin-top: 12px; }
+.pot-direction-actions button { min-height: 30px; padding: 0 9px; border: 1px solid #cbc9c1; border-radius: 5px; background: #f7f5ef; color: #55584f; font-size: 11px; }
+.pot-direction-actions button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent-dark); }
 .dimension-note { margin: 8px 0 0; color: #77786f; font-size: 11px; text-align: center; }
 
 .product-color-control { margin-top: 18px; padding-top: 17px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border-top: 1px solid var(--line); }
