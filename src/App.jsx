@@ -1,11 +1,12 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import productsData from "./data/products.json";
 import { catalogueCodeFor, catalogueImageAlt } from "./catalogue-numbering.js";
+import { groupGalleryPatterns, latestGalleryImportDay, nextGalleryScrollY } from "./catalogue-gallery.js";
 import categoriesData from "./data/categories.json";
 import modelsData from "./data/models.json";
 import {
   ArrowDown, ArrowLeft, ArrowRight, Check, Heart,
-  DownloadSimple, FacebookLogo, InstagramLogo, MagnifyingGlassPlus, PaintBrush,
+  DownloadSimple, FacebookLogo, InstagramLogo, MagnifyingGlassPlus, PaintBrush, Pause, Play,
   ShieldCheck, ShoppingCart, SquaresFour, Trash, WechatLogo, WhatsappLogo, X,
 } from "@phosphor-icons/react";
 
@@ -48,6 +49,8 @@ const heroShowcasePatterns = catalogue
   .sort((a, b) => a.sortOrder - b.sortOrder)
   .slice(-4);
 const heroFeaturedPattern = catalogue.find((product) => product.no === 54) || heroShowcasePatterns[0] || catalogue[0];
+const galleryImportOrder = new Map(productsData.map((product, index) => [product.productId, index]));
+const latestGalleryDay = latestGalleryImportDay(catalogue);
 
 const filters = ["全部花色", "白色壶身", "316不锈钢", "混色套装"];
 const model318Feature = catalogue.find((product) => product.model === "318");
@@ -450,8 +453,13 @@ function Storefront() {
   const [zoom, setZoom] = useState(1);
   const [visibleSeriesCount, setVisibleSeriesCount] = useState(1);
   const [modelSeriesScrollRequest, setModelSeriesScrollRequest] = useState(0);
+  const [autoScroll, setAutoScroll] = useState(() => (
+    !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    && !["#customization", "#specifications", "#details"].includes(window.location.hash)
+  ));
   const heroCarouselRef = useRef(null);
   const seriesLoaderRef = useRef(null);
+  const seriesListRef = useRef(null);
   const t = copy[language];
   const filteredPatterns = useMemo(() => catalogue.filter((pattern) => matchesFilter(pattern, filter)), [filter]);
   const selected = useMemo(() => (
@@ -460,12 +468,60 @@ function Storefront() {
   const expanded = useMemo(() => (
     catalogue.find((pattern) => pattern.id === expandedId) || null
   ), [expandedId]);
-  const groupedPatterns = useMemo(() => Object.entries(filteredPatterns.reduce((groups, pattern) => {
-    (groups[pattern.family] ||= []).push(pattern);
-    return groups;
-  }, {})), [filteredPatterns]);
+  const groupedPatterns = useMemo(() => (
+    groupGalleryPatterns(filteredPatterns, galleryImportOrder, latestGalleryDay)
+  ), [filteredPatterns]);
   const visibleGroupedPatterns = groupedPatterns.slice(0, visibleSeriesCount);
   const hasMoreSeries = visibleSeriesCount < groupedPatterns.length;
+
+  useEffect(() => {
+    const pauseOnInteraction = (event) => {
+      if (event.target instanceof Element && event.target.closest("[data-gallery-autoscroll-toggle]")) return;
+      if (event.type === "keydown" && !["Tab", " ", "PageUp", "PageDown", "Home", "End", "ArrowUp", "ArrowDown", "Escape"].includes(event.key)) return;
+      setAutoScroll(false);
+    };
+    const events = ["pointerdown", "click", "wheel", "keydown"];
+    for (const event of events) window.addEventListener(event, pauseOnInteraction, { capture: true, passive: true });
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const onMotionChange = (event) => { if (event.matches) setAutoScroll(false); };
+    motion.addEventListener("change", onMotionChange);
+    return () => {
+      for (const event of events) window.removeEventListener(event, pauseOnInteraction, true);
+      motion.removeEventListener("change", onMotionChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!autoScroll) return undefined;
+    const header = document.querySelector(".topbar");
+    const startTime = performance.now() + 850;
+    let frame;
+    let previousTime;
+    let carry = 0;
+    function advance(now) {
+      frame = window.requestAnimationFrame(advance);
+      if (document.hidden || now < startTime) {
+        previousTime = undefined;
+        return;
+      }
+      const elapsed = previousTime === undefined ? 0 : Math.min(50, now - previousTime);
+      previousTime = now;
+      carry += elapsed * 0.048;
+      const step = Math.floor(carry);
+      if (!step) return;
+      carry -= step;
+
+      const list = seriesListRef.current;
+      if (!list?.firstElementChild) return;
+      const y = window.scrollY;
+      const startY = Math.max(0, Math.round(list.firstElementChild.getBoundingClientRect().top + y - (header?.offsetHeight || 88) - 12));
+      const endY = Math.max(startY, Math.ceil(list.getBoundingClientRect().bottom + y - window.innerHeight + 16));
+      const nextY = nextGalleryScrollY(y, startY, endY, step, hasMoreSeries);
+      if (nextY !== y) window.scrollTo({ top: nextY, behavior: "instant" });
+    }
+    frame = window.requestAnimationFrame(advance);
+    return () => window.cancelAnimationFrame(frame);
+  }, [autoScroll, hasMoreSeries]);
   const selectedEntries = useMemo(() => (
     Object.entries(selectedCapacities).flatMap(([patternId, capacityIds]) => {
       const pattern = catalogue.find((item) => item.id === patternId);
@@ -760,6 +816,14 @@ function Storefront() {
         <a className="button button-primary header-cta" href="#gallery">{t.headerCta}</a>
       </header>
 
+      {!cartOpen && !expandedId && !quotePreview && !seriesMenuOpen && (
+        <button className="gallery-autoscroll-toggle" type="button" data-gallery-autoscroll-toggle
+          onClick={() => setAutoScroll((playing) => !playing)}>
+          {autoScroll ? <Pause weight="fill" aria-hidden="true" /> : <Play weight="fill" aria-hidden="true" />}
+          {autoScroll ? localize(language, "暂停滚动", "Pause scrolling", "إيقاف التمرير") : localize(language, "继续滚动", "Resume scrolling", "متابعة التمرير")}
+        </button>
+      )}
+
       <main id="top">
         <section className="hero" aria-labelledby="hero-title">
           <div className="hero-copy">
@@ -805,16 +869,29 @@ function Storefront() {
             </div>
           </div>
           <div className="catalogue-layout">
-            <aside className="series-directory" aria-label={localize(language, "花色系列目录", "Pattern series directory", "دليل مجموعات التصاميم")}>
-              <span>{t.directory}</span>
-              {groupedPatterns.map(([series, seriesPatterns], seriesIndex) => (
-                <a href={`#series-${seriesIndex + 1}`} key={series} onClick={(event) => revealSeries(event, seriesIndex)}>
-                  <strong>{displayFamily(series)}</strong>
-                  <small>{seriesPatterns.length} {t.itemUnit}</small>
-                </a>
-              ))}
-            </aside>
-            <div className="series-list" aria-live="polite">
+            <div className="catalogue-sidebar">
+              {(model318Feature || model319Feature) && <aside className="model-spotlight" aria-label={localize(language, "壶型分类", "Model categories", "فئات الموديلات")}>
+                <span>{localize(language, "壶型分类", "MODEL CATEGORIES", "فئات الموديلات")}</span>
+                {[model318Feature && { product: model318Feature, model: "318", image: "/assets/model-318-plain.png", detail: localize(language, "1.2L · ¥32", "1.2L · ¥32", "1.2 لتر · ¥32") }, model319Feature && { product: model319Feature, model: "319", image: "/assets/model-319-plain.png", detail: localize(language, "1.6L / 2.0L", "1.6L / 2.0L", "1.6 / 2.0 لتر") }].filter(Boolean).map(({ product, model, image, detail }) => (
+                  <button type="button" key={model} onPointerDown={(event) => event.preventDefault()} onClick={() => chooseFilter(`型号${model}`, { scrollToFirstSeries: true })} aria-pressed={filter === `型号${model}`}>
+                    <span className="model-spotlight-image"><img src={image} alt={language === "zh" ? product.imageAltZh : (product.imageAltEn || `Model ${model}`)} width="1600" height="1600" loading="lazy" decoding="async" /></span>
+                    <strong>{localize(language, `型号 ${model}`, `Model ${model}`, `موديل ${model}`)}</strong>
+                    <small>{detail}</small>
+                    <b>{localize(language, "查看花色", "View patterns", "عرض التصاميم")} <ArrowRight weight="bold" /></b>
+                  </button>
+                ))}
+              </aside>}
+              <aside className="series-directory" aria-label={localize(language, "花色系列目录", "Pattern series directory", "دليل مجموعات التصاميم")}>
+                <span>{t.directory}</span>
+                {groupedPatterns.map(([series, seriesPatterns], seriesIndex) => (
+                  <a href={`#series-${seriesIndex + 1}`} key={series} onClick={(event) => revealSeries(event, seriesIndex)}>
+                    <strong>{displayFamily(series)}</strong>
+                    <small>{seriesPatterns.length} {t.itemUnit}</small>
+                  </a>
+                ))}
+              </aside>
+            </div>
+            <div className="series-list" ref={seriesListRef} aria-live="polite">
             {visibleGroupedPatterns.map(([series, seriesPatterns], seriesIndex) => <section className="pattern-series" id={`series-${seriesIndex + 1}`} key={series} aria-label={`${series}`}>
               <div className="series-heading"><span>{displayFamily(series)}</span><small>{seriesPatterns.length} {t.patternUnit}</small></div>
               <div className="pattern-grid">
@@ -844,17 +921,6 @@ function Storefront() {
               </button>
             </div>}
             </div>
-            {(model318Feature || model319Feature) && <aside className="model-spotlight" aria-label={localize(language, "壶型分类", "Model categories", "فئات الموديلات")}>
-              <span>{localize(language, "壶型分类", "MODEL CATEGORIES", "فئات الموديلات")}</span>
-              {[model318Feature && { product: model318Feature, model: "318", image: "/assets/model-318-plain.png", detail: localize(language, "1.2L · ¥32", "1.2L · ¥32", "1.2 لتر · ¥32") }, model319Feature && { product: model319Feature, model: "319", image: "/assets/model-319-plain.png", detail: localize(language, "1.6L / 2.0L", "1.6L / 2.0L", "1.6 / 2.0 لتر") }].filter(Boolean).map(({ product, model, image, detail }) => (
-                <button type="button" key={model} onPointerDown={(event) => event.preventDefault()} onClick={() => chooseFilter(`型号${model}`, { scrollToFirstSeries: true })} aria-pressed={filter === `型号${model}`}>
-                  <span className="model-spotlight-image"><img src={image} alt={language === "zh" ? product.imageAltZh : (product.imageAltEn || `Model ${model}`)} width="1600" height="1600" loading="lazy" decoding="async" /></span>
-                  <strong>{localize(language, `型号 ${model}`, `Model ${model}`, `موديل ${model}`)}</strong>
-                  <small>{detail}</small>
-                  <b>{localize(language, "查看花色", "View patterns", "عرض التصاميم")} <ArrowRight weight="bold" /></b>
-                </button>
-              ))}
-            </aside>}
           </div>
           <p className="gallery-note">{t.currentShowing} {filteredPatterns.length} {t.currentSuffix}</p>
         </section>
