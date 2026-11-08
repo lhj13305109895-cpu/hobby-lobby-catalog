@@ -56,8 +56,18 @@ export function galleryScrollStep(elapsedMs, remainder = 0) {
   return { step, remainder: distance - step };
 }
 
-export function nextGalleryScrollY(currentY, startY, endY, step, hasMoreSeries) {
-  if (currentY < endY) return Math.min(endY, currentY + step);
+const GALLERY_END_TOLERANCE = 1;
+const GALLERY_END_PAUSE_MS = 1000;
+
+export function nextGalleryScrollFrame({ currentY, startY, endY, step, hasMoreSeries, now, bottomReachedAt }) {
+  // Browser zoom and device pixel ratios can leave scrollY just below the
+  // requested offset, even after scrolling to it. Don't wait for equality.
+  if (currentY < endY - GALLERY_END_TOLERANCE) {
+    return { nextY: Math.min(endY, currentY + step), bottomReachedAt: null };
+  }
   // The bottom of the currently rendered list is not the end of the catalogue.
-  return hasMoreSeries ? currentY : startY;
+  if (hasMoreSeries) return { nextY: currentY, bottomReachedAt: null, loadMore: true };
+  if (bottomReachedAt === null) return { nextY: endY, bottomReachedAt: now };
+  if (now - bottomReachedAt < GALLERY_END_PAUSE_MS) return { nextY: currentY, bottomReachedAt };
+  return { nextY: startY, bottomReachedAt: null };
 }

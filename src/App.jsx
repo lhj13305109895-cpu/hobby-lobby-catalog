@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import productsData from "./data/products.json";
 import { catalogueCodeFor, catalogueImageAlt } from "./catalogue-numbering.js";
-import { galleryScrollStep, groupGalleryPatterns, latestGalleryImportDay, LATEST_ARRIVALS_SERIES, nextGalleryScrollY } from "./catalogue-gallery.js";
+import { galleryScrollStep, groupGalleryPatterns, latestGalleryImportDay, LATEST_ARRIVALS_SERIES, nextGalleryScrollFrame } from "./catalogue-gallery.js";
 import categoriesData from "./data/categories.json";
 import modelsData from "./data/models.json";
 import {
@@ -461,6 +461,7 @@ function Storefront() {
   const seriesLoaderRef = useRef(null);
   const seriesListRef = useRef(null);
   const galleryScrollBoundsRef = useRef(null);
+  const nextSeriesCountRef = useRef(null);
   const t = copy[language];
   const filteredPatterns = useMemo(() => catalogue.filter((pattern) => matchesFilter(pattern, filter)), [filter]);
   const selected = useMemo(() => (
@@ -478,7 +479,8 @@ function Storefront() {
   useLayoutEffect(() => {
     // Invalidate before the next frame, including when the last series replaces the loader.
     galleryScrollBoundsRef.current = null;
-  }, [groupedPatterns, language, visibleSeriesCount]);
+    nextSeriesCountRef.current = hasMoreSeries ? visibleSeriesCount + 1 : null;
+  }, [groupedPatterns, hasMoreSeries, language, visibleSeriesCount]);
 
   useEffect(() => {
     const pauseOnInteraction = (event) => {
@@ -513,10 +515,12 @@ function Storefront() {
     let frame;
     let previousTime;
     let remainder = 0;
+    let bottomReachedAt = null;
     function advance(now) {
       frame = window.requestAnimationFrame(advance);
       if (document.hidden || now < startTime) {
         previousTime = undefined;
+        bottomReachedAt = null;
         return;
       }
       const elapsed = previousTime === undefined ? 0 : now - previousTime;
@@ -530,13 +534,25 @@ function Storefront() {
       if (!firstSeries) return;
       const y = window.scrollY;
       if (!galleryScrollBoundsRef.current) {
-        const startY = Math.max(0, Math.round(firstSeries.getBoundingClientRect().top + y - (header?.offsetHeight || 88) - 12));
-        const endY = Math.max(startY, Math.ceil(list.getBoundingClientRect().bottom + y - window.innerHeight + 16));
+        const scrollRoot = document.scrollingElement || document.documentElement;
+        const maxY = Math.max(0, scrollRoot.scrollHeight - scrollRoot.clientHeight);
+        const startY = Math.min(maxY, Math.max(0, Math.round(firstSeries.getBoundingClientRect().top + y - (header?.offsetHeight || 88) - 12)));
+        const endY = Math.min(maxY, Math.max(startY, Math.ceil(list.getBoundingClientRect().bottom + y - window.innerHeight + 16)));
         galleryScrollBoundsRef.current = { startY, endY };
       }
       const { startY, endY } = galleryScrollBoundsRef.current;
-      const nextY = nextGalleryScrollY(y, startY, endY, step, Boolean(seriesLoaderRef.current));
-      if (nextY !== y) window.scrollTo({ top: nextY, behavior: "instant" });
+      const next = nextGalleryScrollFrame({
+        currentY: y, startY, endY, step, hasMoreSeries: Boolean(seriesLoaderRef.current), now, bottomReachedAt,
+      });
+      bottomReachedAt = next.bottomReachedAt;
+      if (next.loadMore && nextSeriesCountRef.current !== null) {
+        // Fallback if the preload observer hasn't advanced a series, e.g. after
+        // restoring the page below its loading marker on a display device.
+        const nextCount = nextSeriesCountRef.current;
+        nextSeriesCountRef.current = null;
+        setVisibleSeriesCount((count) => Math.max(count, nextCount));
+      }
+      if (next.nextY !== y) window.scrollTo({ top: next.nextY, behavior: "instant" });
     }
     frame = window.requestAnimationFrame(advance);
     return () => {
@@ -638,7 +654,7 @@ function Storefront() {
       return undefined;
     }
     const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) setVisibleSeriesCount((count) => Math.min(count + 1, groupedPatterns.length));
+      if (entry.isIntersecting) setVisibleSeriesCount((count) => Math.max(count, visibleSeriesCount + 1));
     }, { rootMargin: "800px 0px" });
     observer.observe(loader);
     return () => observer.disconnect();

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { galleryScrollStep, groupGalleryPatterns, latestGalleryImportDay, LATEST_ARRIVALS_SERIES, nextGalleryScrollY } from "../src/catalogue-gallery.js";
+import { galleryScrollStep, groupGalleryPatterns, latestGalleryImportDay, LATEST_ARRIVALS_SERIES, nextGalleryScrollFrame } from "../src/catalogue-gallery.js";
 
 const pattern = (id, family, createdAt, categoryId = family) => ({ id, family, createdAt, categoryId });
 
@@ -53,12 +53,34 @@ test("latest arrivals respect filters without treating older matching patterns a
   assert.deepEqual(groupGalleryPatterns([pattern("undated", "C")], new Map(), null).map(([family]) => family), ["C"]);
 });
 
-test("autoscroll advances down and wraps only once the complete catalogue is rendered", () => {
-  assert.equal(nextGalleryScrollY(100, 800, 3000, 2, true), 102);
-  assert.equal(nextGalleryScrollY(2999, 800, 3000, 2, true), 3000);
-  assert.equal(nextGalleryScrollY(3000, 800, 3000, 2, true), 3000);
-  assert.equal(nextGalleryScrollY(3000, 800, 3000, 2, false), 800);
-  assert.equal(nextGalleryScrollY(800, 800, 800, 2, false), 800);
+const scrollFrame = (overrides) => nextGalleryScrollFrame({
+  currentY: 100, startY: 800, endY: 3000, step: 2, hasMoreSeries: false, now: 2000, bottomReachedAt: null, ...overrides,
+});
+
+test("autoscroll progresses downward and requests the next series at the temporary end", () => {
+  assert.deepEqual(scrollFrame({ hasMoreSeries: true }), { nextY: 102, bottomReachedAt: null });
+  assert.deepEqual(scrollFrame({ currentY: 2998.5, hasMoreSeries: true }), { nextY: 3000, bottomReachedAt: null });
+  assert.deepEqual(scrollFrame({ currentY: 2999.6, hasMoreSeries: true }), {
+    nextY: 2999.6, bottomReachedAt: null, loadMore: true,
+  });
+});
+
+test("autoscroll reaches the list end, holds briefly, and wraps even when the browser rounds the position down", () => {
+  const arrival = scrollFrame({ currentY: 2999.6 });
+  assert.deepEqual(arrival, { nextY: 3000, bottomReachedAt: 2000 });
+  assert.deepEqual(scrollFrame({ currentY: 2999.6, now: 2999, bottomReachedAt: arrival.bottomReachedAt }), {
+    nextY: 2999.6, bottomReachedAt: 2000,
+  });
+  assert.deepEqual(scrollFrame({ currentY: 2999.6, now: 3000, bottomReachedAt: arrival.bottomReachedAt }), {
+    nextY: 800, bottomReachedAt: null,
+  });
+  assert.deepEqual(scrollFrame({ currentY: 800 }), { nextY: 802, bottomReachedAt: null });
+});
+
+test("autoscroll cancels a pending wrap if the catalogue grows before the pause ends", () => {
+  assert.deepEqual(scrollFrame({ currentY: 3000, endY: 3100, now: 3000, bottomReachedAt: 2000 }), {
+    nextY: 3002, bottomReachedAt: null,
+  });
 });
 
 test("autoscroll advances steadily at 60 Hz, maintains speed at higher refresh rates, and caps catch-up", () => {
