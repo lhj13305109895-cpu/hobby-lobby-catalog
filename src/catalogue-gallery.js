@@ -48,6 +48,14 @@ export function groupGalleryPatterns(patterns, importOrder, latestDay) {
     : series;
 }
 
+export function galleryScrollStep(elapsedMs, remainder = 0) {
+  // 60 CSS pixels per second is one pixel per frame at 60 Hz. Keep fractional
+  // progress at other refresh rates, but don't jump to catch up after a stall.
+  const distance = remainder + Math.min(Math.max(0, elapsedMs), 1000 / 30) * 0.06;
+  const step = Math.round(distance);
+  return { step, remainder: distance - step };
+}
+
 export function nextGalleryScrollY(currentY, startY, endY, step, hasMoreSeries) {
   if (currentY < endY) return Math.min(endY, currentY + step);
   // The bottom of the currently rendered list is not the end of the catalogue.

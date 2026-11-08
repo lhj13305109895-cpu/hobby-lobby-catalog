@@ -14,6 +14,8 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 
 ## Durable Product Decisions
 
+- Keep catalogue autoplay steady as more series load. Only recalculate its scroll bounds when the layout changes, and suppress card hover motion during autoplay so cards passing under a stationary pointer do not jump. Cards use lazy-loaded thumbnails; retain the high-resolution lightbox and existing pause, resume, and looping behaviour.
+
 - On 2026-11-08 the user placed a dedicated `最新上新` / `New Arrivals` section first in the catalogue and the desktop/mobile series directory. It automatically shows the visible patterns from the most recent Shanghai import day, newest first and subject to the active filter. Keep those products in their original series, retain the regular series ranking, and hide the arrivals section if the filter has no matches from that day.
 
 - On 2026-11-06 the user moved the model cards into the left catalogue sidebar above the series directory to make room for six product cards per wide-desktop row; retain two columns on phones. Rank series by how many patterns were added on the most recent import day (Shanghai time), sort newest first within each series, and keep mixed sets last. The storefront defaults to slowly scrolling down and loops from the fully loaded catalogue's end back to its first series. Clicking or manually navigating pauses it, with an explicit resume control. Respect reduced motion and preserve all product metadata, selection, filtering and detail links.

@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import productsData from "./data/products.json";
 import { catalogueCodeFor, catalogueImageAlt } from "./catalogue-numbering.js";
-import { groupGalleryPatterns, latestGalleryImportDay, LATEST_ARRIVALS_SERIES, nextGalleryScrollY } from "./catalogue-gallery.js";
+import { galleryScrollStep, groupGalleryPatterns, latestGalleryImportDay, LATEST_ARRIVALS_SERIES, nextGalleryScrollY } from "./catalogue-gallery.js";
 import categoriesData from "./data/categories.json";
 import modelsData from "./data/models.json";
 import {
@@ -460,6 +460,7 @@ function Storefront() {
   const heroCarouselRef = useRef(null);
   const seriesLoaderRef = useRef(null);
   const seriesListRef = useRef(null);
+  const galleryScrollBoundsRef = useRef(null);
   const t = copy[language];
   const filteredPatterns = useMemo(() => catalogue.filter((pattern) => matchesFilter(pattern, filter)), [filter]);
   const selected = useMemo(() => (
@@ -473,6 +474,11 @@ function Storefront() {
   ), [filteredPatterns]);
   const visibleGroupedPatterns = groupedPatterns.slice(0, visibleSeriesCount);
   const hasMoreSeries = visibleSeriesCount < groupedPatterns.length;
+
+  useLayoutEffect(() => {
+    // Invalidate before the next frame, including when the last series replaces the loader.
+    galleryScrollBoundsRef.current = null;
+  }, [groupedPatterns, language, visibleSeriesCount]);
 
   useEffect(() => {
     const pauseOnInteraction = (event) => {
@@ -493,35 +499,52 @@ function Storefront() {
 
   useEffect(() => {
     if (!autoScroll) return undefined;
+    const list = seriesListRef.current;
+    if (!list) return undefined;
     const header = document.querySelector(".topbar");
     const startTime = performance.now() + 850;
+    const invalidateBounds = () => { galleryScrollBoundsRef.current = null; };
+    invalidateBounds();
+    const observer = "ResizeObserver" in window ? new ResizeObserver(invalidateBounds) : null;
+    observer?.observe(list);
+    observer?.observe(document.body);
+    if (header) observer?.observe(header);
+    window.addEventListener("resize", invalidateBounds);
     let frame;
     let previousTime;
-    let carry = 0;
+    let remainder = 0;
     function advance(now) {
       frame = window.requestAnimationFrame(advance);
       if (document.hidden || now < startTime) {
         previousTime = undefined;
         return;
       }
-      const elapsed = previousTime === undefined ? 0 : Math.min(50, now - previousTime);
+      const elapsed = previousTime === undefined ? 0 : now - previousTime;
       previousTime = now;
-      carry += elapsed * 0.048;
-      const step = Math.floor(carry);
+      const advanceBy = galleryScrollStep(elapsed, remainder);
+      const { step } = advanceBy;
+      remainder = advanceBy.remainder;
       if (!step) return;
-      carry -= step;
 
-      const list = seriesListRef.current;
-      if (!list?.firstElementChild) return;
+      const firstSeries = list.firstElementChild;
+      if (!firstSeries) return;
       const y = window.scrollY;
-      const startY = Math.max(0, Math.round(list.firstElementChild.getBoundingClientRect().top + y - (header?.offsetHeight || 88) - 12));
-      const endY = Math.max(startY, Math.ceil(list.getBoundingClientRect().bottom + y - window.innerHeight + 16));
-      const nextY = nextGalleryScrollY(y, startY, endY, step, hasMoreSeries);
+      if (!galleryScrollBoundsRef.current) {
+        const startY = Math.max(0, Math.round(firstSeries.getBoundingClientRect().top + y - (header?.offsetHeight || 88) - 12));
+        const endY = Math.max(startY, Math.ceil(list.getBoundingClientRect().bottom + y - window.innerHeight + 16));
+        galleryScrollBoundsRef.current = { startY, endY };
+      }
+      const { startY, endY } = galleryScrollBoundsRef.current;
+      const nextY = nextGalleryScrollY(y, startY, endY, step, Boolean(seriesLoaderRef.current));
       if (nextY !== y) window.scrollTo({ top: nextY, behavior: "instant" });
     }
     frame = window.requestAnimationFrame(advance);
-    return () => window.cancelAnimationFrame(frame);
-  }, [autoScroll, hasMoreSeries]);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer?.disconnect();
+      window.removeEventListener("resize", invalidateBounds);
+    };
+  }, [autoScroll]);
   const selectedEntries = useMemo(() => (
     Object.entries(selectedCapacities).flatMap(([patternId, capacityIds]) => {
       const pattern = catalogue.find((item) => item.id === patternId);
@@ -616,7 +639,7 @@ function Storefront() {
     }
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) setVisibleSeriesCount((count) => Math.min(count + 1, groupedPatterns.length));
-    }, { rootMargin: "300px 0px" });
+    }, { rootMargin: "800px 0px" });
     observer.observe(loader);
     return () => observer.disconnect();
   }, [hasMoreSeries, groupedPatterns.length, visibleSeriesCount]);
@@ -862,7 +885,7 @@ function Storefront() {
 
         <div className="catalog-strip" aria-label={localize(language, "目录摘要", "Catalogue summary", "ملخص الكتالوج")}><span><small>{t.stripModel}</small><strong>319</strong></span><span><small>1.6L</small><strong>¥29 RMB</strong></span><span><small>2.0L</small><strong>¥31 RMB</strong></span><span><small>{t.stripPatterns}</small><strong>{t.stripPatternCount}</strong></span></div>
 
-        <section className="gallery-section section" id="gallery" aria-labelledby="gallery-title">
+        <section className="gallery-section section" id="gallery" aria-labelledby="gallery-title" data-auto-scrolling={autoScroll ? "" : undefined}>
           <div className="section-heading">
             <div><p className="eyebrow">{t.galleryEyebrow}</p><h2 id="gallery-title">{t.galleryTitle}</h2><p>{t.galleryText}</p></div>
             <div className="finish-tabs three-tabs" role="group" aria-label={localize(language, "筛选型号和壶身", "Filter model and body finish", "تصفية الموديل ونوع الهيكل")}>
@@ -901,7 +924,7 @@ function Storefront() {
                   const catalogueCode = pattern.catalogueCode;
                   return (
                     <article className={`pattern-card ${active ? "selected" : ""}`} id={series === LATEST_ARRIVALS_SERIES ? `latest-${pattern.id}` : pattern.id} key={pattern.id}>
-                      <button className="pattern-image-wrap" type="button" onClick={() => openExpanded(pattern)} aria-label={`${displayPatternName(pattern)}，${displayFamily(pattern.family)}，${t.zoomHint}。`}><img src={pattern.thumb} srcSet={`${pattern.thumb} 640w, ${pattern.displayImage} 1600w`} sizes="(max-width: 700px) 46vw, (max-width: 1100px) 30vw, 240px" alt={language === "zh" ? pattern.imageAltZh : (pattern.imageAltEn || displayPatternName(pattern))} width="640" height="640" loading="lazy" decoding="async" />{active && <span className="check-mark"><Check weight="bold" /></span>}<span className="zoom-hint"><MagnifyingGlassPlus weight="bold" /> {t.zoomHint}</span></button>
+                      <button className="pattern-image-wrap" type="button" onClick={() => openExpanded(pattern)} aria-label={`${displayPatternName(pattern)}，${displayFamily(pattern.family)}，${t.zoomHint}。`}><img src={pattern.thumb} alt={language === "zh" ? pattern.imageAltZh : (pattern.imageAltEn || displayPatternName(pattern))} width="640" height="640" loading="lazy" decoding="async" />{active && <span className="check-mark"><Check weight="bold" /></span>}<span className="zoom-hint"><MagnifyingGlassPlus weight="bold" /> {t.zoomHint}</span></button>
                       <span className="pattern-code">MODEL {pattern.model} · {catalogueCode}</span><span className="pattern-name">{displayPatternName(pattern)}</span><span className="pattern-family">{displayBody(pattern.body)} · {capacitySummary(pattern)}</span>
                       <a className="product-detail-link" href={`/products/${pattern.slug}/`}>{localize(language, "查看商品详情", "View product details", "عرض تفاصيل المنتج")} <ArrowRight weight="bold" /></a>
                       <div className="capacity-picker" aria-label={`${displayPatternName(pattern)} ${localize(language, "容量选择", "capacity selection", "اختيار السعة")}`}>

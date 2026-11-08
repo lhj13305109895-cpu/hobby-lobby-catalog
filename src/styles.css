@@ -116,16 +116,16 @@ h2 { font-size:clamp(42px,4vw,62px); line-height:1.04; }
 .series-heading small { color:var(--muted); font-size:10px; letter-spacing:.12em; text-transform:uppercase; }
 .pattern-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:24px; max-width:1390px; margin:0 auto; padding:4px; }
 .pattern-card { min-width:0; padding:0 0 20px; border:1px solid #e7e0d9; border-radius:2px; background:#fff; text-align:left; color:var(--ink); position:relative; transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease; }
-.pattern-card:hover { transform:translateY(-3px); border-color:#cfc6bd; background:#fff; box-shadow:0 16px 36px rgba(52,43,36,.09); }
+.gallery-section:not([data-auto-scrolling]) .pattern-card:hover { transform:translateY(-3px); border-color:#cfc6bd; background:#fff; box-shadow:0 16px 36px rgba(52,43,36,.09); }
 .pattern-card.selected { border-color:var(--red); background:var(--white); }
 .pattern-image-wrap { display:block; width:100%; aspect-ratio:.82; overflow:hidden; background:var(--paper-strong); position:relative; border:0; padding:0; border-radius:4px 4px 0 0; cursor:zoom-in; }
 .pattern-image-wrap img { width:100%; height:100%; object-fit:contain; display:block; transition:transform .22s ease; }
-.pattern-card:hover img { transform:scale(1.07); }
+.gallery-section:not([data-auto-scrolling]) .pattern-card:hover img { transform:scale(1.07); }
 .check-mark { position:absolute; right:10px; top:10px; width:30px; height:30px; border-radius:50%; display:grid; place-items:center; background:var(--red); color:white; }
 .check-mark svg { font-size:17px; }
 .zoom-hint { position:absolute; left:10px; bottom:10px; display:inline-flex; align-items:center; gap:6px; padding:8px 10px; background:rgba(255,253,250,.94); border:1px solid rgba(53,47,43,.12); border-radius:999px; color:var(--red); font-size:11px; font-weight:600; opacity:0; transform:translateY(4px); transition:opacity .2s ease,transform .2s ease; }
 .zoom-hint svg { font-size:15px; }
-.pattern-card:hover .zoom-hint,.pattern-card.selected .zoom-hint { opacity:1; transform:translateY(0); }
+.gallery-section:not([data-auto-scrolling]) .pattern-card:hover .zoom-hint,.pattern-card.selected .zoom-hint { opacity:1; transform:translateY(0); }
 .pattern-code,.pattern-name,.pattern-family,.view-label { display:flex; padding-inline:14px; }
 .pattern-code { margin-top:14px; color:#9b9189; font-size:9px; font-weight:600; letter-spacing:.08em; }
 .pattern-name { margin-top:4px; font-family:"Playfair Display",Georgia,serif; font-size:19px; font-weight:600; }

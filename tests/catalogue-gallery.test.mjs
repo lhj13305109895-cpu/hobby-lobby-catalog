@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { groupGalleryPatterns, latestGalleryImportDay, LATEST_ARRIVALS_SERIES, nextGalleryScrollY } from "../src/catalogue-gallery.js";
+import { galleryScrollStep, groupGalleryPatterns, latestGalleryImportDay, LATEST_ARRIVALS_SERIES, nextGalleryScrollY } from "../src/catalogue-gallery.js";
 
 const pattern = (id, family, createdAt, categoryId = family) => ({ id, family, createdAt, categoryId });
 
@@ -59,6 +59,33 @@ test("autoscroll advances down and wraps only once the complete catalogue is ren
   assert.equal(nextGalleryScrollY(3000, 800, 3000, 2, true), 3000);
   assert.equal(nextGalleryScrollY(3000, 800, 3000, 2, false), 800);
   assert.equal(nextGalleryScrollY(800, 800, 800, 2, false), 800);
+});
+
+test("autoscroll advances steadily at 60 Hz, maintains speed at higher refresh rates, and caps catch-up", () => {
+  for (const refreshRate of [60, 120, 144]) {
+    let remainder = 0;
+    let travelled = 0;
+    for (let frame = 0; frame < refreshRate; frame += 1) {
+      const result = galleryScrollStep(1000 / refreshRate, remainder);
+      assert.ok(result.step >= 0 && result.step <= 1);
+      if (refreshRate === 60) assert.equal(result.step, 1);
+      travelled += result.step;
+      remainder = result.remainder;
+    }
+    assert.equal(travelled, 60);
+  }
+  assert.equal(galleryScrollStep(500).step, 2);
+  assert.equal(galleryScrollStep(0).step, 0);
+});
+
+test("product cards defer thumbnail decoding and reserve full-size images for the lightbox", () => {
+  const app = readFileSync(new URL("../src/App.jsx", import.meta.url), "utf8");
+  const cardImage = app.match(/className="pattern-image-wrap"[^\n]*?(<img [^>]+>)/)?.[1];
+  assert.ok(cardImage);
+  assert.match(cardImage, /src=\{pattern\.thumb\}/);
+  assert.match(cardImage, /loading="lazy" decoding="async"/);
+  assert.doesNotMatch(cardImage, /srcSet|displayImage|originalImage/);
+  assert.match(app, /className="lightbox-image"><img src=\{expanded\.displayImage\}/);
 });
 
 test("catalogue places model cards above the series directory and keeps six columns on wide screens", () => {
