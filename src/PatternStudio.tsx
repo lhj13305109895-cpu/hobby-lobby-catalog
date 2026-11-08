@@ -160,12 +160,11 @@ function formatMillimetres(value: number) {
 
 function applyArtworkTextureTransform(texture: THREE.Texture, settings: TextureSettings, capacity?: Capacity) {
   const image = texture.image as { width?: number } | undefined;
-  // Sample a few pixels inside each horizontal edge, then stretch that inner
-  // range across the same 365.99 mm circumference. This behaves like print
-  // bleed: the physical width is unchanged, but transparent/white edge pixels
-  // cannot open into a vertical line at the 0°/360° join.
+  // On 319 1.6L, sample at the centre of the first pixel inside the edge.
+  // This skips a translucent outer pixel without the larger three-pixel trim.
+  const edgeInsetPixels = capacity === "1.6" ? 1.5 : 3;
   const horizontalInset = !is322Capacity(capacity) && image?.width
-    ? Math.min(0.01, 3 / image.width)
+    ? Math.min(0.01, edgeInsetPixels / image.width)
     : 0;
   texture.wrapS = THREE.RepeatWrapping;
   // Both 318 bands have a visible upper edge. Do not blend bottom-row
