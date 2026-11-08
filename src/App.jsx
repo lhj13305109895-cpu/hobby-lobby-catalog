@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import productsData from "./data/products.json";
 import { catalogueCodeFor, catalogueImageAlt } from "./catalogue-numbering.js";
-import { groupGalleryPatterns, latestGalleryImportDay, nextGalleryScrollY } from "./catalogue-gallery.js";
+import { groupGalleryPatterns, latestGalleryImportDay, LATEST_ARRIVALS_SERIES, nextGalleryScrollY } from "./catalogue-gallery.js";
 import categoriesData from "./data/categories.json";
 import modelsData from "./data/models.json";
 import {
@@ -536,6 +536,7 @@ function Storefront() {
   const totalCartons = selectedEntries.reduce((sum, item) => sum + item.quantity, 0);
   const displayFilter = (value) => t.filterLabels[value] || value;
   const displayFamily = (value) => {
+    if (value === LATEST_ARRIVALS_SERIES) return localize(language, "最新上新", "New Arrivals", "أحدث التصاميم");
     if (language === "zh") return value;
     if (language === "ar") return t.familyLabels[value] || categoryByNameZh.get(value)?.nameEn || value;
     return categoryByNameZh.get(value)?.nameEn || t.familyLabels[value] || value;
@@ -892,14 +893,14 @@ function Storefront() {
               </aside>
             </div>
             <div className="series-list" ref={seriesListRef} aria-live="polite">
-            {visibleGroupedPatterns.map(([series, seriesPatterns], seriesIndex) => <section className="pattern-series" id={`series-${seriesIndex + 1}`} key={series} aria-label={`${series}`}>
+            {visibleGroupedPatterns.map(([series, seriesPatterns], seriesIndex) => <section className="pattern-series" id={`series-${seriesIndex + 1}`} key={series} aria-label={displayFamily(series)}>
               <div className="series-heading"><span>{displayFamily(series)}</span><small>{seriesPatterns.length} {t.patternUnit}</small></div>
               <div className="pattern-grid">
                 {seriesPatterns.map((pattern) => {
                   const active = Boolean(selectedCapacities[pattern.id]?.length);
                   const catalogueCode = pattern.catalogueCode;
                   return (
-                    <article className={`pattern-card ${active ? "selected" : ""}`} id={pattern.id} key={pattern.id}>
+                    <article className={`pattern-card ${active ? "selected" : ""}`} id={series === LATEST_ARRIVALS_SERIES ? `latest-${pattern.id}` : pattern.id} key={pattern.id}>
                       <button className="pattern-image-wrap" type="button" onClick={() => openExpanded(pattern)} aria-label={`${displayPatternName(pattern)}，${displayFamily(pattern.family)}，${t.zoomHint}。`}><img src={pattern.thumb} srcSet={`${pattern.thumb} 640w, ${pattern.displayImage} 1600w`} sizes="(max-width: 700px) 46vw, (max-width: 1100px) 30vw, 240px" alt={language === "zh" ? pattern.imageAltZh : (pattern.imageAltEn || displayPatternName(pattern))} width="640" height="640" loading="lazy" decoding="async" />{active && <span className="check-mark"><Check weight="bold" /></span>}<span className="zoom-hint"><MagnifyingGlassPlus weight="bold" /> {t.zoomHint}</span></button>
                       <span className="pattern-code">MODEL {pattern.model} · {catalogueCode}</span><span className="pattern-name">{displayPatternName(pattern)}</span><span className="pattern-family">{displayBody(pattern.body)} · {capacitySummary(pattern)}</span>
                       <a className="product-detail-link" href={`/products/${pattern.slug}/`}>{localize(language, "查看商品详情", "View product details", "عرض تفاصيل المنتج")} <ArrowRight weight="bold" /></a>

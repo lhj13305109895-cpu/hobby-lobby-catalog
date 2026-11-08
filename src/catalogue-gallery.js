@@ -5,6 +5,7 @@ const catalogueDay = new Intl.DateTimeFormat("en-CA", {
   day: "2-digit",
 });
 const importedAt = (pattern) => Date.parse(pattern.createdAt) || 0;
+export const LATEST_ARRIVALS_SERIES = "latest-arrivals";
 
 export function latestGalleryImportDay(patterns) {
   const latest = patterns.reduce((time, pattern) => Math.max(time, importedAt(pattern)), 0);
@@ -13,28 +14,38 @@ export function latestGalleryImportDay(patterns) {
 
 export function groupGalleryPatterns(patterns, importOrder, latestDay) {
   const groups = new Map();
+  const latestArrivals = [];
   for (const pattern of patterns) {
-    if (!groups.has(pattern.family)) groups.set(pattern.family, []);
-    groups.get(pattern.family).push(pattern);
+    if (!groups.has(pattern.family)) groups.set(pattern.family, { items: [], additions: 0 });
+    const group = groups.get(pattern.family);
+    group.items.push(pattern);
+    const timestamp = importedAt(pattern);
+    if (latestDay && timestamp && catalogueDay.format(timestamp) === latestDay) {
+      group.additions += 1;
+      latestArrivals.push(pattern);
+    }
   }
 
   const newestFirst = (a, b) => importedAt(b) - importedAt(a)
     || (importOrder.get(b.id) ?? -1) - (importOrder.get(a.id) ?? -1);
-  const ranked = [...groups].map(([family, items], index) => ({
+  const ranked = [...groups].map(([family, { items, additions }], index) => ({
     family,
     items: items.sort(newestFirst),
     index,
-    additions: latestDay ? items.filter((pattern) => (
-      importedAt(pattern) && catalogueDay.format(importedAt(pattern)) === latestDay
-    )).length : 0,
+    additions,
     isSet: items[0].categoryId === "mixed-set",
   }));
 
-  return ranked.sort((a, b) => Number(a.isSet) - Number(b.isSet)
+  const series = ranked.sort((a, b) => Number(a.isSet) - Number(b.isSet)
     || b.additions - a.additions
     || (a.additions ? newestFirst(a.items[0], b.items[0]) : 0)
     || a.index - b.index
   ).map(({ family, items }) => [family, items]);
+
+  // This is a showcase, not a product category: arrivals also stay in their own series.
+  return latestArrivals.length
+    ? [[LATEST_ARRIVALS_SERIES, latestArrivals.sort(newestFirst)], ...series]
+    : series;
 }
 
 export function nextGalleryScrollY(currentY, startY, endY, step, hasMoreSeries) {
