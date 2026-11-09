@@ -1,15 +1,16 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { galleryScrollStep, groupGalleryPatterns, latestGalleryImportDay, LATEST_ARRIVALS_SERIES, nextGalleryScrollFrame } from "../src/catalogue-gallery.js";
+import { galleryMonthWindow, galleryScrollStep, groupGalleryPatterns, latestGalleryImportDay, LATEST_ARRIVALS_SERIES, nextGalleryScrollFrame } from "../src/catalogue-gallery.js";
 
 const pattern = (id, family, createdAt, categoryId = family) => ({ id, family, createdAt, categoryId });
+const now = Date.parse("2026-10-19T08:00:00Z");
 
 test("latest arrivals lead the catalogue while original series keep their ranking and products", () => {
   const products = [
-    pattern("older-one", "A", "2026-10-01T05:00:00Z"),
+    pattern("older-one", "A", "2026-09-01T05:00:00Z"),
     pattern("recent-a", "A", "2026-10-19T06:00:00Z"),
-    pattern("older-many", "C", "2026-10-01T05:00:00Z"),
+    pattern("older-many", "C", "2026-09-01T05:00:00Z"),
     pattern("recent-b1", "B", "2026-10-19T02:00:00Z"),
     pattern("recent-b2", "B", "2026-10-19T02:00:00Z"),
     pattern("set-one", "Sets", "2026-10-19T07:00:00Z", "mixed-set"),
@@ -17,7 +18,7 @@ test("latest arrivals lead the catalogue while original series keep their rankin
     pattern("set-three", "Sets", "2026-10-19T07:00:00Z", "mixed-set"),
   ];
   const order = new Map(products.map((p, i) => [p.id, i]));
-  const grouped = groupGalleryPatterns(products, order, latestGalleryImportDay(products));
+  const grouped = groupGalleryPatterns(products, order, latestGalleryImportDay(products), now);
   assert.deepEqual(grouped.map(([family, items]) => [family, items.map(item => item.id)]), [
     [LATEST_ARRIVALS_SERIES, ["set-three", "set-two", "set-one", "recent-a", "recent-b2", "recent-b1"]],
     ["B", ["recent-b2", "recent-b1"]],
@@ -34,23 +35,45 @@ test("same Shanghai import day combines separate UTC dates", () => {
     pattern("b", "A", "2026-10-19T00:10:00Z"),
     pattern("c", "B", "2026-10-19T12:00:00Z"),
   ];
-  const grouped = groupGalleryPatterns(products, new Map(), latestGalleryImportDay(products));
+  const grouped = groupGalleryPatterns(products, new Map(), latestGalleryImportDay(products), now);
   assert.deepEqual(grouped.map(([family]) => family), [LATEST_ARRIVALS_SERIES, "A", "B"]);
   assert.deepEqual(grouped[0][1].map((item) => item.id), ["c", "b", "a"]);
 });
 
 test("latest arrivals respect filters without treating older matching patterns as new", () => {
   const products = [
-    { ...pattern("older-318", "A", "2026-10-18T12:00:00Z"), model: "318" },
+    { ...pattern("older-318", "A", "2026-09-18T12:00:00Z"), model: "318" },
     { ...pattern("new-318", "B", "2026-10-19T05:00:00Z"), model: "318" },
     { ...pattern("new-319", "A", "2026-10-19T06:00:00Z"), model: "319" },
   ];
   const latestDay = latestGalleryImportDay(products);
-  const only318 = groupGalleryPatterns(products.filter((p) => p.model === "318"), new Map(), latestDay);
+  const only318 = groupGalleryPatterns(products.filter((p) => p.model === "318"), new Map(), latestDay, now);
   assert.deepEqual(only318[0], [LATEST_ARRIVALS_SERIES, [products[1]]]);
-  assert.deepEqual(groupGalleryPatterns([products[0]], new Map(), latestDay), [["A", [products[0]]]]);
+  assert.deepEqual(groupGalleryPatterns([products[0]], new Map(), latestDay, now), [["A", [products[0]]]]);
   assert.deepEqual(groupGalleryPatterns([], new Map(), latestDay), []);
   assert.deepEqual(groupGalleryPatterns([pattern("undated", "C")], new Map(), null).map(([family]) => family), ["C"]);
+});
+
+test("one calendar month uses Shanghai dates including both boundaries", () => {
+  assert.deepEqual(galleryMonthWindow(Date.parse("2026-03-31T06:00:00Z")), { start: "2026-02-28", end: "2026-03-31" });
+  const items = [pattern("before", "A", "2026-09-18T15:59:59Z"), pattern("start", "A", "2026-09-18T16:00:00Z"), pattern("end", "B", "2026-10-19T15:59:59Z"), pattern("future", "B", "2026-10-19T16:00:00Z")];
+  assert.deepEqual(groupGalleryPatterns(items, new Map(), null, now)[0][1].map(p => p.id), ["end", "start"]);
+});
+
+test("each model gets arrivals and rankings based on its own recent designs", () => {
+  const items = [
+    { ...pattern("318-a", "A", "2026-10-18T00:00:00Z"), model: "318" },
+    { ...pattern("318-b1", "B", "2026-10-17T00:00:00Z"), model: "318" },
+    { ...pattern("318-b2", "B", "2026-10-16T00:00:00Z"), model: "318" },
+    { ...pattern("319-a1", "A", "2026-10-18T00:00:00Z"), model: "319" },
+    { ...pattern("319-a2", "A", "2026-10-17T00:00:00Z"), model: "319" },
+    { ...pattern("319-b", "B", "2026-10-16T00:00:00Z"), model: "319" },
+  ];
+  for (const [model, expected] of [["318", [LATEST_ARRIVALS_SERIES, "B", "A"]], ["319", [LATEST_ARRIVALS_SERIES, "A", "B"]]]) {
+    const groups = groupGalleryPatterns(items.filter(p => p.model === model), new Map(), null, now);
+    assert.deepEqual(groups.map(([family]) => family), expected);
+    assert.ok(groups[0][1].every(p => p.model === model));
+  }
 });
 
 test("matching artwork across models and render variants is grouped under the same theme", () => {

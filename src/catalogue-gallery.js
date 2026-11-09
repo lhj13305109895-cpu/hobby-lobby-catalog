@@ -12,15 +12,27 @@ export function latestGalleryImportDay(patterns) {
   return latest ? catalogueDay.format(latest) : null;
 }
 
-export function groupGalleryPatterns(patterns, importOrder, latestDay) {
+// Use Shanghai calendar dates and clamp shorter months (e.g. March 31 → February 28).
+export function galleryMonthWindow(now = Date.now()) {
+  const today = catalogueDay.format(now);
+  const [year, month, day] = today.split("-").map(Number);
+  const previousMonth = new Date(Date.UTC(year, month - 2, 1));
+  const lastDay = new Date(Date.UTC(year, month - 1, 0)).getUTCDate();
+  previousMonth.setUTCDate(Math.min(day, lastDay));
+  return { start: previousMonth.toISOString().slice(0, 10), end: today };
+}
+
+export function groupGalleryPatterns(patterns, importOrder, latestDay, now = Date.now()) {
   const groups = new Map();
   const latestArrivals = [];
+  const window = galleryMonthWindow(now);
   for (const pattern of patterns) {
     if (!groups.has(pattern.family)) groups.set(pattern.family, { items: [], additions: 0 });
     const group = groups.get(pattern.family);
     group.items.push(pattern);
     const timestamp = importedAt(pattern);
-    if (latestDay && timestamp && catalogueDay.format(timestamp) === latestDay) {
+    const day = timestamp ? catalogueDay.format(timestamp) : "";
+    if (day && day >= window.start && day <= window.end) {
       group.additions += 1;
       latestArrivals.push(pattern);
     }

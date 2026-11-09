@@ -66,7 +66,7 @@ const matchesFilter = (pattern, filter) => {
 };
 
 const capacitiesFor = (product) => product.model === "318" && product.capacities?.includes("2.0L")
-  ? [{ id: "2.0L", price: "Price on request", packing: "Packing to be confirmed", quoteReady: false }]
+  ? [{ id: "2.0L", price: "¥37 RMB", priceNumber: 37, packing: "20 pcs", pcsPerCarton: 20, cbm: 0.13, quoteReady: true }]
   : modelsData[product.model]?.capacities || modelsData["319"].capacities;
 const capacitySummary = (product) => capacitiesFor(product).map((capacity) => `${capacity.id} ${capacity.price}`).join(" · ");
 
@@ -457,6 +457,7 @@ function Storefront() {
   const [expandedId, setExpandedId] = useState(null);
   const [zoom, setZoom] = useState(1);
   const [visibleSeriesCount, setVisibleSeriesCount] = useState(1);
+  const [galleryClock, setGalleryClock] = useState(() => Date.now());
   const [modelSeriesScrollRequest, setModelSeriesScrollRequest] = useState(0);
   const [autoScroll, setAutoScroll] = useState(() => (
     !window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -476,10 +477,15 @@ function Storefront() {
     catalogue.find((pattern) => pattern.id === expandedId) || null
   ), [expandedId]);
   const groupedPatterns = useMemo(() => (
-    groupGalleryPatterns(filteredPatterns, galleryImportOrder, latestGalleryDay)
-  ), [filteredPatterns]);
+    groupGalleryPatterns(filteredPatterns, galleryImportOrder, latestGalleryDay, galleryClock)
+  ), [filteredPatterns, galleryClock]);
   const visibleGroupedPatterns = groupedPatterns.slice(0, visibleSeriesCount);
   const hasMoreSeries = visibleSeriesCount < groupedPatterns.length;
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setGalleryClock(Date.now()), 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useLayoutEffect(() => {
     // Invalidate before the next frame, including when the last series replaces the loader.
@@ -929,7 +935,7 @@ function Storefront() {
                 <button type="button" onPointerDown={(event) => event.preventDefault()} onClick={() => chooseFilter("型号318-2.0L", { scrollToFirstSeries: true })} aria-pressed={filter === "型号318-2.0L"}>
                   <span className="model-spotlight-image"><img src="/assets/model-318-2l-plain.png" alt={localize(language, "318 2.0L 壶型", "Model 318 2.0L", "موديل 318 سعة 2.0 لتر")} width="3200" height="3200" loading="lazy" decoding="async" /></span>
                   <strong>{localize(language, "型号 318", "Model 318", "موديل 318")}</strong>
-                  <small>{localize(language, "2.0L", "2.0L", "2.0 لتر")}</small>
+                  <small>{localize(language, "2.0L · ¥37", "2.0L · ¥37", "2.0 لتر · ¥37")}</small>
                   <b>{localize(language, "查看花色", "View patterns", "عرض التصاميم")} <ArrowRight weight="bold" /></b>
                 </button>
               </aside>
