@@ -21,7 +21,9 @@ const escapeXml = (value) => String(value ?? "")
 const escapeHtml = escapeXml;
 const absoluteUrl = (source) => new URL(source, `${siteOrigin}/`).href;
 const productUrl = (product) => `${siteOrigin}/products/${product.slug}/`;
-const modelCapacities = (product) => models[product.model]?.capacities || models["319"].capacities;
+const modelCapacities = (product) => product.model === "318" && product.capacities?.includes("2.0L")
+  ? [{ id: "2.0L", price: "价格待定", packing: "装箱待定" }]
+  : models[product.model]?.capacities || models["319"].capacities;
 const productDescription = (product) => product.descriptionZh || `${product.nameZh}花色型号${product.model}保温壶，提供${modelCapacities(product).map((capacity) => capacity.id).join("和")}容量。`;
 
 function structuredData(product) {
@@ -43,7 +45,7 @@ function structuredData(product) {
     brand: { "@type": "Brand", name: "Hobby Lobby Ask for More" },
     category: categoryById.get(product.categoryId)?.nameZh || "保温壶",
     material: product.bodyType,
-    offers: {
+    offers: prices.every(Number.isFinite) ? {
       "@type": "AggregateOffer",
       url: productUrl(product),
       priceCurrency: "CNY",
@@ -51,7 +53,7 @@ function structuredData(product) {
       highPrice: String(Math.max(...prices)),
       offerCount: offers.length,
       availability: "https://schema.org/InStock",
-    },
+    } : undefined,
   };
 }
 

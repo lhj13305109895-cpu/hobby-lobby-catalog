@@ -59,12 +59,15 @@ const model319Feature = catalogue.find((product) => product.model === "319");
 const modelForFilter = (filter) => (filter === "型号318" || filter === "型号319" ? filter.replace("型号", "") : null);
 const matchesFilter = (pattern, filter) => {
   if (filter === "全部花色") return true;
+  if (filter === "型号318-2.0L") return pattern.model === "318" && pattern.capacities?.includes("2.0L");
   const model = modelForFilter(filter);
-  if (model) return pattern.model === model;
+  if (model) return pattern.model === model && (model !== "318" || pattern.capacities?.includes("1.2L"));
   return pattern.body === filter || pattern.family === `${filter}系列`;
 };
 
-const capacitiesFor = (product) => modelsData[product.model]?.capacities || modelsData["319"].capacities;
+const capacitiesFor = (product) => product.model === "318" && product.capacities?.includes("2.0L")
+  ? [{ id: "2.0L", price: "Price on request", packing: "Packing to be confirmed", quoteReady: false }]
+  : modelsData[product.model]?.capacities || modelsData["319"].capacities;
 const capacitySummary = (product) => capacitiesFor(product).map((capacity) => `${capacity.id} ${capacity.price}`).join(" · ");
 
 const languageOptions = [
@@ -340,14 +343,14 @@ function productStructuredData(product) {
     "@id": `${productUrl(product)}#product`,
     name: `${product.nameZh}保温壶（${product.catalogueCode}）`,
     alternateName: product.nameEn || undefined,
-    description: product.descriptionZh || `${product.nameZh}花色型号319保温壶，提供1.6L和2.0L两种容量。`,
+    description: product.descriptionZh || `${product.nameZh}花色型号${product.model}保温壶，容量${offers.map((offer) => offer.id).join("、")}。`,
     image: [...new Set(imageUrls)],
     sku: product.catalogueCode,
     mpn: product.catalogueCode,
     brand: { "@type": "Brand", name: "Hobby Lobby Ask for More" },
     category: category?.nameZh || "保温壶",
     material: product.bodyType,
-    offers: {
+    offers: prices.every(Number.isFinite) ? {
       "@type": "AggregateOffer",
       url: productUrl(product),
       priceCurrency: "CNY",
@@ -355,7 +358,7 @@ function productStructuredData(product) {
       highPrice: String(Math.max(...prices)),
       offerCount: offers.length,
       availability: "https://schema.org/InStock",
-    },
+    } : undefined,
   };
 }
 
@@ -706,6 +709,7 @@ function Storefront() {
   }
 
   function toggleCapacity(pattern, capacityId) {
+    if (!capacitiesFor(pattern).find((capacity) => capacity.id === capacityId)?.quoteReady) return;
     setSelectedId(pattern.id);
     setExportStatus("");
     setSelectedCapacities((current) => {
@@ -912,7 +916,7 @@ function Storefront() {
           </div>
           <div className="catalogue-layout">
             <div className="catalogue-sidebar">
-              {(model318Feature || model319Feature) && <aside className="model-spotlight" aria-label={localize(language, "壶型分类", "Model categories", "فئات الموديلات")}>
+              <aside className="model-spotlight" aria-label={localize(language, "壶型分类", "Model categories", "فئات الموديلات")}>
                 <span>{localize(language, "壶型分类", "MODEL CATEGORIES", "فئات الموديلات")}</span>
                 {[model318Feature && { product: model318Feature, model: "318", image: "/assets/model-318-plain.png", detail: localize(language, "1.2L · ¥32", "1.2L · ¥32", "1.2 لتر · ¥32") }, model319Feature && { product: model319Feature, model: "319", image: "/assets/model-319-plain.png", detail: localize(language, "1.6L / 2.0L", "1.6L / 2.0L", "1.6 / 2.0 لتر") }].filter(Boolean).map(({ product, model, image, detail }) => (
                   <button type="button" key={model} onPointerDown={(event) => event.preventDefault()} onClick={() => chooseFilter(`型号${model}`, { scrollToFirstSeries: true })} aria-pressed={filter === `型号${model}`}>
@@ -922,7 +926,13 @@ function Storefront() {
                     <b>{localize(language, "查看花色", "View patterns", "عرض التصاميم")} <ArrowRight weight="bold" /></b>
                   </button>
                 ))}
-              </aside>}
+                <button type="button" onPointerDown={(event) => event.preventDefault()} onClick={() => chooseFilter("型号318-2.0L", { scrollToFirstSeries: true })} aria-pressed={filter === "型号318-2.0L"}>
+                  <span className="model-spotlight-image"><img src="/assets/model-318-2l-plain.png" alt={localize(language, "318 2.0L 壶型", "Model 318 2.0L", "موديل 318 سعة 2.0 لتر")} width="3200" height="3200" loading="lazy" decoding="async" /></span>
+                  <strong>{localize(language, "型号 318", "Model 318", "موديل 318")}</strong>
+                  <small>{localize(language, "2.0L", "2.0L", "2.0 لتر")}</small>
+                  <b>{localize(language, "查看花色", "View patterns", "عرض التصاميم")} <ArrowRight weight="bold" /></b>
+                </button>
+              </aside>
               <aside className="series-directory" aria-label={localize(language, "花色系列目录", "Pattern series directory", "دليل مجموعات التصاميم")}>
                 <span>{t.directory}</span>
                 {groupedPatterns.map(([series, seriesPatterns], seriesIndex) => (
@@ -947,7 +957,7 @@ function Storefront() {
                       <a className="product-detail-link" href={`/products/${pattern.slug}/`}>{localize(language, "查看商品详情", "View product details", "عرض تفاصيل المنتج")} <ArrowRight weight="bold" /></a>
                       <div className="capacity-picker" aria-label={`${displayPatternName(pattern)} ${localize(language, "容量选择", "capacity selection", "اختيار السعة")}`}>
                         {capacitiesFor(pattern).map((capacity) => (
-                          <button className={isCapacitySelected(pattern.id, capacity.id) ? "active" : ""} type="button" key={capacity.id} onClick={() => toggleCapacity(pattern, capacity.id)} aria-pressed={isCapacitySelected(pattern.id, capacity.id)}>
+                          <button className={isCapacitySelected(pattern.id, capacity.id) ? "active" : ""} type="button" key={capacity.id} disabled={!capacity.quoteReady} onClick={() => toggleCapacity(pattern, capacity.id)} aria-pressed={isCapacitySelected(pattern.id, capacity.id)}>
                             <strong>{capacity.id}</strong><span>{capacity.price}</span>{isCapacitySelected(pattern.id, capacity.id) && <em>{getSelectedQuantity(pattern.id, capacity.id)} {localize(language, "箱", "cartons", "كرتون")}</em>}
                           </button>
                         ))}
@@ -1117,7 +1127,7 @@ function Storefront() {
             <div className="lightbox-pack">
               <span>{localize(language, "价格 / 装箱", "PRICE / PACKING", "السعر / التعبئة")}</span>
               {capacitiesFor(expanded).map((capacity) => (
-                <button className={`pack-option ${isCapacitySelected(expanded.id, capacity.id) ? "active" : ""}`} type="button" key={capacity.id} onClick={() => toggleCapacity(expanded, capacity.id)} aria-pressed={isCapacitySelected(expanded.id, capacity.id)}>
+                <button className={`pack-option ${isCapacitySelected(expanded.id, capacity.id) ? "active" : ""}`} type="button" key={capacity.id} disabled={!capacity.quoteReady} onClick={() => toggleCapacity(expanded, capacity.id)} aria-pressed={isCapacitySelected(expanded.id, capacity.id)}>
                   <strong>{capacity.id}</strong><small>{capacity.price} · {capacity.packing}{isCapacitySelected(expanded.id, capacity.id) ? ` · ${getSelectedQuantity(expanded.id, capacity.id)} ${localize(language, "箱", "cartons", "كرتون")}` : ""}</small>
                 </button>
               ))}

@@ -75,7 +75,10 @@ test("matching artwork across models and render variants is grouped under the sa
     ["gilded-ornament", ["319-305", "319-306", "319-307", "319-308", "319-309", "319-326", "319-327", "319-334", "319-335"]],
     ["scenic-illustration", ["318-148", "318-150", "319-258", "319-265", "319-338"]],
   ]) {
-    for (const code of codes) assert.equal(byCode.get(code)?.categoryId, category, code);
+    for (const code of codes) {
+      const current = code.startsWith("318-") ? `318A-${Number(code.slice(4)) - 24}` : code;
+      assert.equal(byCode.get(current)?.categoryId, category, current);
+    }
   }
 });
 
@@ -141,6 +144,8 @@ test("catalogue places model cards above the series directory and keeps six colu
   const css = readFileSync(new URL("../src/styles.css", import.meta.url), "utf8");
   assert.ok(app.indexOf('className="catalogue-sidebar"') < app.indexOf('className="model-spotlight"'));
   assert.ok(app.indexOf('className="model-spotlight"') < app.indexOf('className="series-directory"'));
+  assert.match(app, /chooseFilter\("型号318-2\.0L"/);
+  assert.match(app, /model-318-2l-plain\.png/);
   assert.match(css, /@media \(min-width:1400px\)\s*\{\s*\.pattern-grid\s*\{[^}]*repeat\(6,/);
   assert.match(app, /const events = \["pointerdown", "click", "wheel", "keydown"\]/);
   assert.match(app, /onClick=\{\(\) => setAutoScroll\(\(playing\) => !playing\)\}/);

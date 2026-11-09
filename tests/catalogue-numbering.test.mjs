@@ -7,7 +7,7 @@ const products = JSON.parse(readFileSync(new URL("../src/data/products.json", im
 const mapping = JSON.parse(readFileSync(new URL("../backups/numbering-2026-10-28.json", import.meta.url), "utf8"));
 
 test("catalogue numbers follow original import order with independent requested starting numbers", () => {
-  const counters = { "319": 19, "318": 24, "319套装": 0 };
+  const counters = { "319": 19, "318A": 0, "318B": 0, "319套装": 0 };
   const codes = new Set();
   for (const product of products) {
     const prefix = cataloguePrefix(product);
@@ -25,7 +25,7 @@ test("renumbering preserves stable detail URLs and product identities", () => {
     const product = byId.get(row.productId);
     assert.ok(product);
     assert.equal(product.slug, row.previousCode);
-    assert.equal(product.catalogueCode, row.catalogueCode);
+    if (product.model !== "318") assert.equal(product.catalogueCode, row.catalogueCode);
   }
   assert.equal(new Set(products.map(p => p.slug)).size, products.length);
 });
@@ -33,14 +33,16 @@ test("renumbering preserves stable detail URLs and product identities", () => {
 test("new products continue the proper single-pot or set sequence", () => {
   const fixtures = [
     { model: "319", catalogueCode: "319-20" },
-    { model: "318", catalogueCode: "318-25" },
+    { model: "318", catalogueCode: "318A-1" },
+    { model: "318", capacities: ["2.0L"], catalogueCode: "318B-1" },
     { model: "319", categoryId: "mixed-set", catalogueCode: "319套装-1" },
   ];
   assert.equal(nextCatalogueCode(fixtures, { model: "319" }), "319-21");
-  assert.equal(nextCatalogueCode(fixtures, { model: "318" }), "318-26");
+  assert.equal(nextCatalogueCode(fixtures, { model: "318" }), "318A-2");
+  assert.equal(nextCatalogueCode(fixtures, { model: "318", capacities: ["2.0L"] }), "318B-2");
   assert.equal(nextCatalogueCode(fixtures, { model: "319", categoryId: "mixed-set" }), "319套装-2");
   assert.equal(nextCatalogueCode([], { model: "319" }), "319-20");
-  assert.equal(nextCatalogueCode([], { model: "318" }), "318-25");
+  assert.equal(nextCatalogueCode([], { model: "318" }), "318A-1");
   assert.equal(nextCatalogueCode([], { model: "319", categoryId: "mixed-set" }), "319套装-1");
 });
 
@@ -48,7 +50,8 @@ test("public number validation rejects wrong model, wrong set prefix and unsafe 
   for (const catalogueCode of ["319-1", "318套装-1", "319套装-0", "319套装-01", "../319套装-1", "319套装-1-copy"]) {
     assert.equal(isValidCatalogueCode({ model: "319", categoryId: "mixed-set", catalogueCode }), false, catalogueCode);
   }
-  assert.equal(isValidCatalogueCode({ model: "318", catalogueCode: "318-25" }), true);
+  assert.equal(isValidCatalogueCode({ model: "318", catalogueCode: "318A-1" }), true);
+  assert.equal(isValidCatalogueCode({ model: "318", capacities: ["2.0L"], catalogueCode: "318B-1" }), true);
   assert.equal(isValidCatalogueCode({ model: "319", categoryId: "mixed-set", catalogueCode: "319套装-1" }), true);
 });
 
