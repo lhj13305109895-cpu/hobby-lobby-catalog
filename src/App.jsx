@@ -468,6 +468,29 @@ function Storefront() {
   const seriesListRef = useRef(null);
   const galleryScrollBoundsRef = useRef(null);
   const nextSeriesCountRef = useRef(null);
+  const resumeScrollTimerRef = useRef(null);
+  const galleryOverlayOpenRef = useRef(false);
+  galleryOverlayOpenRef.current = Boolean(expandedId || cartOpen || quotePreview);
+  function pauseGalleryScroll() {
+    setAutoScroll(false);
+    window.clearTimeout(resumeScrollTimerRef.current);
+    const resume = () => {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      if (galleryOverlayOpenRef.current) {
+        resumeScrollTimerRef.current = window.setTimeout(resume, 1000);
+        return;
+      }
+      setAutoScroll(true);
+    };
+    resumeScrollTimerRef.current = window.setTimeout(resume, 20000);
+  }
+  function toggleGalleryScroll() {
+    if (autoScroll) pauseGalleryScroll();
+    else {
+      window.clearTimeout(resumeScrollTimerRef.current);
+      setAutoScroll(true);
+    }
+  }
   const t = copy[language];
   const filteredPatterns = useMemo(() => catalogue.filter((pattern) => matchesFilter(pattern, filter)), [filter]);
   const selected = useMemo(() => (
@@ -497,16 +520,17 @@ function Storefront() {
     const pauseOnInteraction = (event) => {
       if (event.target instanceof Element && event.target.closest("[data-gallery-autoscroll-toggle]")) return;
       if (event.type === "keydown" && !["Tab", " ", "PageUp", "PageDown", "Home", "End", "ArrowUp", "ArrowDown", "Escape"].includes(event.key)) return;
-      setAutoScroll(false);
+      pauseGalleryScroll();
     };
     const events = ["pointerdown", "click", "wheel", "keydown"];
     for (const event of events) window.addEventListener(event, pauseOnInteraction, { capture: true, passive: true });
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const onMotionChange = (event) => { if (event.matches) setAutoScroll(false); };
+    const onMotionChange = (event) => { if (event.matches) { window.clearTimeout(resumeScrollTimerRef.current); setAutoScroll(false); } };
     motion.addEventListener("change", onMotionChange);
     return () => {
       for (const event of events) window.removeEventListener(event, pauseOnInteraction, true);
       motion.removeEventListener("change", onMotionChange);
+      window.clearTimeout(resumeScrollTimerRef.current);
     };
   }, []);
 
@@ -870,7 +894,7 @@ function Storefront() {
 
       {!cartOpen && !expandedId && !quotePreview && !seriesMenuOpen && (
         <button className="gallery-autoscroll-toggle" type="button" data-gallery-autoscroll-toggle
-          onClick={() => setAutoScroll((playing) => !playing)}>
+          onClick={toggleGalleryScroll}>
           {autoScroll ? <Pause weight="fill" aria-hidden="true" /> : <Play weight="fill" aria-hidden="true" />}
           {autoScroll ? localize(language, "暂停滚动", "Pause scrolling", "إيقاف التمرير") : localize(language, "继续滚动", "Resume scrolling", "متابعة التمرير")}
         </button>

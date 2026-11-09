@@ -171,6 +171,8 @@ test("catalogue places model cards above the series directory and keeps six colu
   assert.match(app, /model-318-2l-plain\.png/);
   assert.match(css, /@media \(min-width:1400px\)\s*\{\s*\.pattern-grid\s*\{[^}]*repeat\(6,/);
   assert.match(app, /const events = \["pointerdown", "click", "wheel", "keydown"\]/);
-  assert.match(app, /onClick=\{\(\) => setAutoScroll\(\(playing\) => !playing\)\}/);
+  assert.match(app, /onClick=\{toggleGalleryScroll\}/);
+  assert.match(app, /setTimeout\(resume, 20000\)/);
+  assert.match(app, /galleryOverlayOpenRef\.current/);
   assert.match(app, /prefers-reduced-motion: reduce/);
 });
