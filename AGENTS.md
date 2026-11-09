@@ -14,6 +14,8 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 
 ## Durable Product Decisions
 
+- On 2026-11-09 the user requested catalogue series to follow the artwork names and actual designs. Keep recognizable design families together across colourways, capacities and pot models; use the dominant artwork rather than a secondary background motif or a generic imported name. Reclassification must not change catalogue numbers, detail URLs, images, original import order or the separate mixed-set series.
+
 - Autoplay ends at the last row of the complete product list, not the page footer. Show that row briefly, then return to the first visible series (Latest Arrivals when present) and keep scrolling. Treat browser scroll-position rounding as reaching the end, and request the next series if a display reaches a temporary loading boundary.
 
 - Keep catalogue autoplay steady as more series load. Only recalculate its scroll bounds when the layout changes, and suppress card hover motion during autoplay so cards passing under a stationary pointer do not jump. Cards use lazy-loaded thumbnails; retain the high-resolution lightbox and existing pause, resume, and looping behaviour.

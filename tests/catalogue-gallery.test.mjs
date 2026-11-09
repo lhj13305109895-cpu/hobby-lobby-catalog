@@ -53,6 +53,32 @@ test("latest arrivals respect filters without treating older matching patterns a
   assert.deepEqual(groupGalleryPatterns([pattern("undated", "C")], new Map(), null).map(([family]) => family), ["C"]);
 });
 
+test("matching artwork across models and render variants is grouped under the same theme", () => {
+  const products = JSON.parse(readFileSync(new URL("../src/data/products.json", import.meta.url), "utf8"));
+  const categories = JSON.parse(readFileSync(new URL("../src/data/categories.json", import.meta.url), "utf8"));
+  const byCode = new Map(products.map((item) => [item.catalogueCode, item]));
+  const activeCategories = new Set(categories.filter((item) => item.enabled && item.visible).map((item) => item.categoryId));
+  for (const item of products.filter((item) => item.visible)) {
+    assert.ok(activeCategories.has(item.categoryId), `${item.catalogueCode} belongs to a visible series`);
+  }
+  for (const [category, codes] of [
+    ["folk-floral", ["318-25", "318-26", "318-131", "318-132", "318-136", "319-341", "319-342", "319-346", "319-348"]],
+    ["botanical-floral", ["318-93", "318-94", "319-87", "319-88"]],
+    ["fresh-fruit", ["318-79", "318-80", "318-114", "319-33", "319-51", "319-55", "319-279"]],
+    ["arabic-beverage", ["318-84", "318-85", "318-86", "318-95", "318-96", "318-97", "319-23", "319-57", "319-70", "319-77", "319-78", "319-79"]],
+    ["soft-garden", ["318-89", "318-91", "318-118", "318-119", "318-120", "319-36", "319-43", "319-49", "319-54", "319-60", "319-66", "319-67", "319-69", "319-122", "319-331"]],
+    ["porcelain-heritage", ["318-133", "319-318", "319-319", "319-343"]],
+    ["modern-checks", ["318-134", "319-344"]],
+    ["animal-print", ["318-129", "318-130", "318-138", "318-139", "318-140", "318-141", "319-286", "319-287", "319-288", "319-289", "319-290", "319-298"]],
+    ["ethnic-geometric", ["318-109", "318-110", "318-111", "319-37", "319-39", "319-58", "319-74", "319-110", "319-115", "319-119", "319-253", "319-254", "319-274", "319-315", "319-316", "319-317"]],
+    ["silk-road-story", ["319-106", "319-114", "319-302", "319-329"]],
+    ["gilded-ornament", ["319-305", "319-306", "319-307", "319-308", "319-309", "319-326", "319-327", "319-334", "319-335"]],
+    ["scenic-illustration", ["318-148", "318-150", "319-258", "319-265", "319-338"]],
+  ]) {
+    for (const code of codes) assert.equal(byCode.get(code)?.categoryId, category, code);
+  }
+});
+
 const scrollFrame = (overrides) => nextGalleryScrollFrame({
   currentY: 100, startY: 800, endY: 3000, step: 2, hasMoreSeries: false, now: 2000, bottomReachedAt: null, ...overrides,
 });

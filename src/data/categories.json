@@ -320,5 +320,33 @@
     "protected": false,
     "createdAt": "2026-10-19T05:28:40.000Z",
     "updatedAt": "2026-10-19T05:28:40.000Z"
+  },
+  {
+    "categoryId": "gilded-ornament",
+    "nameZh": "鎏金雅饰系列",
+    "nameEn": "Gilded Ornament Series",
+    "slug": "gilded-ornament",
+    "descriptionZh": "以金线、金叶、珍珠和宝石镶嵌效果为主的装饰图案。",
+    "descriptionEn": "Decorative patterns featuring gold outlines, metallic leaves, pearls and jewel-like accents.",
+    "sortOrder": 79,
+    "enabled": true,
+    "visible": true,
+    "protected": false,
+    "createdAt": "2026-11-09T00:00:00.000+08:00",
+    "updatedAt": "2026-11-09T00:00:00.000+08:00"
+  },
+  {
+    "categoryId": "scenic-illustration",
+    "nameZh": "风景意象系列",
+    "nameEn": "Scenic Illustration Series",
+    "slug": "scenic-illustration",
+    "descriptionZh": "以棕榈、草原落日和城市天际线为主景的插画。",
+    "descriptionEn": "Illustrated scenes featuring palms, savanna sunsets and city skylines.",
+    "sortOrder": 86,
+    "enabled": true,
+    "visible": true,
+    "protected": false,
+    "createdAt": "2026-11-09T00:00:00.000+08:00",
+    "updatedAt": "2026-11-09T00:00:00.000+08:00"
   }
 ]
