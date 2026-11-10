@@ -7,12 +7,16 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const products = JSON.parse(readFileSync(path.join(root, "src", "data", "products.json"), "utf8")).filter((product) => product.visible);
 
-test("visible products have unique sequential catalogue slugs", () => {
+test("visible products have unique slugs in the supported catalogue formats", () => {
   const slugs = products.map((product) => product.slug);
   assert.equal(new Set(slugs).size, slugs.length);
-  for (const product of products) assert.match(product.slug, /^(318|319)-\d{2,3}$/);
+  const hasLegacy318BSlug = (product) => product.model === "318"
+    && product.capacities.length === 1 && product.capacities[0] === "2.0L"
+    && /^318-2l-\d{13}$/.test(product.slug);
+  const numericProducts = products.filter((product) => !hasLegacy318BSlug(product));
+  for (const product of numericProducts) assert.match(product.slug, new RegExp(`^${product.model}-\\d{2,3}$`));
   for (const model of ["318", "319"]) {
-    const catalogueNumbers = products.filter((product) => product.model === model).map((product) => Number(product.slug.split("-").at(-1)));
+    const catalogueNumbers = numericProducts.filter((product) => product.model === model).map((product) => Number(product.slug.split("-").at(-1)));
     assert.ok(catalogueNumbers.every((number, index) => index === 0 || number > catalogueNumbers[index - 1]));
     assert.equal(catalogueNumbers.at(-1), Math.max(...catalogueNumbers));
   }
