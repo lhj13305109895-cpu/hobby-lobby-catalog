@@ -447,6 +447,7 @@ function ProductDetail({ product }) {
 function Storefront() {
   const [language, setLanguage] = useState("en");
   const [filter, setFilter] = useState("全部花色");
+  const [numberQuery, setNumberQuery] = useState("");
   const [selectedId, setSelectedId] = useState("pattern-01");
   const [selectedCapacities, setSelectedCapacities] = useState({});
   const [selectedQuantities, setSelectedQuantities] = useState({});
@@ -470,7 +471,7 @@ function Storefront() {
   const nextSeriesCountRef = useRef(null);
   const resumeScrollTimerRef = useRef(null);
   const galleryOverlayOpenRef = useRef(false);
-  galleryOverlayOpenRef.current = Boolean(expandedId || cartOpen || quotePreview);
+  galleryOverlayOpenRef.current = Boolean(expandedId || cartOpen || quotePreview || numberQuery);
   function pauseGalleryScroll() {
     setAutoScroll(false);
     window.clearTimeout(resumeScrollTimerRef.current);
@@ -492,7 +493,10 @@ function Storefront() {
     }
   }
   const t = copy[language];
-  const filteredPatterns = useMemo(() => catalogue.filter((pattern) => matchesFilter(pattern, filter)), [filter]);
+  const filteredPatterns = useMemo(() => catalogue.filter((pattern) => (
+    matchesFilter(pattern, filter)
+    && (!numberQuery.trim() || pattern.catalogueCode.split("-").pop() === numberQuery.trim().replace(/^0+(?=\d)/, ""))
+  )), [filter, numberQuery]);
   const selected = useMemo(() => (
     catalogue.find((pattern) => pattern.id === selectedId) || catalogue[0]
   ), [selectedId]);
@@ -656,7 +660,11 @@ function Storefront() {
   useEffect(() => {
     setVisibleSeriesCount(1);
     setSeriesMenuOpen(false);
-  }, [filter]);
+  }, [filter, numberQuery]);
+
+  useEffect(() => {
+    if (numberQuery) document.getElementById("gallery")?.scrollIntoView({ behavior: "instant", block: "start" });
+  }, [numberQuery]);
 
   useLayoutEffect(() => {
     if (!modelSeriesScrollRequest) return;
@@ -893,11 +901,18 @@ function Storefront() {
       </header>
 
       {!cartOpen && !expandedId && !quotePreview && !seriesMenuOpen && (
+        <div className="gallery-floating-controls">
+        <input className="gallery-number-search" type="search" inputMode="numeric" dir="ltr"
+          aria-label={localize(language, "搜索编号，只需输入数字", "Search number, digits only", "ابحث برقم الصنف فقط")}
+          placeholder={localize(language, "搜索编号，如 138", "Number, e.g. 138", "الرقم، مثل 138")}
+          value={numberQuery} onFocus={pauseGalleryScroll}
+          onChange={(event) => { pauseGalleryScroll(); setNumberQuery(event.target.value.replace(/[^0-9]/g, "")); }} />
         <button className="gallery-autoscroll-toggle" type="button" data-gallery-autoscroll-toggle
           onClick={toggleGalleryScroll}>
           {autoScroll ? <Pause weight="fill" aria-hidden="true" /> : <Play weight="fill" aria-hidden="true" />}
           {autoScroll ? localize(language, "暂停滚动", "Pause scrolling", "إيقاف التمرير") : localize(language, "继续滚动", "Resume scrolling", "متابعة التمرير")}
         </button>
+        </div>
       )}
 
       <main id="top">

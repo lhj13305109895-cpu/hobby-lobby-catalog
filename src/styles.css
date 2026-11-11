@@ -93,7 +93,10 @@ h2 { font-size:clamp(42px,4vw,62px); line-height:1.04; }
 .catalogue-layout { max-width:1650px; margin:0 auto; display:grid; grid-template-columns:210px minmax(0,1fr); gap:28px; align-items:start; }
 .catalogue-sidebar { position:sticky; top:112px; display:flex; flex-direction:column; min-width:0; max-height:calc(100dvh - 132px); gap:12px; }
 .series-directory { display:grid; gap:8px; min-height:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-gutter:stable; padding:18px; border:1px solid var(--line); background:var(--white); border-radius:4px; scrollbar-width:thin; scrollbar-color:rgba(201,8,22,.45) #f4eee7; }
-.gallery-autoscroll-toggle { position:fixed; inset-inline-start:24px; bottom:24px; z-index:75; display:inline-flex; align-items:center; gap:8px; min-height:42px; padding:8px 14px; border:1px solid var(--line); border-radius:999px; background:var(--white); color:var(--ink); box-shadow:0 6px 20px rgba(31,27,25,.12); font-size:12px; font-weight:700; cursor:pointer; }
+.gallery-floating-controls { position:fixed; inset-inline-start:24px; bottom:24px; z-index:75; display:flex; flex-direction:column; align-items:flex-start; gap:8px; }
+.gallery-number-search { width:150px; min-height:36px; padding:8px 12px; border:1px solid var(--line); border-radius:12px; background:var(--white); color:var(--ink); box-shadow:0 6px 20px rgba(31,27,25,.1); font:inherit; font-size:12px; }
+.gallery-number-search:focus { outline:2px solid var(--red); outline-offset:2px; }
+.gallery-autoscroll-toggle { display:inline-flex; align-items:center; gap:8px; min-height:42px; padding:8px 14px; border:1px solid var(--line); border-radius:999px; background:var(--white); color:var(--ink); box-shadow:0 6px 20px rgba(31,27,25,.12); font-size:12px; font-weight:700; cursor:pointer; }
 .gallery-autoscroll-toggle:hover { color:var(--red); border-color:rgba(201,8,22,.35); }
 .series-directory::-webkit-scrollbar { width:8px; }
 .series-directory::-webkit-scrollbar-track { background:#f4eee7; }
@@ -410,7 +413,7 @@ footer a { display:inline-flex; align-items:center; gap:7px; text-decoration:non
   .catalogue-sidebar { position:static; max-height:none; }
   .model-spotlight-image { aspect-ratio:auto; height:86px; }
   .model-spotlight strong { font-size:18px; }
-  .gallery-autoscroll-toggle { inset-inline-start:14px; bottom:84px; }
+  .gallery-floating-controls { inset-inline-start:14px; bottom:84px; }
 }
 
 @media (max-width:380px) {

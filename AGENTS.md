@@ -20,6 +20,8 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 
 ## Durable Product Decisions
 
+- On 2026-11-11 the user requested a compact catalogue-number search above the floating resume-scroll control. Search by the numeric suffix alone, without typing the model prefix, and respect the active model filter.
+
 - On 2026-11-09 the user requested catalogue series to follow the artwork names and actual designs. Keep recognizable design families together across colourways, capacities and pot models; use the dominant artwork rather than a secondary background motif or a generic imported name. Reclassification must not change catalogue numbers, detail URLs, images, original import order or the separate mixed-set series.
 
 - Autoplay ends at the last row of the complete product list, not the page footer. Show that row briefly, then return to the first visible series (Latest Arrivals when present) and keep scrolling. Treat browser scroll-position rounding as reaching the end, and request the next series if a display reaches a temporary loading boundary.
