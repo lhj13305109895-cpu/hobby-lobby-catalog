@@ -10,6 +10,14 @@
   ! Cache-Control
   Cache-Control: public, max-age=31536000, immutable
 
+/assets/miniprogram-thumbs/*
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/selection-photos/*
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+
 /*
   Referrer-Policy: strict-origin-when-cross-origin
   X-Content-Type-Options: nosniff
