@@ -1,0 +1,15 @@
+<view class="catalogue-page">
+ <view class="brand-row"><text class="brand">Hobby Lobby<text class="brand-dot">.</text></text><button class="language" bindtap="switchLanguage">{{lang === 'en' ? 'EN' : '中文'}}</button></view>
+ <view class="hero"><text class="eyebrow">{{t.eyebrow}}</text><view class="headline">{{t.headline}}</view><text class="muted">{{t.lead}}</text></view>
+ <view class="filters"><input class="search" placeholder="{{t.search}}" value="{{query}}" bindinput="search" confirm-type="search"/><view class="model-cards"><button class="model-card model-all {{model === '' ? 'active' : ''}}" data-model="" bindtap="filter"><text>{{t.all}}</text></button><button wx:for="{{models}}" wx:key="id" class="model-card {{model === item.id ? 'active' : ''}}" data-model="{{item.id}}" bindtap="filter"><image src="{{item.image}}" mode="aspectFit"/><text>{{item.label}}</text></button></view></view>
+ <view class="catalogue-body">
+  <scroll-view class="directory" scroll-y enhanced show-scrollbar="{{false}}" scroll-into-view="{{directoryAnchor}}"><view class="directory-label">{{t.series}}</view><view wx:for="{{directory}}" wx:key="id" id="directory-{{item.id}}" class="directory-item {{category === item.id ? 'current' : ''}}" data-id="{{item.id}}" bindtap="category">{{item.name}}<text class="directory-count">{{item.count}}</text></view></scroll-view>
+  <view class="results"><view class="count">{{total}} {{t.patterns}}</view><view wx:if="{{!sections.length}}" class="empty">{{t.empty}}</view>
+   <view class="series-section" wx:for="{{sections}}" wx:for-item="section" wx:key="id" id="series-{{section.id}}" data-id="{{section.id}}">
+    <view class="series-heading"><text>{{section.name}}</text><text class="series-total">{{section.total}}</text></view>
+    <view class="grid"><view class="product" wx:for="{{section.items}}" wx:key="productId"><image class="product-image" src="{{item.thumb}}" mode="aspectFit" lazy-load data-id="{{item.productId}}" bindtap="detail"/><view class="product-content"><text class="code" data-id="{{item.productId}}" bindtap="detail">{{item.code}}</text><view class="product-title" data-id="{{item.productId}}" bindtap="detail">{{item.title}}</view><view class="capacity-row"><button wx:for="{{item.offers}}" wx:for-item="offer" wx:key="id" class="capacity {{offer.selected ? 'chosen' : ''}}" data-id="{{item.productId}}" data-capacity="{{offer.id}}" bindtap="choose">{{offer.selected ? '✓ ' : '+ '}}{{offer.id}}</button></view></view></view></view>
+   </view>
+   <button wx:if="{{hasMore}}" class="secondary load-more" bindtap="more">{{t.more}}</button><view class="list-bottom"></view>
+  </view>
+ </view>
+</view>

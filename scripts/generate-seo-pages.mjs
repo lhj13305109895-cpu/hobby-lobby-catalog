@@ -23,6 +23,8 @@ const absoluteUrl = (source) => new URL(source, `${siteOrigin}/`).href;
 const productUrl = (product) => `${siteOrigin}/products/${product.slug}/`;
 const modelCapacities = (product) => product.model === "318" && product.capacities?.includes("2.0L")
   ? [{ id: "2.0L", price: "价格待定", packing: "装箱待定" }]
+  : product.model === "322"
+    ? models["322"].capacities.filter((capacity) => product.capacities?.includes(capacity.id))
   : models[product.model]?.capacities || models["319"].capacities;
 const productDescription = (product) => product.descriptionZh || `${product.nameZh}花色型号${product.model}保温壶，提供${modelCapacities(product).map((capacity) => capacity.id).join("和")}容量。`;
 

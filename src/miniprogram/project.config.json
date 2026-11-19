@@ -1,0 +1,8 @@
+{
+  "appid": "touristappid",
+  "projectname": "hobby-lobby-catalog",
+  "compileType": "miniprogram",
+  "miniprogramRoot": "./",
+  "setting": { "es6": true, "enhance": true, "postcss": true, "minified": true, "urlCheck": true },
+  "packOptions": { "ignore": [{ "type": "file", "value": "README.md" }] }
+}

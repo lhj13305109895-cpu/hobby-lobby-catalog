@@ -15,5 +15,14 @@
     "capacities": [
       { "id": "1.2L", "price": "¥32 RMB", "priceNumber": 32, "packing": "24 pcs", "pcsPerCarton": 24, "cbm": 0.13, "quoteReady": true }
     ]
+  },
+  "322": {
+    "nameZh": "型号322",
+    "nameEn": "Model 322",
+    "nameAr": "موديل 322",
+    "capacities": [
+      { "id": "1.0L", "price": "¥26 RMB", "priceNumber": 26, "packing": "30 pcs", "pcsPerCarton": 30, "quoteReady": true },
+      { "id": "1.3L", "price": "¥28 RMB", "priceNumber": 28, "packing": "24 pcs", "pcsPerCarton": 24, "quoteReady": true }
+    ]
   }
 }

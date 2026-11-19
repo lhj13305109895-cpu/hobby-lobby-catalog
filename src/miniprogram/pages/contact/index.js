@@ -1,0 +1,2 @@
+const catalogue=require('../../utils/catalogue');const language=require('../../utils/language');
+Page({data:{card:catalogue.asset('/assets/custom-service-contact-card.webp'),wecom:catalogue.asset('/assets/jackie-lee-wecom.webp')},onShow(){language.setup(this);},preview(e){const image=e.currentTarget.dataset.image;wx.previewImage({current:image,urls:[image]});},onShareAppMessage(){return {title:'Hobby Lobby · Custom patterns',path:'/pages/contact/index'};}});

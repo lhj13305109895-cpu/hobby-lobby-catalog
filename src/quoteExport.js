@@ -250,6 +250,18 @@ function makeImagePdf(pages) {
   return new Blob([concatByteArrays(parts)], { type: "application/pdf" });
 }
 
+function quoteTotals(entries) {
+  return entries.reduce((summary, { capacity, quantity }) => {
+    const pieces = capacity.pcsPerCarton * quantity;
+    return {
+      cartons: summary.cartons + quantity,
+      pieces: summary.pieces + pieces,
+      amount: summary.amount + pieces * capacity.priceNumber,
+      cbm: summary.cbm !== null && Number.isFinite(capacity.cbm) ? summary.cbm + capacity.cbm * quantity : null,
+    };
+  }, { cartons: 0, pieces: 0, amount: 0, cbm: 0 });
+}
+
 async function buildQuotePageImages(entries, quoteNo, dateDisplay) {
   const rowsPerPage = 7;
   const pageCount = Math.ceil(entries.length / rowsPerPage);
@@ -258,12 +270,7 @@ async function buildQuotePageImages(entries, quoteNo, dateDisplay) {
     pattern.id,
     await loadCanvasImage(pattern.thumb),
   ])));
-  const totals = entries.reduce((summary, { capacity, quantity }) => ({
-    cartons: summary.cartons + quantity,
-    pieces: summary.pieces + capacity.pcsPerCarton * quantity,
-    amount: summary.amount + capacity.pcsPerCarton * quantity * capacity.priceNumber,
-    cbm: summary.cbm + capacity.cbm * quantity,
-  }), { cartons: 0, pieces: 0, amount: 0, cbm: 0 });
+  const totals = quoteTotals(entries);
   const pages = [];
 
   for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
@@ -332,7 +339,8 @@ async function buildQuotePageImages(entries, quoteNo, dateDisplay) {
     context.fillRect(42, 1590, 1156, 112);
     context.fillStyle = "#ffffff";
     context.font = '700 25px "Microsoft YaHei", "PingFang SC", sans-serif';
-    context.fillText(`合计  ${totals.cartons} 箱  |  ${totals.pieces} 只  |  ${totals.cbm.toFixed(2)} CBM`, 70, 1658);
+    const volume = totals.cbm === null ? "体积待确认" : `${totals.cbm.toFixed(2)} CBM`;
+    context.fillText(`合计  ${totals.cartons} 箱  |  ${totals.pieces} 只  |  ${volume}`, 70, 1658);
     context.textAlign = "right";
     context.font = '700 36px "Microsoft YaHei", "PingFang SC", sans-serif';
     context.fillText(`总金额 ¥${totals.amount}`, 1168, 1664);
@@ -443,21 +451,19 @@ function makeQuoteXlsx({ entries, quoteNo, dateDisplay, imageData }) {
     const row = dataStartRow + index;
     const totalPieces = capacity.pcsPerCarton * quantity;
     const totalAmount = totalPieces * capacity.priceNumber;
-    const totalCbm = Number((quantity * capacity.cbm).toFixed(2));
+    const volumeCells = Number.isFinite(capacity.cbm)
+      ? numberCell(`H${row}`, capacity.cbm.toFixed(2), 4) + numberCell(`I${row}`, (quantity * capacity.cbm).toFixed(2), 4)
+      : emptyCell(`H${row}`, 4) + emptyCell(`I${row}`, 4);
     merges.push(`J${row}:K${row}`);
-    rowXml.push(`<row r="${row}" ht="105" customHeight="1">${inlineStringCell(`A${row}`, `${catalogueCodeFor(pattern)} ${pattern.name} ${capacity.id}\n${pattern.family}`, 8)}${emptyCell(`B${row}`, 1)}${numberCell(`C${row}`, quantity, 4)}${numberCell(`D${row}`, capacity.pcsPerCarton, 4)}${numberCell(`E${row}`, totalPieces, 4)}${numberCell(`F${row}`, capacity.priceNumber, 4)}${formulaCurrencyCell(`G${row}`, `E${row}*F${row}`, totalAmount)}${numberCell(`H${row}`, capacity.cbm.toFixed(2), 4)}${numberCell(`I${row}`, totalCbm.toFixed(2), 4)}${inlineStringCell(`J${row}`, `型号${pattern.model}\n\n${capacity.id}`, 4)}${emptyCell(`K${row}`, 4)}</row>`);
+    rowXml.push(`<row r="${row}" ht="105" customHeight="1">${inlineStringCell(`A${row}`, `${catalogueCodeFor(pattern)} ${pattern.name} ${capacity.id}\n${pattern.family}`, 8)}${emptyCell(`B${row}`, 1)}${numberCell(`C${row}`, quantity, 4)}${numberCell(`D${row}`, capacity.pcsPerCarton, 4)}${numberCell(`E${row}`, totalPieces, 4)}${numberCell(`F${row}`, capacity.priceNumber, 4)}${formulaCurrencyCell(`G${row}`, `E${row}*F${row}`, totalAmount)}${volumeCells}${inlineStringCell(`J${row}`, `型号${pattern.model}\n\n${capacity.id}`, 4)}${emptyCell(`K${row}`, 4)}</row>`);
   });
 
-  const totals = entries.reduce((summary, { capacity, quantity }) => {
-    const pieces = capacity.pcsPerCarton * quantity;
-    summary.cartons += quantity;
-    summary.pieces += pieces;
-    summary.amount += pieces * capacity.priceNumber;
-    summary.cbm += quantity * capacity.cbm;
-    return summary;
-  }, { cartons: 0, pieces: 0, amount: 0, cbm: 0 });
+  const totals = quoteTotals(entries);
+  const totalVolumeCell = totals.cbm === null
+    ? inlineStringCell(`I${totalRow}`, "待确认", 7)
+    : numberCell(`I${totalRow}`, totals.cbm.toFixed(2), 7);
   merges.push(`J${totalRow}:K${totalRow}`, `C${tailRow}:F${tailRow}`, `J${tailRow}:K${tailRow}`, `A${bankRow}:K${bankRow}`);
-  rowXml.push(`<row r="${totalRow}" ht="23" customHeight="1">${inlineStringCell(`A${totalRow}`, "合计:", 7)}${emptyCell(`B${totalRow}`, 7)}${numberCell(`C${totalRow}`, totals.cartons, 7)}${emptyCell(`D${totalRow}`, 7)}${numberCell(`E${totalRow}`, totals.pieces, 7)}${emptyCell(`F${totalRow}`, 7)}${formulaCurrencyCell(`G${totalRow}`, `SUM(G${dataStartRow}:G${totalRow - 1})`, totals.amount)}${emptyCell(`H${totalRow}`, 7)}${numberCell(`I${totalRow}`, totals.cbm.toFixed(2), 7)}${emptyCell(`J${totalRow}`, 7)}${emptyCell(`K${totalRow}`, 7)}</row>`);
+  rowXml.push(`<row r="${totalRow}" ht="23" customHeight="1">${inlineStringCell(`A${totalRow}`, "合计:", 7)}${emptyCell(`B${totalRow}`, 7)}${numberCell(`C${totalRow}`, totals.cartons, 7)}${emptyCell(`D${totalRow}`, 7)}${numberCell(`E${totalRow}`, totals.pieces, 7)}${emptyCell(`F${totalRow}`, 7)}${formulaCurrencyCell(`G${totalRow}`, `SUM(G${dataStartRow}:G${totalRow - 1})`, totals.amount)}${emptyCell(`H${totalRow}`, 7)}${totalVolumeCell}${emptyCell(`J${totalRow}`, 7)}${emptyCell(`K${totalRow}`, 7)}</row>`);
   rowXml.push(`<row r="${tailRow}" ht="23" customHeight="1">${inlineStringCell(`A${tailRow}`, "部门:", 1)}${inlineStringCell(`B${tailRow}`, "业务员:", 1)}${emptyCell(`C${tailRow}`, 1)}${emptyCell(`D${tailRow}`, 1)}${emptyCell(`E${tailRow}`, 1)}${emptyCell(`F${tailRow}`, 1)}${inlineStringCell(`G${tailRow}`, "制单人:", 1)}${emptyCell(`H${tailRow}`, 1)}${inlineStringCell(`I${tailRow}`, "审核人:", 1)}${emptyCell(`J${tailRow}`, 1)}${emptyCell(`K${tailRow}`, 1)}</row>`);
   rowXml.push(`<row r="${bankRow}" ht="56" customHeight="1">${inlineStringCell(`A${bankRow}`, "收款账号：\n郭宝宝，6228480388950363373，ABC，义乌解放之行\n陈亚平，6230910799115975545，东阳农商银行上卢支行", 1)}${emptyCell(`B${bankRow}`, 1)}${emptyCell(`C${bankRow}`, 1)}${emptyCell(`D${bankRow}`, 1)}${emptyCell(`E${bankRow}`, 1)}${emptyCell(`F${bankRow}`, 1)}${emptyCell(`G${bankRow}`, 1)}${emptyCell(`H${bankRow}`, 1)}${emptyCell(`I${bankRow}`, 1)}${emptyCell(`J${bankRow}`, 1)}${emptyCell(`K${bankRow}`, 1)}</row>`);
 

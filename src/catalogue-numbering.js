@@ -7,7 +7,7 @@ export const catalogueCodeFor = (product) => product.catalogueCode || product.sl
 
 export const isValidCatalogueCode = (product) => {
   const prefix = cataloguePrefix(product);
-  return /^(318[AB]|319|319套装)-[1-9]\d*$/.test(catalogueCodeFor(product))
+  return /^(318[AB]|319|319套装|322)-[1-9]\d*$/.test(catalogueCodeFor(product))
     && catalogueCodeFor(product).startsWith(prefix + "-");
 };
 
@@ -18,7 +18,7 @@ export function nextCatalogueCode(products, product) {
     if (!code.startsWith(prefix + "-")) return max;
     const sequence = Number(code.slice(prefix.length + 1));
     return Number.isSafeInteger(sequence) && sequence > max ? sequence : max;
-  }, product.categoryId === "mixed-set" || product.model === "318" ? 0 : 19);
+  }, prefix === "319" ? 19 : 0);
   return prefix + "-" + (highest + 1);
 }
 

@@ -15,8 +15,9 @@ test("visible products have unique slugs in the supported catalogue formats", ()
     && /^318-2l-\d{13}$/.test(product.slug);
   const numericProducts = products.filter((product) => !hasLegacy318BSlug(product));
   for (const product of numericProducts) assert.match(product.slug, new RegExp(`^${product.model}-\\d{2,3}$`));
-  for (const model of ["318", "319"]) {
+  for (const model of ["318", "319", "322"]) {
     const catalogueNumbers = numericProducts.filter((product) => product.model === model).map((product) => Number(product.slug.split("-").at(-1)));
+    if (!catalogueNumbers.length) continue;
     assert.ok(catalogueNumbers.every((number, index) => index === 0 || number > catalogueNumbers[index - 1]));
     assert.equal(catalogueNumbers.at(-1), Math.max(...catalogueNumbers));
   }

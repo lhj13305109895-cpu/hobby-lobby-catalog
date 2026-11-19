@@ -1,4 +1,9 @@
 node_modules/
+__pycache__/
+/miniprogram/
+src/miniprogram/project.private.config.json
+/tmp/pdf-font-source/
+/tmp/pdfs/
 dist/
 .vite/
 *.log

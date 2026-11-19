@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build:miniprogram": "node scripts/build-miniprogram.mjs",
+    "test:miniprogram": "node scripts/build-miniprogram.mjs && node --test tests/miniprogram.test.cjs tests/miniprogram-export.test.cjs tests/miniprogram-catalogue.test.cjs",
     "dev": "vite",
     "dev:studio": "node scripts/studio-preview.mjs",
     "build": "vite build && node scripts/prepare-sites-build.mjs",

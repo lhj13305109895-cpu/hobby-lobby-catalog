@@ -55,8 +55,9 @@ const latestGalleryDay = latestGalleryImportDay(catalogue);
 const filters = ["全部花色", "白色壶身", "316不锈钢", "混色套装"];
 const model318Feature = catalogue.find((product) => product.model === "318");
 const model319Feature = catalogue.find((product) => product.model === "319");
+const model322Feature = catalogue.find((product) => product.model === "322");
 
-const modelForFilter = (filter) => (filter === "型号318" || filter === "型号319" ? filter.replace("型号", "") : null);
+const modelForFilter = (filter) => filter.match(/^型号(\d+)$/)?.[1];
 const matchesFilter = (pattern, filter) => {
   if (filter === "全部花色") return true;
   if (filter === "型号318-2.0L") return pattern.model === "318" && pattern.capacities?.includes("2.0L");
@@ -67,6 +68,8 @@ const matchesFilter = (pattern, filter) => {
 
 const capacitiesFor = (product) => product.model === "318" && product.capacities?.includes("2.0L")
   ? [{ id: "2.0L", price: "¥37 RMB", priceNumber: 37, packing: "20 pcs", pcsPerCarton: 20, cbm: 0.13, quoteReady: true }]
+  : product.model === "322"
+    ? modelsData["322"].capacities.filter((capacity) => product.capacities?.includes(capacity.id))
   : modelsData[product.model]?.capacities || modelsData["319"].capacities;
 const capacitySummary = (product) => capacitiesFor(product).map((capacity) => `${capacity.id} ${capacity.price}`).join(" · ");
 
@@ -977,6 +980,14 @@ function Storefront() {
                   <small>{localize(language, "2.0L · ¥37", "2.0L · ¥37", "2.0 لتر · ¥37")}</small>
                   <b>{localize(language, "查看花色", "View patterns", "عرض التصاميم")} <ArrowRight weight="bold" /></b>
                 </button>
+                {model322Feature && (
+                  <button type="button" onPointerDown={(event) => event.preventDefault()} onClick={() => chooseFilter("型号322", { scrollToFirstSeries: true })} aria-pressed={filter === "型号322"}>
+                    <span className="model-spotlight-image"><img src="/assets/model-322-plain.webp" alt="" width="640" height="640" loading="lazy" decoding="async" /></span>
+                    <strong>{localize(language, "型号 322", "Model 322", "موديل 322")}</strong>
+                    <small>{localize(language, "1.0L / 1.3L", "1.0L / 1.3L", "1.0 / 1.3 لتر")}</small>
+                    <b>{localize(language, "查看花色", "View patterns", "عرض التصاميم")} <ArrowRight weight="bold" /></b>
+                  </button>
+                )}
               </aside>
               <aside className="series-directory" aria-label={localize(language, "花色系列目录", "Pattern series directory", "دليل مجموعات التصاميم")}>
                 <span>{t.directory}</span>

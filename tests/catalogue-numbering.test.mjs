@@ -7,7 +7,7 @@ const products = JSON.parse(readFileSync(new URL("../src/data/products.json", im
 const mapping = JSON.parse(readFileSync(new URL("../backups/numbering-2026-10-28.json", import.meta.url), "utf8"));
 
 test("catalogue numbers follow original import order with independent requested starting numbers", () => {
-  const counters = { "319": 19, "318A": 0, "318B": 0, "319套装": 0 };
+  const counters = { "319": 19, "318A": 0, "318B": 0, "319套装": 0, "322": 0 };
   const codes = new Set();
   for (const product of products) {
     const prefix = cataloguePrefix(product);
@@ -43,6 +43,8 @@ test("new products continue the proper single-pot or set sequence", () => {
   assert.equal(nextCatalogueCode(fixtures, { model: "319", categoryId: "mixed-set" }), "319套装-2");
   assert.equal(nextCatalogueCode([], { model: "319" }), "319-20");
   assert.equal(nextCatalogueCode([], { model: "318" }), "318A-1");
+  assert.equal(nextCatalogueCode([], { model: "322" }), "322-1");
+  assert.equal(nextCatalogueCode([{ model: "322", capacities: ["1.3L"], catalogueCode: "322-1" }], { model: "322", capacities: ["1.0L"] }), "322-2");
   assert.equal(nextCatalogueCode([], { model: "319", categoryId: "mixed-set" }), "319套装-1");
 });
 

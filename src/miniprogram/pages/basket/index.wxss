@@ -1,0 +1,2 @@
+.quantity-row{display:flex;align-items:center;gap:16rpx;margin-top:14rpx;font-size:23rpx;color:#776b5d}.quantity-input{width:110rpx;height:58rpx;padding:0 10rpx;text-align:center;background:#f8f2e9;border:1rpx solid #cfc0ad;border-radius:8rpx;color:#302c28;box-sizing:border-box}
+.export-excel{margin-top:18rpx}
