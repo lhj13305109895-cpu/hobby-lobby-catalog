@@ -64,7 +64,7 @@ const TWO_LITER_WRAP_HEIGHT_MM = 235;
 const NEW_POT_DIAMETER_MM = 145;
 const NEW_POT_BODY_HEIGHT_MM = 171;
 const NEW_POT_OVERALL_HEIGHT_MM = 197.51;
-const NEW_POT_WRAP_WIDTH_MM = 445.8;
+const NEW_POT_WRAP_WIDTH_MM = 454;
 const NEW_POT_WRAP_HEIGHT_MM = 145;
 const POT_12_WRAP_WIDTH_MM = 454.27;
 const POT_12_BODY_HEIGHT_MM = 108;
@@ -2061,7 +2061,7 @@ export function PotStudio() {
               ),
               printMaterial,
             );
-            overlay.name = "BODY_PRINT_445_8x145_OVERLAY";
+            overlay.name = "BODY_PRINT_454x145_OVERLAY";
             overlay.castShadow = false;
             overlay.receiveShadow = false;
             overlay.renderOrder = 2;

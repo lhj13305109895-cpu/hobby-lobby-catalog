@@ -1,3 +1,4 @@
+const catalogue=require('../../utils/catalogue');
 const selection=require('../../utils/selection');
 const language=require('../../utils/language');
 const exporter=require('../../utils/export-selection');
@@ -35,5 +36,5 @@ Page({
     } finally {this.setData({exporting:false});}
   },
   browse(){wx.switchTab({url:'/pages/catalogue/index'});},
-  detail(e){wx.navigateTo({url:'/pages/detail/index?id='+encodeURIComponent(e.currentTarget.dataset.id)});}
+  detail(e){wx.navigateTo({url:catalogue.detailUrl(e.currentTarget.dataset.id)});}
 });

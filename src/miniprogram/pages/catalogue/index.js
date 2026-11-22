@@ -42,7 +42,7 @@ Page({
    if(visible && visible.dataset.id!==this.data.category)this.setData({category:visible.dataset.id,directoryAnchor:'directory-'+visible.dataset.id});
   });
  },
- detail(e){wx.navigateTo({url:'/pages/detail/index?id='+encodeURIComponent(e.currentTarget.dataset.id)});},
+ detail(e){wx.navigateTo({url:catalogue.detailUrl(e.currentTarget.dataset.id)});},
  choose(e){selection.toggle(e.currentTarget.dataset.id,e.currentTarget.dataset.capacity);this.refresh();},
  onShareAppMessage(){return {title:'Hobby Lobby · Patterns, made yours',path:'/pages/catalogue/index'};}
 });

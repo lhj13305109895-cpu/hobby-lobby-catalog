@@ -3,6 +3,7 @@ const config = require('../config');
 const thumbnails = require('../data/thumbnails');
 function asset(path, updatedAt) {
   if (!path) return '';
+  if (path.startsWith('/assets/catalogue-local/') || path.startsWith('/catalogue-photos/images/')) return path;
   const url = /^https:\/\//.test(path) ? path : config.assetOrigin + path;
   return path.indexOf('/assets/uploads/') >= 0 ? url + (url.indexOf('?') >= 0 ? '&' : '?') + 'v=' + encodeURIComponent(Date.parse(updatedAt) || updatedAt || '1') : url;
 }
@@ -38,7 +39,12 @@ function groups(model, query, lang, now) {
   return result;
 }
 function find(id) { return products.find(p=>p.productId===id); }
+function detailUrl(id) {
+  const product = find(id);
+  const page = product && product.image.startsWith('/catalogue-photos/images/') ? '/catalogue-photos/detail/index' : '/pages/detail/index';
+  return page + '?id=' + encodeURIComponent(id);
+}
 function matchesModel(p,model) { if(!model) return true; if(model==='318-1.2L') return p.model==='318' && p.capacities.indexOf('1.2L')>=0; if(model==='318-2.0L') return p.model==='318' && p.capacities.indexOf('2.0L')>=0; return p.model===model; }
-function modelCards() { return [{id:'318-1.2L',label:'318 1.2L',image:'/assets/models/318-12.png'},{id:'318-2.0L',label:'318 2.0L',image:'/assets/models/318-20.png'},{id:'319',label:'319',image:'/assets/models/319-lemon.png'}]; }
+function modelCards() { return [{id:'318-1.2L',label:'318 1.2L',image:'/assets/models/318-12.png'},{id:'318-2.0L',label:'318 2.0L',image:'/assets/models/318-20.png'},{id:'319',label:'319',image:'/assets/models/319-lemon.png'},{id:'322',label:'322',image:'/assets/models/322-floral.jpg',imageMode:'aspectFill'}]; }
 function display(p,lang) { const c = source.categories.find(c=>c.categoryId===p.categoryId); return Object.assign({},p,{title:lang==='zh'?p.nameZh:p.nameEn || p.nameZh,series:lang==='zh'?c.nameZh:c.nameEn || c.nameZh}); }
-module.exports = {products,groups,find,display,asset,monthWindow,modelCards};
+module.exports = {products,groups,find,detailUrl,display,asset,monthWindow,modelCards};

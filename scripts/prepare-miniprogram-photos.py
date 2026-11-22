@@ -10,6 +10,7 @@ from PIL import Image, ImageOps, ImageChops
 
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC = (ROOT / "public").resolve()
+CATALOGUE_PHOTOS = (ROOT / "src/miniprogram/catalogue-photos/images").resolve()
 OUTPUT = (ROOT / "miniprogram").resolve()
 JPEG_SIZE = (640, 480)
 PACKAGE_LIMIT = 1500 * 1024
@@ -45,12 +46,22 @@ def product_bounds(image):
             round(min(height, ys[-1] + padding + 1) * image.height / height))
 
 
-def prepare(product):
+def photo_source(product):
     original = product.get("originalImage") or product.get("mainImage")
+    prefix = "/catalogue-photos/images/"
+    if original.startswith(prefix):
+        source = (CATALOGUE_PHOTOS / original.removeprefix(prefix)).resolve()
+        if not source.is_relative_to(CATALOGUE_PHOTOS):
+            raise ValueError("Photo path escapes mini program assets")
+        return source
     source = (PUBLIC / original.lstrip("/")).resolve()
     if not source.is_relative_to(PUBLIC):
         raise ValueError("Photo path escapes public assets")
-    with Image.open(source) as opened:
+    return source
+
+
+def prepare(product):
+    with Image.open(photo_source(product)) as opened:
         image = ImageOps.exif_transpose(opened).convert("RGBA")
         background = Image.new("RGBA", image.size, "white")
         image = Image.alpha_composite(background, image).convert("RGB")
@@ -68,7 +79,7 @@ def prepare(product):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", choices=["local", "website"], default="local")
+    parser.add_argument("--mode", choices=["local", "website", "hybrid"], default="local")
     options = parser.parse_args()
     products = json.load(sys.stdin)
     manifest, packages = {}, []
@@ -76,29 +87,33 @@ def main():
     previous = {}
     if manifest_file.exists():
         previous = json.loads(manifest_file.read_text(encoding="utf-8").removeprefix("module.exports = ").strip().removesuffix(";"))
-    WEBSITE_PHOTOS.mkdir(parents=True, exist_ok=True)
+    published = set()
+    if options.mode == "hybrid":
+        published = set(json.loads((ROOT / "scripts/miniprogram-website-assets.json").read_text(encoding="utf-8"))["exportPhotos"])
+    if options.mode == "website":
+        WEBSITE_PHOTOS.mkdir(parents=True, exist_ok=True)
     package_bytes = PACKAGE_LIMIT
     for index, product in enumerate(products):
-        original = product.get("originalImage") or product.get("mainImage")
-        source = (PUBLIC / original.lstrip("/")).resolve()
-        if not source.is_relative_to(PUBLIC):
-            raise ValueError("Photo path escapes public assets")
+        source = photo_source(product)
+        local_product = source.is_relative_to(CATALOGUE_PHOTOS)
         signature = hashlib.sha256(source.read_bytes() + (b"mixed" if product["categoryId"] == "mixed-set" else b"single")).hexdigest()
         cached = previous.get(product["productId"], {})
         content = None
         if cached.get("sourceSha256") == signature and cached.get("version") == PHOTO_VERSION:
-            candidate = (PUBLIC / (cached.get("remotePath") or cached["path"]).lstrip("/")).resolve()
-            if candidate.is_relative_to(WEBSITE_PHOTOS) and candidate.exists():
+            cache_root = OUTPUT if cached.get("package") else PUBLIC
+            candidate = (cache_root / (cached["path"] if cached.get("package") else cached.get("remotePath") or cached["path"]).lstrip("/")).resolve()
+            if candidate.is_relative_to(OUTPUT if cached.get("package") else WEBSITE_PHOTOS) and candidate.exists():
                 content = candidate.read_bytes()
         if content is None:
             content = prepare(product)
         digest = hashlib.sha256(content).hexdigest()[:24]
         remote_path = "/assets/selection-photos/" + digest + ".jpg"
         remote_file = PUBLIC / remote_path.lstrip("/")
-        if not remote_file.exists() or remote_file.read_bytes() != content:
+        if options.mode == "website" and not local_product and (not remote_file.exists() or remote_file.read_bytes() != content):
             remote_file.write_bytes(content)
         resource = {"path": remote_path, "remotePath": remote_path, "bytes": len(content), "sourceSha256": signature, "version": PHOTO_VERSION}
-        if options.mode == "local" and package_bytes + len(content) > PACKAGE_LIMIT:
+        bundled = local_product or options.mode == "local" or (options.mode == "hybrid" and remote_path not in published)
+        if bundled and package_bytes + len(content) > PACKAGE_LIMIT:
             package_root = "export-photos-" + str(len(packages))
             directory = OUTPUT / package_root
             (directory / "images").mkdir(parents=True, exist_ok=True)
@@ -107,7 +122,7 @@ def main():
             (directory / "index.wxml").write_text("<view></view>\n", encoding="utf-8")
             packages.append({"name": "exportPhotos" + str(len(packages)), "root": package_root, "pages": ["index"]})
             package_bytes = 0
-        if options.mode == "local":
+        if bundled:
             relative = package_root + "/images/photo-" + str(index) + ".jpg"
             destination = OUTPUT / relative
             if not destination.exists() or destination.read_bytes() != content:

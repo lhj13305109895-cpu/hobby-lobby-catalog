@@ -55,7 +55,7 @@ test('legacy selections default to one piece; quantities are validated and indep
 });
 test('selection quantities represent cartons using each capacity packing count',()=>{
   storage={};
-  const cases=[['318','1.2L',2,48],['318','2.0L',1,20],['319','1.6L',4,96],['319','2.0L',3,60]];
+  const cases=[['318','1.2L',2,48],['318','2.0L',1,20],['319','1.6L',4,96],['319','2.0L',3,60],['322','1.0L',2,60],['322','1.3L',3,72]];
   for(const [model,capacity,cartons,pieces] of cases){
     const p=catalogue.products.find(p=>p.model===model&&p.offers.some(o=>o.id===capacity));
     selection.toggle(p.productId,capacity);selection.setQuantity(p.productId,capacity,cartons);
@@ -63,8 +63,9 @@ test('selection quantities represent cartons using each capacity packing count',
     assert.equal(row.quantity,cartons);assert.equal(row.pieces,pieces);
   }
 });
-test('three photographic model filters keep 318 capacities separate and numeric search stays scoped',()=>{
-  const cards=catalogue.modelCards();assert.deepEqual(cards.map(c=>c.id),['318-1.2L','318-2.0L','319']);assert.ok(cards.every(c=>c.image.startsWith('/assets/models/')));
+test('photographic model filters keep 318 capacities separate, include 322 and scope numeric search',()=>{
+  const cards=catalogue.modelCards();assert.deepEqual(cards.map(c=>c.id),['318-1.2L','318-2.0L','319','322']);assert.ok(cards.every(c=>c.image.startsWith('/assets/models/')&&fs.existsSync(path.join(__dirname,'../miniprogram',c.image))));
+  const model322=catalogue.groups('322','','zh').filter(group=>group.id!=='latest-arrivals').flatMap(group=>group.items);assert.ok(model322.length);assert.ok(model322.every(p=>p.model==='322'&&p.code.startsWith('322-')));for(const p of model322){const matches=catalogue.groups('322',p.code.split('-').pop(),'en').flatMap(group=>group.items);assert.ok(matches.length);assert.ok(matches.every(q=>q.productId===p.productId));}
   for(const id of ['318-1.2L','318-2.0L']){const groups=catalogue.groups(id,'','zh');assert.ok(groups.length);for(const group of groups)for(const p of group.items){assert.equal(p.model,'318');assert.ok(p.capacities.includes(id.slice(4)));const result=catalogue.groups(id,p.code.split('-').pop(),'zh');assert.ok(result.flatMap(g=>g.items).every(q=>q.capacities.includes(id.slice(4))));}}
 });
 test('Excel has three columns, numeric carton quantities, public codes and photos without pricing',()=>{
@@ -86,8 +87,10 @@ test('all visible products, including the failing WebP photo 318A-135, have prep
   const project=JSON.parse(fs.readFileSync(path.resolve(__dirname,'../miniprogram/project.config.json'),'utf8'));
   for(const p of catalogue.products){
     const resource=photoResources[p.productId];
-    if(miniConfig.exportPhotoSource==='website'){assert.equal(resource.package,undefined);assert.equal(app.subPackages.length,0);assert.equal(project.packOptions.include.length,0);}
-    else{assert.ok(app.subPackages.some(pack=>pack.name===resource.package));assert.ok(project.packOptions.include.some(include=>resource.path.startsWith(include.value+'/')));}
+    if(resource.package){assert.ok(app.subPackages.some(pack=>pack.name===resource.package));assert.ok(project.packOptions.include.some(include=>resource.path.startsWith(include.value+'/')));}
+    else{assert.equal(resource.path,resource.remotePath);}
+    if(p.image.startsWith('/catalogue-photos/')) assert.ok(resource.package);
+    else if(miniConfig.exportPhotoSource==='website') assert.equal(resource.package,undefined);
     assert.match(resource.remotePath,/^\/assets\/selection-photos\/[a-f0-9]{24}\.jpg$/);
     const bytes=fs.readFileSync(photoFile(resource));assert.equal(bytes.readUInt16BE(0),0xffd8);assert.equal(bytes.length,resource.bytes);
     let at=2,dimensions;
@@ -100,7 +103,21 @@ test('native export writes a binary Excel file, deduplicates shared images and e
   const items=selected(),state=nativeMocks();
   const file=await exporter.createSelectionFile(items,'zh');assert.equal(state.loads.length+state.downloads.length,1);assert.equal(state.reads.filter(path=>!path.includes('/hl-selection-')).length,1);assert.equal(file,'/sandbox/Hobby-Lobby-Selection.xlsx');const writes=state.writes.filter(o=>o.filePath.endsWith('.xlsx'));assert.equal(writes.length,1);assert.equal(entries(writes[0].data).size,11);
   await exporter.openFile(file);assert.equal(state.opens[0].showMenu,true);assert.equal(state.opens[0].fileType,'xlsx');
-  nativeMocks();wx.loadSubpackage=o=>o.fail({errMsg:'offline'});wx.downloadFile=o=>o.fail({errMsg:'offline'});await assert.rejects(exporter.createSelectionFile(items,'zh'),e=>e.code==='PHOTO'&&e.stage===(miniConfig.exportPhotoSource==='website'?'download':'package')&&e.detail==='offline'&&e.message===items[0].code);
+  nativeMocks();wx.loadSubpackage=o=>o.fail({errMsg:'offline'});wx.downloadFile=o=>o.fail({errMsg:'offline'});await assert.rejects(exporter.createSelectionFile(items,'zh'),e=>e.code==='PHOTO'&&e.stage===(photoResources[items[0].productId].package?'package':'download')&&e.detail==='offline'&&e.message===items[0].code);
+});
+test('new bundled products export both formats without downloading unpublished images',{
+  skip:miniConfig.exportPhotoSource!=='hybrid'
+},async()=>{
+  const items=catalogue.products.filter(p=>photoResources[p.productId].package).map(p=>({...p,quantity:2,offer:p.offers[0]}));assert.ok(items.length);
+  for(const format of ['pdf','xlsx']){
+    const state=nativeMocks();wx.downloadFile=()=>{throw Error('Bundled photos must not request website files');};
+    await exporter.createSelectionFile(items,'zh',undefined,format);
+    assert.equal(state.downloads.length,0);assert.equal(state.loads.length,new Set(items.map(p=>photoResources[p.productId].package)).size);
+    const bytes=state.writes.find(row=>row.filePath.endsWith('.'+format)).data;
+    if(format==='xlsx'){const files=entries(bytes);assert.equal([...files.keys()].filter(name=>name.startsWith('xl/media/')).length,items.length);}
+    else assert.ok(Buffer.from(bytes).toString('ascii',0,8).startsWith('%PDF-1.6'));
+  }
+  const items322=items.filter(p=>p.model==='322');assert.ok(items322.some(p=>p.offer.id==='1.0L'));assert.ok(items322.some(p=>p.offer.id==='1.3L'));
 });
 test('basket refuses invalid drafts and always releases loading state on a failed export',async()=>{
   selected();const errors=[];let hidden=0,config;

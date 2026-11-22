@@ -40,7 +40,7 @@ async function createSelectionFile(items, lang, onProgress, format='xlsx') {
       const resource=photoResources[item.productId],progress={stage:'manifest'};
       try {
         if(!resource)throw new Error('Missing export photo resource');
-        if(config.exportPhotoSource==='website') {
+        if(!resource.package && config.exportPhotoSource!=='local') {
           cache.set(item.productId,await downloadPhoto(resource,fs,progress));
         } else {
           progress.stage='package';

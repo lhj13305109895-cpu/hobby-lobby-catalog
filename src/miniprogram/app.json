@@ -1,5 +1,6 @@
 {
   "pages": ["pages/catalogue/index", "pages/detail/index", "pages/basket/index", "pages/contact/index"],
+  "subPackages": [{ "root": "catalogue-photos", "pages": ["detail/index"] }],
   "window": { "navigationBarTitleText": "Hobby Lobby", "navigationBarBackgroundColor": "#F7F2E9", "navigationBarTextStyle": "black", "backgroundColor": "#F7F2E9" },
   "tabBar": { "color": "#777168", "selectedColor": "#9B302F", "backgroundColor": "#FFFCF7", "list": [
     { "pagePath": "pages/catalogue/index", "text": "Catalogue" },
