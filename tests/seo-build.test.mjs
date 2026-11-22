@@ -10,10 +10,12 @@ const products = JSON.parse(readFileSync(path.join(root, "src", "data", "product
 test("visible products have unique slugs in the supported catalogue formats", () => {
   const slugs = products.map((product) => product.slug);
   assert.equal(new Set(slugs).size, slugs.length);
-  const hasLegacy318BSlug = (product) => product.model === "318"
-    && product.capacities.length === 1 && product.capacities[0] === "2.0L"
-    && /^318-2l-\d{13}$/.test(product.slug);
-  const numericProducts = products.filter((product) => !hasLegacy318BSlug(product));
+  const hasTimestamped318Slug = (product) => {
+    if (product.model !== "318" || product.capacities.length !== 1) return false;
+    const capacity = { "1.2L": "12l", "2.0L": "2l" }[product.capacities[0]];
+    return Boolean(capacity && new RegExp(`^318-${capacity}-\\d{13}$`).test(product.slug));
+  };
+  const numericProducts = products.filter((product) => !hasTimestamped318Slug(product));
   for (const product of numericProducts) assert.match(product.slug, new RegExp(`^${product.model}-\\d{2,3}$`));
   for (const model of ["318", "319", "322"]) {
     const catalogueNumbers = numericProducts.filter((product) => product.model === model).map((product) => Number(product.slug.split("-").at(-1)));
@@ -44,5 +46,9 @@ test("generated product pages expose canonical, image and Product JSON-LD", () =
     assert.ok(html.includes('"@type":"Product"'));
     assert.ok(html.includes(product.mainImage));
     assert.ok(html.includes(`"sku":"${product.catalogueCode || product.slug}"`));
+    if (product.model === "318" && product.capacities.includes("2.0L")) {
+      assert.ok(html.includes("2.0L ¥37 RMB / 20 pcs"));
+      assert.ok(html.includes('"lowPrice":"37"'));
+    }
   }
 });

@@ -27,15 +27,31 @@ await writeFile(join(output,'config.js'),'module.exports = '+JSON.stringify({...
 const load = async name => JSON.parse(await readFile(join(root, 'src/data', name + '.json'), 'utf8'));
 const [products, categories, models] = await Promise.all(['products', 'categories', 'models'].map(load));
 const localProducts = JSON.parse(await readFile(localCatalogue, 'utf8'));
-for (const key of ['productId', 'slug', 'catalogueCode']) {
-  const used = new Set(products.map(product => product[key]));
-  for (const product of localProducts) {
-    if (!product[key] || used.has(product[key])) throw new Error(`Duplicate or missing ${key}: ${product[key]}`);
-    used.add(product[key]);
+const byId = new Map(products.map(product => [product.productId, product]));
+const slugs = new Set(products.map(product => product.slug));
+const codes = new Set(products.map(product => product.catalogueCode));
+const localIds = new Set();
+for (const local of localProducts) {
+  const { productId, slug, catalogueCode, mainImage, thumbnailImage, originalImage } = local;
+  if (!productId || !slug || !catalogueCode || localIds.has(productId)) {
+    throw new Error(`Duplicate or incomplete mini program product: ${productId}`);
+  }
+  localIds.add(productId);
+  const shared = byId.get(productId);
+  if (shared) {
+    if (shared.slug !== slug || shared.catalogueCode !== catalogueCode) {
+      throw new Error(`Mini program product identity differs from the website: ${productId}`);
+    }
+    byId.set(productId, { ...shared, mainImage, thumbnailImage, originalImage });
+  } else {
+    if (slugs.has(slug) || codes.has(catalogueCode)) throw new Error(`Mini program product conflicts with an existing slug or code: ${catalogueCode}`);
+    byId.set(productId, local);
+    slugs.add(slug);
+    codes.add(catalogueCode);
   }
 }
 const active = categories.filter(c => c.enabled && c.visible).sort((a,b) => a.sortOrder-b.sortOrder);
-const visible = [...products, ...localProducts].filter(p => p.visible && active.some(c => c.categoryId === p.categoryId));
+const visible = [...byId.values()].filter(p => p.visible && active.some(c => c.categoryId === p.categoryId));
 await mkdir(join(output, 'data'), { recursive: true });
 // The mini program is a price-free catalogue; keep website pricing in its source.
 const miniModels=Object.fromEntries(Object.entries(models).map(([id,model])=>[id,{

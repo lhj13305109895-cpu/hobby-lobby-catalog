@@ -22,7 +22,7 @@ const escapeHtml = escapeXml;
 const absoluteUrl = (source) => new URL(source, `${siteOrigin}/`).href;
 const productUrl = (product) => `${siteOrigin}/products/${product.slug}/`;
 const modelCapacities = (product) => product.model === "318" && product.capacities?.includes("2.0L")
-  ? [{ id: "2.0L", price: "价格待定", packing: "装箱待定" }]
+  ? [{ id: "2.0L", price: "¥37 RMB", priceNumber: 37, packing: "20 pcs" }]
   : product.model === "322"
     ? models["322"].capacities.filter((capacity) => product.capacities?.includes(capacity.id))
   : models[product.model]?.capacities || models["319"].capacities;

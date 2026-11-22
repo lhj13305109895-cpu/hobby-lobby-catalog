@@ -4,7 +4,7 @@
 
 执行 `npm run build:miniprogram` 同步当前网站商品、系列、容量及装箱量，小程序不展示或导出价格；执行 `npm run test:miniprogram` 检查目录、编号搜索、容量装箱量、选款存储和分享路径。
 
-只在小程序上新的商品追加到 `src/miniprogram/data/local-products.json`，编号接续网站和小程序已有商品。列表 JPEG 放在 `src/miniprogram/assets/catalogue-local/`，高清 JPEG 随 `catalogue-photos` 详情分包加载，选款导出仍使用单独生成的 640×480 JPEG。构建将这些商品并入小程序目录，网站数据和图片目录无需更新。
+只在小程序上新的商品追加到 `src/miniprogram/data/local-products.json`，编号接续网站和小程序已有商品。列表 JPEG 放在 `src/miniprogram/assets/catalogue-local/`，高清 JPEG 随 `catalogue-photos` 详情分包加载，选款导出仍使用单独生成的 640×480 JPEG。商品同步到网站后，构建沿用网站商品资料与小程序本地图片，每款只生成一条记录。
 
 没有 npm 命令的环境可直接执行 `node scripts/build-miniprogram.mjs` 和 `node --test tests/miniprogram.test.cjs`。
 

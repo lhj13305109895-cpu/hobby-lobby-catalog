@@ -4,9 +4,10 @@ const catalogue=require('../miniprogram/utils/catalogue');const selection=requir
 let storage={};global.wx={getStorageSync:key=>storage[key],setStorageSync:(key,value)=>{storage[key]=value;},showToast(){}};
 const websiteProducts=require('../src/data/products.json');
 const localProducts=require('../src/miniprogram/data/local-products.json');
+const sourceProducts=new Map([...websiteProducts,...localProducts].map(product=>[product.productId,product]));
 test('catalogue matches all visible source products and preserves public codes',()=>{
   const categories=require('../src/data/categories.json');
-  const visible=[...websiteProducts,...localProducts].filter(p=>p.visible&&categories.some(c=>c.categoryId===p.categoryId&&c.enabled&&c.visible));
+  const visible=[...sourceProducts.values()].filter(p=>p.visible&&categories.some(c=>c.categoryId===p.categoryId&&c.enabled&&c.visible));
   assert.equal(catalogue.products.length,visible.length);
   for(const [index,product] of catalogue.products.entries()){
     const source=visible[index];
@@ -20,6 +21,23 @@ test('catalogue matches all visible source products and preserves public codes',
       assert.ok(product.thumb.startsWith('https://'));
       assert.ok(product.image.startsWith('https://'));
     }
+  }
+});
+
+test('products synchronized to the website appear once in the mini program with local images',()=>{
+  const websiteById=new Map(websiteProducts.map(product=>[product.productId,product]));
+  const shared=localProducts.filter(product=>websiteById.has(product.productId));
+  assert.ok(shared.length>0);
+  for(const local of shared){
+    const website=websiteById.get(local.productId);
+    const matches=catalogue.products.filter(product=>product.productId===local.productId);
+    assert.equal(matches.length,1);
+    const [product]=matches;
+    assert.equal(product.code,website.catalogueCode);
+    assert.deepEqual(product.capacities,website.capacities);
+    assert.equal(product.categoryId,website.categoryId);
+    assert.equal(product.thumb,local.thumbnailImage);
+    assert.equal(product.image,local.originalImage);
   }
 });
 test('numeric search is exact and respects model filters',()=>{for(const p of catalogue.products){const suffix=p.code.split('-').pop();const groups=catalogue.groups(p.model,suffix,'zh');assert.ok(groups.length);for(const g of groups)for(const found of g.items){assert.equal(found.model,p.model);assert.equal(found.code.split('-').pop(),suffix);}}assert.deepEqual(catalogue.groups('319','nonexistent-pattern-xyz','en'),[]);});
@@ -50,10 +68,9 @@ test('main-package media stays below 200 KB',()=>{
 
 test('phone thumbnails are bounded JPEGs and high-resolution detail URLs are preserved',()=>{
   const thumbs=require('../miniprogram/data/thumbnails'),config=require('../miniprogram/config');
-  const source=[...websiteProducts,...localProducts];
   assert.equal(Object.keys(thumbs).length,catalogue.products.length);
   for(const p of catalogue.products){
-    const thumb=thumbs[p.productId],original=source.find(row=>row.productId===p.productId);
+    const thumb=thumbs[p.productId],original=sourceProducts.get(p.productId);
     const data=fs.readFileSync(path.join(thumb.local?root:path.resolve(__dirname,'../public'),thumb.path.slice(1)));assert.equal(data.length,thumb.bytes);
     if(thumb.local){
       assert.equal(thumb.path,original.thumbnailImage);
