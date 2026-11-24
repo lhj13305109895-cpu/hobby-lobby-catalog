@@ -4,6 +4,7 @@ const catalogue=require('../miniprogram/utils/catalogue');const selection=requir
 let storage={};global.wx={getStorageSync:key=>storage[key],setStorageSync:(key,value)=>{storage[key]=value;},showToast(){}};
 const websiteProducts=require('../src/data/products.json');
 const localProducts=require('../src/miniprogram/data/local-products.json');
+const miniConfig=require('../miniprogram/config');
 const sourceProducts=new Map([...websiteProducts,...localProducts].map(product=>[product.productId,product]));
 test('catalogue matches all visible source products and preserves public codes',()=>{
   const categories=require('../src/data/categories.json');
@@ -24,7 +25,7 @@ test('catalogue matches all visible source products and preserves public codes',
   }
 });
 
-test('products synchronized to the website appear once in the mini program with local images',()=>{
+test('products synchronized to the website appear once with images for the selected photo mode',()=>{
   const websiteById=new Map(websiteProducts.map(product=>[product.productId,product]));
   const shared=localProducts.filter(product=>websiteById.has(product.productId));
   assert.ok(shared.length>0);
@@ -36,8 +37,13 @@ test('products synchronized to the website appear once in the mini program with 
     assert.equal(product.code,website.catalogueCode);
     assert.deepEqual(product.capacities,website.capacities);
     assert.equal(product.categoryId,website.categoryId);
-    assert.equal(product.thumb,local.thumbnailImage);
-    assert.equal(product.image,local.originalImage);
+    if(miniConfig.exportPhotoSource==='website'){
+      assert.ok(product.thumb.startsWith(miniConfig.assetOrigin+'/assets/miniprogram-thumbs/'));
+      assert.equal(product.image,miniConfig.assetOrigin+website.originalImage);
+    }else{
+      assert.equal(product.thumb,local.thumbnailImage);
+      assert.equal(product.image,local.originalImage);
+    }
   }
 });
 test('numeric search is exact and respects model filters',()=>{for(const p of catalogue.products){const suffix=p.code.split('-').pop();const groups=catalogue.groups(p.model,suffix,'zh');assert.ok(groups.length);for(const g of groups)for(const found of g.items){assert.equal(found.model,p.model);assert.equal(found.code.split('-').pop(),suffix);}}assert.deepEqual(catalogue.groups('319','nonexistent-pattern-xyz','en'),[]);});
@@ -66,6 +72,18 @@ test('main-package media stays below 200 KB',()=>{
   inspect(root);assert.ok(mediaBytes<200*1024,'main-package media below 200 KB');
 });
 
+test('website photo mode leaves no product JPEGs in any package and keeps cumulative media below 200 KB',{
+  skip:miniConfig.exportPhotoSource!=='website'
+},()=>{
+  let mediaBytes=0;
+  function inspect(directory){for(const entry of fs.readdirSync(directory,{withFileTypes:true})){const file=path.join(directory,entry.name);if(entry.isDirectory())inspect(file);else if(/\.(jpg|jpeg|png|svg|webp|gif|flac|m4a|ogg|ape|amr|wma|wav|mp3|mp4|aac|aiff|caf)$/i.test(entry.name))mediaBytes+=fs.statSync(file).size;}}
+  inspect(root);assert.ok(mediaBytes<200*1024,'all packages combined, not just the main package');
+  assert.ok(!fs.existsSync(path.join(root,'catalogue-photos/images')));
+  assert.ok(!fs.existsSync(path.join(root,'assets/catalogue-local')));
+  assert.ok(!fs.readdirSync(root).some(name=>/^export-photos-\d+$/.test(name)));
+  assert.ok(fs.existsSync(path.join(root,'assets/models/322-floral.jpg')));
+});
+
 test('phone thumbnails are bounded JPEGs and high-resolution detail URLs are preserved',()=>{
   const thumbs=require('../miniprogram/data/thumbnails'),config=require('../miniprogram/config');
   assert.equal(Object.keys(thumbs).length,catalogue.products.length);
@@ -85,13 +103,14 @@ test('phone thumbnails are bounded JPEGs and high-resolution detail URLs are pre
     if(thumb.original){assert.equal(thumb.path,original.thumbnailImage||original.mainImage);assert.ok(data.length<128*1024);}
     else{assert.match(thumb.path,/^\/assets\/miniprogram-thumbs\/[a-f0-9]{24}\.jpg$/);assert.equal(data.readUInt16BE(0),0xffd8);assert.ok(data.length<64*1024);assert.ok(thumb.width<=360&&thumb.height<=360&&Math.max(thumb.width,thumb.height)===360);}
     if(config.optimizedThumbnails)assert.equal(new URL(p.thumb).pathname,thumb.path);
-    assert.equal(new URL(p.image).pathname,original.originalImage || original.mainImage);
+    const source=miniConfig.exportPhotoSource==='website'?(websiteProducts.find(source=>source.productId===p.productId)||original):original;
+    assert.equal(new URL(p.image).pathname,source.originalImage || source.mainImage);
   }
 });
 
-test('local detail opens from the catalogue and selection, previews its bundled image and shares its own route',()=>{
+test('detail opens from the catalogue and selection, previews its image and keeps legacy shared routes valid',()=>{
   const product=catalogue.products.find(p=>p.code==='318B-25');
-  const route='/catalogue-photos/detail/index?id='+encodeURIComponent(product.productId);
+  const route=(miniConfig.exportPhotoSource==='website'?'/pages/detail/index':'/catalogue-photos/detail/index')+'?id='+encodeURIComponent(product.productId);
   const navigated=[],previews=[];
   Object.assign(global.wx,{setTabBarItem(){},navigateTo:({url})=>navigated.push(url),previewImage:options=>previews.push(options)});
   function load(relative){

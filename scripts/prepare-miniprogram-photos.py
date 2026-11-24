@@ -120,6 +120,7 @@ def main():
             (directory / "index.js").write_text("Page({});\n", encoding="utf-8")
             (directory / "index.json").write_text("{}\n", encoding="utf-8")
             (directory / "index.wxml").write_text("<view></view>\n", encoding="utf-8")
+            (directory / "ready.js").write_text("module.exports = true;\n", encoding="utf-8")
             packages.append({"name": "exportPhotos" + str(len(packages)), "root": package_root, "pages": ["index"]})
             package_bytes = 0
         if bundled:
@@ -132,6 +133,13 @@ def main():
         manifest[product["productId"]] = resource
     manifest_file.write_text(
         "module.exports = " + json.dumps(manifest, separators=(",", ":")) + ";\n", encoding="utf-8")
+    # Static module paths let WeChat include and asynchronously load each photo
+    # subpackage. wx.loadSubpackage is a Mini Game API, not a Mini Program API.
+    loaders = [json.dumps(package["name"]) + ": function () { return require.async("
+               + json.dumps("../" + package["root"] + "/ready.js") + "); }"
+               for package in packages]
+    (OUTPUT / "data/export-photo-loaders.js").write_text(
+        "module.exports = {\n" + ",\n".join(loaders) + "\n};\n", encoding="utf-8")
     print(json.dumps({"packages": packages, "photos": len(manifest), "mode": options.mode}))
 
 

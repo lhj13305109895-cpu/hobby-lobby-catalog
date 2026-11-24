@@ -5,6 +5,16 @@ const words = {
 function current() { try { return wx.getStorageSync('hobby-mini-language')==='zh'?'zh':'en'; }catch(e){return 'en';} }
 words.en.photoResourceError = 'Could not load a product photo. Please retry or update the preview';
 words.zh.photoResourceError = '商品照片未能加载，请重试或更新预览版本';
+Object.assign(words.en,{retryingPhoto:'Retrying',photoErrorStages:{download:'Photo download failed',read:'Photo could not be read',format:'Photo file is incomplete',package:'Photo package could not load',manifest:'Photo data is missing'},photoErrorNetwork:'The download did not finish. Please switch networks and export again.',photoErrorDomain:'Check the downloadFile domain in the mini program settings.',photoErrorRead:'Please export again, or close and reopen the mini program.',photoErrorFormat:'Please export again. If it still fails, send us this error message.',photoErrorVersion:'Please update the mini program and try again.',photoErrorAttempts:'Download attempts: ',photoErrorDetail:'Details: '});
+Object.assign(words.zh,{retryingPhoto:'重试',photoErrorStages:{download:'照片下载失败',read:'照片读取失败',format:'照片文件不完整',package:'照片资源加载失败',manifest:'照片数据缺失'},photoErrorNetwork:'照片未能下载完成，请切换网络后重新导出。',photoErrorDomain:'请在小程序后台核对 downloadFile 合法域名。',photoErrorRead:'请重新导出，或退出后重新进入小程序。',photoErrorFormat:'请重新导出；若仍失败，请把此提示发给我们。',photoErrorVersion:'请更新小程序版本后重试。',photoErrorAttempts:'已尝试下载次数：',photoErrorDetail:'详情：'});
+function exportPhotoError(error,lang) {
+  const t=words[lang==='zh'?'zh':'en'],detail=String(error.detail||'').slice(0,180);
+  const hint=/not in domain list|domain.*not.*configured|合法域名/i.test(detail)?t.photoErrorDomain
+    :error.stage==='format'?t.photoErrorFormat:error.stage==='read'?t.photoErrorRead
+    :['package','manifest'].includes(error.stage)?t.photoErrorVersion:t.photoErrorNetwork;
+  return [(t.photoErrorStages[error.stage]||t.photoResourceError)+' · '+error.message,hint,
+    error.attempts?t.photoErrorAttempts+error.attempts:'',detail?t.photoErrorDetail+detail:''].filter(Boolean).join('\n');
+}
 Object.assign(words.en,{export:'Export selection (Excel)',exporting:'Preparing export',quantity:'Quantity (pcs)',exportError:'Export failed',retryExport:'Please check your network and try again.',exportReady:'Excel file ready',openError:'The file is saved. Tap export to open it again.',quantityError:'Enter a whole number from 1 to 999999',imageError:'Could not load product photo',canvasError:'Could not prepare photos',exportHint:'Photo · Item No. · Quantity (pcs)',openFile:'Open Excel file'});
 Object.assign(words.zh,{export:'导出选款表（Excel）',exporting:'正在生成选款表',quantity:'数量（只）',exportError:'导出失败',retryExport:'请检查网络后重试。',exportReady:'Excel 已生成',openError:'文件已保存，点击导出可重新打开。',quantityError:'请输入 1 至 999999 的整数',imageError:'商品照片加载失败',canvasError:'无法准备商品照片',exportHint:'照片 · 货号 · 数量（只）',openFile:'打开 Excel 文件'});
 function setup(page) { const lang=current(); page.setData({lang,t:words[lang]}); ['catalogue','selection'].forEach((key,index)=>wx.setTabBarItem({index,text:words[lang][key]})); }
@@ -13,4 +23,4 @@ Object.assign(words.zh,{quantity:'数量（件）',carton:'件',pcs:'只',totalP
 Object.assign(words.en,{exportPdf:'Export full selection (PDF)',openPdf:'Open full selection',exportExcel:'Export Excel (editable)',exportReady:'Selection file ready'});
 Object.assign(words.zh,{exportPdf:'导出完整选款单（PDF）',openPdf:'查看完整选款单',exportExcel:'导出 Excel（可编辑）',exportReady:'选款单已生成'});
 function toggle(page) { const lang=current()==='en'?'zh':'en'; try{wx.setStorageSync('hobby-mini-language',lang);}catch(e){wx.showToast({title:'Could not save / 保存失败',icon:'none'});return;} setup(page); }
-module.exports={current,setup,toggle};
+module.exports={current,setup,toggle,exportPhotoError};

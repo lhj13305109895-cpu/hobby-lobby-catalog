@@ -10,6 +10,7 @@ const {workbook}=require('../miniprogram/utils/selection-xlsx');
 const {document:createPdf}=require('../miniprogram/utils/selection-pdf');
 const exporter=require('../miniprogram/utils/export-selection');
 const photoResources=require('../miniprogram/data/export-photos');
+const photoLoaders=require('../miniprogram/data/export-photo-loaders');
 const miniConfig=require('../miniprogram/config');
 let storage={};
 global.wx={getStorageSync:key=>storage[key],setStorageSync:(key,value)=>{storage[key]=value;},showToast(){}};
@@ -32,16 +33,32 @@ function selected(){storage={};const p=catalogue.products.find(p=>p.model==='319
 function photoFile(resource){return resource.package?path.resolve(__dirname,'../miniprogram',resource.path):path.resolve(__dirname,'../public',resource.path.slice(1));}
 function nativeMocks(){
   const state={writes:[],opens:[],loads:[],downloads:[],reads:[],files:new Map()};
+  // Native Mini Programs have require.async, not the Mini Game wx.loadSubpackage API.
+  delete global.wx.loadSubpackage;
+  const loaderFile=path.resolve(__dirname,'../miniprogram/data/export-photo-loaders.js');
+  const nativeRequire=createRequire(loaderFile),loaded={exports:{}};
+  nativeRequire.async=async modulePath=>{
+    await Promise.resolve();
+    const resolved=nativeRequire.resolve(modulePath);
+    const app=JSON.parse(fs.readFileSync(path.resolve(__dirname,'../miniprogram/app.json'),'utf8'));
+    const pack=app.subPackages.find(pack=>resolved===path.resolve(__dirname,'../miniprogram',pack.root,'ready.js'));
+    assert.ok(pack,'Async loader must target a registered photo subpackage');
+    state.loads.push(pack.name);
+    assert.equal(nativeRequire(modulePath),true);
+    return true;
+  };
+  vm.runInNewContext(fs.readFileSync(loaderFile,'utf8'),{module:loaded,require:nativeRequire});
+  Object.assign(photoLoaders,loaded.exports);
   const api={marker:true,
-    readFile(o){assert.equal(this.marker,true);state.reads.push(o.filePath);let bytes=state.files.get(o.filePath);if(!bytes&&o.filePath.startsWith('export-photos-'))bytes=fs.readFileSync(path.resolve(__dirname,'../miniprogram',o.filePath));if(!bytes){o.fail({errMsg:'ENOENT'});return;}o.success({data:Uint8Array.from(bytes).buffer});},
+    readFile(o){assert.equal(this.marker,true);state.reads.push(o.filePath);let bytes=state.files.get(o.filePath);if(!bytes&&o.filePath.startsWith('export-photos-')){const resource=Object.values(photoResources).find(resource=>resource.path===o.filePath);assert.ok(state.loads.includes(resource.package),'Read bundled JPEG only after require.async completes');bytes=fs.readFileSync(path.resolve(__dirname,'../miniprogram',o.filePath));}if(!bytes){o.fail({errMsg:'ENOENT'});return;}o.success({data:Uint8Array.from(bytes).buffer});},
     writeFile(o){assert.equal(this.marker,true);state.writes.push(o);state.files.set(o.filePath,Buffer.from(o.data));o.success({});}
   };
-  Object.assign(global.wx,{env:{USER_DATA_PATH:'/sandbox'},getImageInfo(){throw Error('Must not decode WebP on the phone');},canvasToTempFilePath(){throw Error('Must not use runtime canvas export');},loadSubpackage(o){state.loads.push(o.name);o.success({});},downloadFile(o){state.downloads.push(o.url);const url=new URL(o.url);assert.equal(url.origin,miniConfig.assetOrigin);assert.equal(o.timeout,30000);const bytes=fs.readFileSync(path.resolve(__dirname,'../public',url.pathname.slice(1)));const tempFilePath='/temp/photo-'+state.downloads.length+'.jpg';state.files.set(tempFilePath,bytes);o.success({statusCode:200,tempFilePath});},getFileSystemManager(){return api;},openDocument(o){state.opens.push(o);o.success({});}});
+  Object.assign(global.wx,{env:{USER_DATA_PATH:'/sandbox'},getImageInfo(){throw Error('Must not decode WebP on the phone');},canvasToTempFilePath(){throw Error('Must not use runtime canvas export');},downloadFile(o){state.downloads.push(o.url);const url=new URL(o.url);assert.equal(url.origin,miniConfig.assetOrigin);assert.equal(o.timeout,30000);const bytes=fs.readFileSync(path.resolve(__dirname,'../public',url.pathname.slice(1)));const tempFilePath='/temp/photo-'+state.downloads.length+'.jpg';state.files.set(tempFilePath,bytes);o.success({statusCode:200,tempFilePath});},getFileSystemManager(){return api;},openDocument(o){state.opens.push(o);o.success({});}});
   return state;
 }
 function websiteExporter(){
   const file=path.resolve(__dirname,'../src/miniprogram/utils/export-selection.js');const original=createRequire(file);const output={exports:{}};
-  vm.runInNewContext(fs.readFileSync(file,'utf8'),{module:output,require:name=>name==='../config'?{...miniConfig,exportPhotoSource:'website'}:name==='../data/export-photos'?photoResources:original(name),wx:global.wx,Uint8Array,Set,Map,console});
+  vm.runInNewContext(fs.readFileSync(file,'utf8'),{module:output,require:name=>name==='../config'?{...miniConfig,exportPhotoSource:'website'}:name==='../data/export-photos'?photoResources:name==='../data/export-photo-loaders'?photoLoaders:original(name),wx:global.wx,Uint8Array,Set,Map,console,setTimeout:callback=>setTimeout(callback,0)});
   return output.exports;
 }
 
@@ -103,7 +120,7 @@ test('native export writes a binary Excel file, deduplicates shared images and e
   const items=selected(),state=nativeMocks();
   const file=await exporter.createSelectionFile(items,'zh');assert.equal(state.loads.length+state.downloads.length,1);assert.equal(state.reads.filter(path=>!path.includes('/hl-selection-')).length,1);assert.equal(file,'/sandbox/Hobby-Lobby-Selection.xlsx');const writes=state.writes.filter(o=>o.filePath.endsWith('.xlsx'));assert.equal(writes.length,1);assert.equal(entries(writes[0].data).size,11);
   await exporter.openFile(file);assert.equal(state.opens[0].showMenu,true);assert.equal(state.opens[0].fileType,'xlsx');
-  nativeMocks();wx.loadSubpackage=o=>o.fail({errMsg:'offline'});wx.downloadFile=o=>o.fail({errMsg:'offline'});await assert.rejects(exporter.createSelectionFile(items,'zh'),e=>e.code==='PHOTO'&&e.stage===(photoResources[items[0].productId].package?'package':'download')&&e.detail==='offline'&&e.message===items[0].code);
+  nativeMocks();for(const name of Object.keys(photoLoaders))photoLoaders[name]=async()=>{throw Error('offline');};wx.downloadFile=o=>o.fail({errMsg:'offline'});await assert.rejects(exporter.createSelectionFile(items,'zh'),e=>e.code==='PHOTO'&&e.stage===(photoResources[items[0].productId].package?'package':'download')&&e.detail==='offline'&&e.message===items[0].code);
 });
 test('new bundled products export both formats without downloading unpublished images',{
   skip:miniConfig.exportPhotoSource!=='hybrid'
@@ -111,13 +128,39 @@ test('new bundled products export both formats without downloading unpublished i
   const items=catalogue.products.filter(p=>photoResources[p.productId].package).map(p=>({...p,quantity:2,offer:p.offers[0]}));assert.ok(items.length);
   for(const format of ['pdf','xlsx']){
     const state=nativeMocks();wx.downloadFile=()=>{throw Error('Bundled photos must not request website files');};
+    assert.equal(typeof wx.loadSubpackage,'undefined');
     await exporter.createSelectionFile(items,'zh',undefined,format);
     assert.equal(state.downloads.length,0);assert.equal(state.loads.length,new Set(items.map(p=>photoResources[p.productId].package)).size);
     const bytes=state.writes.find(row=>row.filePath.endsWith('.'+format)).data;
     if(format==='xlsx'){const files=entries(bytes);assert.equal([...files.keys()].filter(name=>name.startsWith('xl/media/')).length,items.length);}
     else assert.ok(Buffer.from(bytes).toString('ascii',0,8).startsWith('%PDF-1.6'));
   }
-  const items322=items.filter(p=>p.model==='322');assert.ok(items322.some(p=>p.offer.id==='1.0L'));assert.ok(items322.some(p=>p.offer.id==='1.3L'));
+  assert.ok(items.every(p=>photoResources[p.productId].package));
+});
+test('bundled photo reports an async package failure before attempting a file read',{
+  skip:!Object.values(photoResources).some(resource=>resource.package)
+},async()=>{
+  const product=catalogue.products.find(p=>p.code==='322-47'&&photoResources[p.productId].package)||catalogue.products.find(p=>photoResources[p.productId].package),resource=photoResources[product.productId];
+  assert.ok(resource.package);const state=nativeMocks();
+  photoLoaders[resource.package]=async()=>{throw Error('subpackage download failed');};
+  await assert.rejects(exporter.createSelectionFile([{...product,quantity:1,offer:product.offers[0]}],'zh',undefined,'pdf'),
+    error=>error.code==='PHOTO'&&error.message===product.code&&error.stage==='package'&&error.detail==='subpackage download failed');
+  assert.equal(state.reads.length,0);assert.equal(state.writes.length,0);
+});
+test('website mode exports all newly hosted products, including 322-47, with a cached download per product',{
+  skip:miniConfig.exportPhotoSource!=='website'
+},async()=>{
+  const localIds=new Set(require('../src/miniprogram/data/local-products.json').map(p=>p.productId));
+  const items=catalogue.products.filter(p=>p.model==='322'||localIds.has(p.productId)).map(p=>({...p,quantity:2,offer:p.offers[0]}));
+  assert.ok(items.some(p=>p.code==='322-47'));assert.ok(items.some(p=>p.code==='318B-25'));
+  const state=nativeMocks();assert.equal(typeof wx.loadSubpackage,'undefined');
+  for(const format of ['pdf','xlsx']){
+    await exporter.createSelectionFile(items,'zh',undefined,format);
+    const bytes=state.writes.find(row=>row.filePath.endsWith('.'+format)).data;
+    if(format==='xlsx')assert.equal([...entries(bytes).keys()].filter(name=>name.startsWith('xl/media/')).length,items.length);
+    else assert.ok(Buffer.from(bytes).toString('ascii',0,8).startsWith('%PDF-1.6'));
+  }
+  assert.equal(state.loads.length,0);assert.equal(state.downloads.length,new Set(items.map(p=>p.productId)).size);
 });
 test('basket refuses invalid drafts and always releases loading state on a failed export',async()=>{
   selected();const errors=[];let hidden=0,config;
@@ -125,7 +168,7 @@ test('basket refuses invalid drafts and always releases loading state on a faile
   const file=path.resolve(__dirname,'../miniprogram/pages/basket/index.js');vm.runInNewContext(fs.readFileSync(file,'utf8'),{require:createRequire(file),wx,Page:c=>{config=c;},encodeURIComponent});
   config.data=JSON.parse(JSON.stringify(config.data));config.setData=function(data){Object.assign(this.data,data);};config.onShow();
   const row=config.data.items[0];config.quantity({currentTarget:{dataset:{id:row.productId,capacity:row.offer.id}},detail:{value:''}});await config.exportSelection();assert.equal(errors.length,1);assert.equal(config.data.exporting,false);
-  config.quantity({currentTarget:{dataset:{id:row.productId,capacity:row.offer.id}},detail:{value:'48'}});nativeMocks();wx.loadSubpackage=o=>o.fail({errMsg:'offline'});wx.downloadFile=o=>o.fail({errMsg:'offline'});await config.exportSelection();assert.equal(config.data.exporting,false);assert.equal(hidden,1);assert.equal(errors.length,2);
+  config.quantity({currentTarget:{dataset:{id:row.productId,capacity:row.offer.id}},detail:{value:'48'}});nativeMocks();for(const name of Object.keys(photoLoaders))photoLoaders[name]=async()=>{throw Error('offline');};wx.downloadFile=o=>o.fail({errMsg:'offline'});await config.exportSelection();assert.equal(config.data.exporting,false);assert.equal(hidden,1);assert.equal(errors.length,2);
 });
 test('the exact four rows in the reported failure export without image APIs or canvas',async()=>{
   const requested=[['318A-135','1.2L',24],['318A-134','1.2L',48],['319-334','1.6L',72],['319-334','2.0L',20]];
@@ -170,6 +213,67 @@ test('website export refreshes corrupt cache and succeeds even when persistent c
   state.files.set('/sandbox/hl-selection-'+resource.remotePath.split('/').pop(),Buffer.from('corrupt cache'));
   const api=wx.getFileSystemManager(),write=api.writeFile;api.writeFile=function(o){if(o.filePath.includes('/hl-selection-'))o.fail({errMsg:'storage full'});else write.call(this,o);};
   await websiteExporter().createSelectionFile(items,'zh');assert.equal(state.downloads.length,1);assert.equal(state.writes.filter(o=>o.filePath.endsWith('.xlsx')).length,1);
+});
+
+test('322-34 recovers from timeout and HTTP 503, keeps prior photos cached and exports both formats',async()=>{
+  const items=['318B-23','318B-22','322-34'].map(code=>{const p=catalogue.products.find(p=>p.code===code);return {...p,quantity:1,offer:p.offers[0]};});
+  const state=nativeMocks(),download=wx.downloadFile,requests=[],progress=[];
+  const resource=photoResources[items[2].productId];let failures=0;
+  wx.downloadFile=options=>{
+    requests.push(options.url);
+    if(new URL(options.url).pathname===resource.path&&failures++<2){
+      if(failures===1)options.fail({errMsg:'downloadFile:fail timeout'});
+      else options.success({statusCode:503,tempFilePath:'/temp/unavailable'});
+    }else download(options);
+  };
+  const remote=websiteExporter();
+  for(const format of ['pdf','xlsx']){
+    await remote.createSelectionFile(items,'zh',(n,total,retry)=>{if(retry)progress.push({n,total,...retry});},format);
+    const bytes=state.writes.find(row=>row.filePath.endsWith('.'+format)).data;
+    if(format==='xlsx')assert.deepEqual(entries(bytes).get('xl/media/image3.jpg'),fs.readFileSync(photoFile(resource)));
+    else assert.equal((Buffer.from(bytes).toString('latin1').match(/\/Subtype \/Image\b/g)||[]).length,3);
+  }
+  assert.equal(requests.length,5);assert.equal(state.downloads.length,3);
+  assert.deepEqual(progress.map(p=>[p.code,p.attempt,p.n,p.total]),[['322-34',2,3,3],['322-34',3,3,3]]);
+  assert.ok(requests.some(url=>url.endsWith('?retry=2')));assert.ok(requests.some(url=>url.endsWith('?retry=3')));
+});
+
+test('incomplete or unreadable temporary downloads are fetched again before export',async()=>{
+  const product=catalogue.products.find(p=>p.code==='322-34'),items=[{...product,quantity:1,offer:product.offers[0]}];
+  for(const mode of ['incomplete','read']){
+    const state=nativeMocks(),download=wx.downloadFile,api=wx.getFileSystemManager(),read=api.readFile;let attempts=0,failedRead=false;
+    state.files.set('/temp/incomplete',Buffer.from('<html>temporary error</html>'));
+    wx.downloadFile=options=>{attempts++;if(mode==='incomplete'&&attempts===1)options.success({statusCode:200,tempFilePath:'/temp/incomplete'});else download(options);};
+    api.readFile=function(options){if(mode==='read'&&!failedRead&&options.filePath.startsWith('/temp/')){failedRead=true;options.fail({errMsg:'readFile:fail temporary file unavailable'});}else read.call(this,options);};
+    await websiteExporter().createSelectionFile(items,'zh',undefined,'pdf');
+    assert.equal(attempts,2);assert.equal(state.writes.filter(row=>row.filePath.endsWith('.pdf')).length,1);
+  }
+});
+
+test('persistent download errors keep the exact code and cause, while domain/404 errors stop immediately',async()=>{
+  const product=catalogue.products.find(p=>p.code==='322-34'),items=[{...product,quantity:1,offer:product.offers[0]}];
+  for(const [detail,status,expectedAttempts] of [['downloadFile:fail timeout',0,3],['downloadFile:fail url not in domain list',0,1],['Photo HTTP 404',404,1]]){
+    const state=nativeMocks();let attempts=0;
+    wx.downloadFile=options=>{attempts++;if(status)options.success({statusCode:status,tempFilePath:'/temp/error'});else options.fail({errMsg:detail});};
+    await assert.rejects(websiteExporter().createSelectionFile(items,'zh',undefined,'pdf'),error=>error.message==='322-34'&&error.stage==='download'&&error.detail===detail&&error.attempts===expectedAttempts);
+    assert.equal(attempts,expectedAttempts);assert.equal(state.writes.length,0);
+  }
+});
+
+test('the basket shows the real photo failure in the selected language and releases export controls',async()=>{
+  const product=catalogue.products.find(p=>p.code==='322-34');storage={};selection.toggle(product.productId,product.offers[0].id);
+  for(const lang of ['zh','en']){
+    storage['hobby-mini-language']=lang;nativeMocks();const modals=[];let hidden=0,page;
+    Object.assign(wx,{setTabBarItem(){},showLoading(){},hideLoading(){hidden++;},showModal(options){modals.push(options);},downloadFile(options){options.fail({errMsg:'downloadFile:fail url not in domain list'});}});
+    const file=path.join(__dirname,'../miniprogram/pages/basket/index.js');
+    vm.runInNewContext(fs.readFileSync(file,'utf8'),{require:createRequire(file),wx,Page:config=>{page=config;},encodeURIComponent});
+    page.data=JSON.parse(JSON.stringify(page.data));page.setData=function(data){Object.assign(this.data,data);};page.onShow();
+    await page.exportSelection();
+    assert.equal(page.data.exporting,false);assert.equal(hidden,1);assert.equal(modals.length,1);
+    assert.ok(modals[0].content.includes('322-34'));assert.ok(modals[0].content.includes('downloadFile:fail url not in domain list'));
+    assert.ok(modals[0].content.includes(lang==='zh'?'照片下载失败':'Photo download failed'));
+    assert.ok(modals[0].content.includes(lang==='zh'?'合法域名':'domain'));
+  }
 });
 
 test('mobile preview cell markers and absolute image positions agree in every product row',()=>{

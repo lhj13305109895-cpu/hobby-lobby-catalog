@@ -22,7 +22,11 @@ for(const page of sourcePages) {
 // Keep the current valid app/package configuration during photo preparation;
 // replace it only after the new resources and manifest are ready.
 const localCatalogue = join(sourceRoot, 'data', 'local-products.json');
-await cp(sourceRoot, output, { recursive: true, filter: source => source !== localCatalogue && !['app.json','project.config.json','project.private.config.json'].includes(relative(sourceRoot, source)) });
+await cp(sourceRoot, output, { recursive: true, filter: source => {
+  const path=relative(sourceRoot,source).split(sep).join('/');
+  return source!==localCatalogue && !['app.json','project.config.json','project.private.config.json'].includes(path)
+    && !(photoMode==='website' && ['assets/catalogue-local','catalogue-photos/images'].includes(path));
+} });
 await writeFile(join(output,'config.js'),'module.exports = '+JSON.stringify({...miniConfig,exportPhotoSource:photoMode})+';\n');
 const load = async name => JSON.parse(await readFile(join(root, 'src/data', name + '.json'), 'utf8'));
 const [products, categories, models] = await Promise.all(['products', 'categories', 'models'].map(load));
@@ -42,8 +46,9 @@ for (const local of localProducts) {
     if (shared.slug !== slug || shared.catalogueCode !== catalogueCode) {
       throw new Error(`Mini program product identity differs from the website: ${productId}`);
     }
-    byId.set(productId, { ...shared, mainImage, thumbnailImage, originalImage });
+    if(photoMode!=='website')byId.set(productId, { ...shared, mainImage, thumbnailImage, originalImage });
   } else {
+    if(photoMode==='website')throw new Error(`Website photo mode needs hosted product images before building: ${catalogueCode}. Use hybrid mode for a local-only draft.`);
     if (slugs.has(slug) || codes.has(catalogueCode)) throw new Error(`Mini program product conflicts with an existing slug or code: ${catalogueCode}`);
     byId.set(productId, local);
     slugs.add(slug);
@@ -77,12 +82,12 @@ try{privateSettings=JSON.parse(await readFile(join(output,'project.private.confi
 try{Object.assign(privateSettings,JSON.parse(await readFile(join(sourceRoot,'project.private.config.json'),'utf8')));}catch(error){if(error.code!=='ENOENT')throw error;}
 if(privateSettings.appid)project.appid=privateSettings.appid;
 if(Object.keys(privateSettings).length)await writeFile(join(output,'project.private.config.json'),JSON.stringify(privateSettings,null,2)+'\n');
-project.packOptions.include = [...app.subPackages.map(pack => pack.root), 'assets/catalogue-local'].map(folder => ({type:'folder',value:folder}));
+project.packOptions.include = [...app.subPackages.map(pack => pack.root), ...(photoMode==='website'?[]:['assets/catalogue-local'])].map(folder => ({type:'folder',value:folder}));
 await writeFile(join(output, 'project.config.json'), JSON.stringify(project, null, 2) + '\n');
 // Remove only retired generated mini program files; never website GLB assets.
 const activePhotoRoots=new Set(app.subPackages.map(pack=>pack.root));
 const retiredPhotoRoots=(await readdir(output,{withFileTypes:true})).filter(entry=>entry.isDirectory()&&/^export-photos-\d+$/.test(entry.name)&&!activePhotoRoots.has(entry.name)).map(entry=>entry.name);
-for(const retired of [...retiredPhotoRoots,'assets/models/322.webp','pages/studio','components/pot-viewer','studio-source','utils/studio-models.js','utils/studio-glb.js','utils/studio-resources.js','vendor/draco_decoder.js','vendor/DRACO-NOTICE.txt']) {
+for(const retired of [...retiredPhotoRoots,...(photoMode==='website'?['assets/catalogue-local','catalogue-photos/images']:[]),'assets/models/322.webp','pages/studio','components/pot-viewer','studio-source','utils/studio-models.js','utils/studio-glb.js','utils/studio-resources.js','vendor/draco_decoder.js','vendor/DRACO-NOTICE.txt']) {
   const target=resolve(output,retired);
   if(!target.startsWith(output+sep)) throw new Error('Retired output path escapes miniprogram');
   await rm(target,{recursive:true,force:true});
@@ -96,6 +101,7 @@ if(total > 20 * 1024 * 1024) throw new Error('小程序总大小超过保守的 
 const mediaExtensions=/\.(jpg|jpeg|png|svg|webp|gif|flac|m4a|ogg|ape|amr|wma|wav|mp3|mp4|aac|aiff|caf)$/i;
 async function mediaSize(dir){let count=0;for(const entry of await readdir(dir,{withFileTypes:true})){const file=join(dir,entry.name);count+=entry.isDirectory()?await mediaSize(file):mediaExtensions.test(entry.name)?(await stat(file)).size:0;}return count;}
 const mediaBytes=await mediaSize(output);
+if(photoMode==='website' && mediaBytes>=200*1024)throw new Error('网站图片模式的包内图片/音频累计超过 200KB；检查是否残留商品照片。');
 console.log(`小程序已生成：${output}；${visible.length} 款商品，${active.length} 个系列；主包 ${(bytes / 1024).toFixed(0)} KB；${photoResult.photos} 张导出照片（${photoMode}），${app.subPackages.length} 个分包；总包 ${(total/1024/1024).toFixed(2)} MB；图片/音频累计 ${(mediaBytes/1024).toFixed(1)} KB`);
 if(mediaBytes>=200*1024)console.warn(`导出照片含本地分包；图片/音频累计 ${(mediaBytes/1024).toFixed(1)} KB，超过开发者工具 200KB 性能建议（不影响包体限制检查）。`);
 console.log(`列表缩略图：${thumbnailResult.photos} 张；总下载量 ${(thumbnailResult.before/1024/1024).toFixed(2)} → ${(thumbnailResult.after/1024/1024).toFixed(2)} MB`);

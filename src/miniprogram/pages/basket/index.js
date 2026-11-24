@@ -24,14 +24,14 @@ Page({
       wx.showLoading({title:this.data.t.exporting,mask:true});
       if(!filePath){
         const items=this.data.items.map(p=>Object.assign({},p,{quantity:Number(p.quantity)}));
-        filePath=await exporter.createSelectionFile(items,this.data.lang,(n,total)=>wx.showLoading({title:n+' / '+total,mask:true}),format);
+        filePath=await exporter.createSelectionFile(items,this.data.lang,(n,total,retry)=>wx.showLoading({title:retry?this.data.t.retryingPhoto+' '+retry.code+' '+retry.attempt+'/'+retry.totalAttempts:n+' / '+total,mask:true}),format);
         this.setData({exportPath:filePath,exportPaths:Object.assign({},this.data.exportPaths,{[format]:filePath})});
       }
       wx.hideLoading();
       await exporter.openFile(filePath);
     } catch(error) {
       wx.hideLoading();
-      const detail=error.code==='PHOTO'?this.data.t.photoResourceError+' · '+error.message:this.data.t.retryExport;
+      const detail=error.code==='PHOTO'?language.exportPhotoError(error,this.data.lang):this.data.t.retryExport;
       wx.showModal({title:filePath?this.data.t.exportReady:this.data.t.exportError,content:filePath?this.data.t.openError:detail,showCancel:false});
     } finally {this.setData({exporting:false});}
   },
