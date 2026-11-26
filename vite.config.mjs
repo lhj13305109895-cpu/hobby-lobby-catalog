@@ -8,6 +8,12 @@ const seoScript = fileURLToPath(new URL("./scripts/generate-seo-pages.mjs", impo
 export default defineConfig({
   build: {
     outDir: "dist/client",
+    rollupOptions: {
+      input: [
+        fileURLToPath(new URL("./index.html", import.meta.url)),
+        fileURLToPath(new URL("./photo-number/index.html", import.meta.url)),
+      ],
+    },
   },
   optimizeDeps: {
     include: ["react", "react-dom/client"],
